@@ -1,0 +1,16 @@
+node_modules
+.scratch
+!.scratch/PLACEHOLDER
+qjs
+qjsc
+!out/PLACEHOLDER
+build
+build_*
+!build_quickjs.sh
+!build_osxcross.sh
+tools-bin
+!tools-bin/PLACEHOLDER
+*_meta.json
+*.qjsbc
+private_signing_key.pem
+public_signing_key

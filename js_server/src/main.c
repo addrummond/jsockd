@@ -1,0 +1,855 @@
+#define _REENTRANT
+#include "custom_module_loader.h"
+#include "fchmod.h"
+#include "hash_cache.h"
+#include "hex.h"
+#include "line_buf.h"
+#include "quickjs-libc.h"
+#include "quickjs.h"
+#include "utils.h"
+#include "verify_bytecode.h"
+#include "wait_group.h"
+#include <assert.h>
+#include <err.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <inttypes.h>
+#include <memory.h>
+#include <poll.h>
+#include <pthread.h>
+#include <signal.h>
+#include <stdatomic.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/mman.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/un.h>
+#include <time.h>
+#include <unistd.h>
+
+#ifdef CMAKE_BUILD_TYPE_DEBUG
+#define CMAKE_BUILD_TYPE_IS_DEBUG 1
+#else
+#define CMAKE_BUILD_TYPE_IS_DEBUG 0
+#endif
+
+static const uint8_t *g_module_bytecode;
+static size_t g_module_bytecode_size;
+
+static char MSG_SEP_CHAR = '\n'; // the default (can be overriden by env var)
+static const uint64_t MAX_COMMAND_RUNTIME_US = 250000; // 0.25 seconds
+#define MESSAGE_UUID_MAX_BYTES 32
+
+// This is the interval at which threads pause IO on the UNIX socket to check
+// for exceptional conditions (e.g. SIGINT).
+static const int SOCKET_POLL_TIMEOUT_MS = 100;
+
+// Testing scenarios with collisions is less labor intensive if we use a smaller
+// number of bits in the debug build.
+#define CACHED_FUNCTION_HASH_BITS (CMAKE_BUILD_TYPE_IS_DEBUG ? 6 : 10)
+#define CACHED_FUNCTIONS_N_BUCKETS                                             \
+  HASH_CACHE_BUCKET_ARRAY_SIZE_FROM_HASH_BITS(CACHED_FUNCTION_HASH_BITS)
+
+static atomic_bool g_interrupted_or_error;
+
+// Global vars that need destruction before exit.
+static WaitGroup g_thread_ready_wait_group;
+static pthread_mutex_t g_cached_functions_mutex;
+
+static atomic_bool g_global_init_complete;
+
+static void debug_dump_error(JSContext *ctx) {
+  if (CMAKE_BUILD_TYPE_IS_DEBUG)
+    js_std_dump_error(ctx);
+}
+
+// The input buffer gets malloced to this size once per thread. Longer inputs
+// are truncated. I tried starting with a smaller buffer and reallocing as
+// needed, but it doesn't actually improve memory usage. I guess most of the
+// large allocation doesn't get paged in till it's needed anyway.
+static const int LINE_BUF_BYTES = 1024 * 1024 * 1024;
+#define MAX_THREADS 8
+
+typedef struct {
+  const uint8_t *bytecode;
+  size_t bytecode_size;
+  JSContext *ctx;
+} cached_function_t;
+
+static HashCacheBucket g_cached_function_buckets[CACHED_FUNCTIONS_N_BUCKETS];
+static cached_function_t g_cached_functions[CACHED_FUNCTIONS_N_BUCKETS];
+
+static void add_cached_function(JSContext *ctx, uint64_t uid,
+                                const uint8_t *bytecode, size_t bytecode_size) {
+  assert(0 != JS_TAG_FUNCTION_BYTECODE);
+  assert(bytecode);
+
+  mutex_lock(&g_cached_functions_mutex);
+
+  HashCacheBucket *b = add_to_hash_cache(g_cached_function_buckets,
+                                         CACHED_FUNCTION_HASH_BITS, uid);
+  if (b->data) {
+    debug_log("Hash collision: freeing existing bytecode\n");
+    js_free(ctx, (void *)((cached_function_t *)(b->data))->bytecode);
+  }
+  size_t bi = b - g_cached_function_buckets;
+  b->data = g_cached_functions + bi;
+  g_cached_functions[bi].bytecode = bytecode;
+  g_cached_functions[bi].bytecode_size = bytecode_size;
+  g_cached_functions[bi].ctx = ctx;
+
+  mutex_unlock(&g_cached_functions_mutex);
+}
+
+static const uint8_t *get_cached_function(JSContext *ctx, uint64_t uid,
+                                          size_t *psize) {
+  mutex_lock(&g_cached_functions_mutex);
+  cached_function_t *cf = get_hash_cache_entry(g_cached_function_buckets,
+                                               CACHED_FUNCTION_HASH_BITS, uid);
+  mutex_unlock(&g_cached_functions_mutex);
+  if (cf) {
+    *psize = cf->bytecode_size;
+    return cf->bytecode;
+  }
+  return NULL;
+}
+
+// The state for each thread which runs a QuickJS VM.
+typedef struct {
+  const char *unix_socket_filename;
+  JSRuntime *rt;
+  JSContext *ctx;
+  int sockfd;
+  int streamfd;
+  int stream_io_err;
+  int exit_status;
+  pthread_mutex_t doing_js_stuff_mutex;
+  int line_n;
+  JSValue compiled_module;
+  JSValue compiled_query;
+  struct timespec last_js_execution_start;
+  char current_uuid[MESSAGE_UUID_MAX_BYTES + 1 /*zeroterm*/];
+  size_t current_uuid_len;
+} ThreadState;
+
+static void js_print_value_debug_write(void *opaque, const char *buf,
+                                       size_t len) {
+  release_logf("%.*s", len, buf);
+}
+
+typedef enum { READY, SIG_INTERRUPT_OR_ERROR, GO_AROUND } PollFdResult;
+
+static PollFdResult poll_fd(int fd) {
+  struct pollfd pfd = {.fd = fd, .events = POLLIN | POLLPRI};
+  if (!poll(&pfd, 1, SOCKET_POLL_TIMEOUT_MS)) {
+    if (atomic_load(&g_interrupted_or_error))
+      return SIG_INTERRUPT_OR_ERROR;
+    return GO_AROUND;
+  }
+  return READY;
+}
+
+static int lb_read(char *buf, size_t n, void *data) {
+  for (;;) {
+    int r = read(*(int *)data, buf, n);
+    if (r == -1 && errno == EINTR)
+      continue; // interrupted, try again
+    return r;
+  }
+}
+
+static const int EXIT_ON_QUIT_COMMAND = -999;
+
+static void listen_on_unix_socket(const char *unix_socket_filename,
+                                  int (*line_handler)(const char *line,
+                                                      size_t len, void *data),
+                                  void *data) {
+  ThreadState *ts = (ThreadState *)data;
+
+  char *line_buf_buffer = calloc(LINE_BUF_BYTES, sizeof(char));
+  LineBuf line_buf = {.buf = line_buf_buffer, .size = LINE_BUF_BYTES};
+
+  ts->sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
+  if (ts->sockfd < 0) {
+    ts->exit_status = -1;
+    goto error;
+  }
+
+  if (0 != socket_fchmod(ts->sockfd, 0600)) {
+    release_logf("Error setting permissions 0600 on socket %s: %s\n",
+                 unix_socket_filename, strerror(errno));
+    ts->exit_status = -1;
+    goto error;
+  }
+
+  struct sockaddr_un addr;
+  memset(&addr, 0, sizeof(addr));
+  addr.sun_family = AF_UNIX;
+  if (sizeof(addr.sun_path) / sizeof(addr.sun_path[0]) <
+      strlen(unix_socket_filename) + 1 /* zeroterm */) {
+    release_logf("Error: unix socket filename %s is too long\n",
+                 unix_socket_filename);
+    ts->exit_status = -1;
+    goto error;
+  }
+  strncpy(addr.sun_path, unix_socket_filename, sizeof(addr.sun_path) - 1);
+  if (-1 == unlink(unix_socket_filename) && errno != ENOENT) {
+    release_logf("Error attempting to unlink %s\n", unix_socket_filename);
+    ts->exit_status = -1;
+    goto error;
+  }
+  if (0 != bind(ts->sockfd, (struct sockaddr *)&addr, sizeof(addr))) {
+    ts->exit_status = -1;
+    goto error;
+  }
+  if (0 != listen(ts->sockfd, SOMAXCONN)) {
+    ts->exit_status = -1;
+    goto error;
+  }
+
+  // On Mac the call to socket_fchmod above is a no-op, so call chmod on the
+  // UNIX socket filename. This is theoretically less good, because there's a
+  // tiny window where the socket file exists but is not yet chmodded.
+  if (0 != chmod(unix_socket_filename, 0600)) {
+    release_logf(
+        "Error setting permissions 0600 on socket %s via filename: %s\n",
+        unix_socket_filename, strerror(errno));
+    ts->exit_status = -1;
+    goto error;
+  }
+
+  if (0 != wait_group_inc(&g_thread_ready_wait_group, 1)) {
+    release_log("Error incrementing thread ready wait group\n");
+    ts->exit_status = -1;
+    goto error_no_inc;
+  }
+
+  ts->streamfd = -1;
+  for (;;) {
+  accept_loop:
+    switch (poll_fd(ts->sockfd)) {
+    case READY:
+      break;
+    case GO_AROUND:
+      goto accept_loop;
+    case SIG_INTERRUPT_OR_ERROR: {
+      ts->exit_status = -1;
+      goto error_no_inc;
+    } break;
+    }
+
+    socklen_t streamfd_size = sizeof(struct sockaddr);
+    ts->streamfd = accept(ts->sockfd, (struct sockaddr *)&addr, &streamfd_size);
+    debug_log("Accepted on ts->socket\n");
+    if (ts->streamfd < 0) {
+      ts->exit_status = -1;
+      goto error_no_inc;
+    }
+    break;
+  }
+
+  for (;;) {
+  read_loop:
+    switch (poll_fd(ts->streamfd)) {
+    case READY:
+      break;
+    case GO_AROUND:
+      goto read_loop;
+    case SIG_INTERRUPT_OR_ERROR: {
+      ts->exit_status = -1;
+      goto error_no_inc;
+    } break;
+    }
+
+    int exit_value = line_buf_read(&line_buf, MSG_SEP_CHAR, lb_read,
+                                   &ts->streamfd, line_handler, data, "!;");
+    if (exit_value == EXIT_ON_QUIT_COMMAND)
+      ; // "?quit"
+    else if (exit_value < 0)
+      ts->exit_status = -1;
+    if (exit_value <= 0)
+      goto error_no_inc; // EOF or error
+  }
+
+error:
+  // Increment the wait group to indicate that this thread is ready, so that
+  // all threads can be joined in main. The other threads will notice that
+  // g_interrupted_or_error has been set to true, and thus exit gracefully
+  // in due course.
+  if (0 != wait_group_inc(&g_thread_ready_wait_group, 1))
+    release_log(
+        "Error incrementing thread ready wait group in error condition\n");
+error_no_inc:
+  if (ts->streamfd >= 0)
+    close(ts->streamfd);
+  if (ts->sockfd >= 0)
+    close(ts->sockfd);
+  // indicate they're closed so we don't try to close them again in the main
+  // teardown
+  ts->streamfd = -1;
+  ts->sockfd = -1;
+
+  free(line_buf_buffer);
+
+  atomic_store(&g_interrupted_or_error, true);
+}
+
+static JSContext *JS_NewCustomContext(JSRuntime *rt) {
+  JSContext *ctx;
+  ctx = JS_NewContext(rt);
+  if (!ctx)
+    return NULL;
+  js_init_module_std(ctx, "std");
+  js_init_module_os(ctx, "os");
+  return ctx;
+}
+
+static const uint8_t *compile_buf(JSContext *ctx, const char *buf, int buf_len,
+                                  size_t *bytecode_size) {
+  JSValue val = JS_Eval(ctx, (const char *)buf, buf_len, "<buffer>",
+                        JS_EVAL_FLAG_ASYNC | JS_EVAL_FLAG_COMPILE_ONLY);
+  if (JS_IsException(val)) {
+    debug_dump_error(ctx);
+    JS_FreeValue(ctx, val);
+    return NULL;
+  }
+
+  const uint8_t *bytecode =
+      JS_WriteObject(ctx, bytecode_size, val, JS_WRITE_OBJ_BYTECODE);
+  JS_FreeValue(ctx, val);
+  debug_logf("Compiled bytecode size: %zu\n", *bytecode_size);
+  return (const uint8_t *)bytecode;
+}
+
+static JSValue func_from_bytecode(JSContext *ctx, const uint8_t *bytecode,
+                                  int len) {
+  JSValue val = JS_ReadObject(ctx, bytecode, len, JS_READ_OBJ_BYTECODE);
+  if (JS_IsException(val)) {
+    debug_log("Exception returned when reading bytecode via JS_ReadObject\n");
+    debug_dump_error(ctx);
+    return val;
+  }
+  JSValue evald = JS_EvalFunction(ctx, val); // this call frees val
+  evald = js_std_await(ctx, evald);
+  if (JS_VALUE_GET_TAG(evald) != JS_TAG_OBJECT) {
+    debug_log("JS_EvalFunction did not return an object\n");
+    if (CMAKE_BUILD_TYPE_IS_DEBUG && JS_IsException(evald))
+      debug_dump_error(ctx);
+    JS_FreeValue(ctx, evald);
+    return JS_EXCEPTION;
+  }
+  JSValue r = JS_GetPropertyStr(ctx, evald, "value");
+  JS_FreeValue(ctx, evald);
+  return r;
+}
+
+static int interrupt_handler(JSRuntime *rt, void *opaque) {
+  ThreadState *state = (ThreadState *)opaque;
+  struct timespec *start = &state->last_js_execution_start;
+  if (start->tv_sec != 0) {
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC_RAW, &now);
+    uint64_t delta_us = (uint64_t)(now.tv_sec - start->tv_sec) * 1000000ULL +
+                        (uint64_t)(now.tv_nsec - start->tv_nsec) / 1000ULL;
+    return delta_us > MAX_COMMAND_RUNTIME_US;
+  }
+  return atomic_load(&g_interrupted_or_error);
+}
+
+static int init_thread_state(ThreadState *ts,
+                             const char *unix_socket_filename) {
+  JSRuntime *rt = JS_NewRuntime();
+  if (!rt) {
+    release_log("Failed to create JS runtime\n");
+    return -1;
+  }
+
+  js_std_set_worker_new_context_func(JS_NewCustomContext);
+  js_std_init_handlers(rt);
+  JSContext *ctx = JS_NewCustomContext(rt);
+  if (!ctx) {
+    release_log("Failed to create JS context\n");
+    JS_FreeRuntime(rt);
+    return -1;
+  }
+
+  JS_SetModuleLoaderFunc2(rt, NULL, jsockd_js_module_loader,
+                          js_module_check_attributes, NULL);
+  JS_SetInterruptHandler(rt, interrupt_handler, ts);
+
+  // Load the precompiled module.
+  ts->compiled_module =
+      load_binary_module(ctx, g_module_bytecode, g_module_bytecode_size);
+  if (JS_IsException(ts->compiled_module)) {
+    release_log("Failed to load precompiled module\n");
+    debug_dump_error(ctx);
+    JS_FreeValue(ctx, ts->compiled_module);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+    return -1;
+  }
+
+  ts->unix_socket_filename = unix_socket_filename;
+  ts->rt = rt;
+  ts->ctx = ctx;
+  ts->sockfd = -1;   // to be set later
+  ts->streamfd = -1; // to be set later
+  ts->stream_io_err = 0;
+  // set to nonzero if program should eventually exit with non-zero exit code
+  ts->exit_status = 0;
+  mutex_init(&ts->doing_js_stuff_mutex);
+  ts->line_n = 0;
+  ts->compiled_query = JS_UNDEFINED;
+  ts->last_js_execution_start.tv_sec = 0;
+  ts->last_js_execution_start.tv_nsec = 0;
+  ts->current_uuid[0] = '\0';
+  ts->current_uuid_len = 0;
+
+  return 0;
+}
+
+static void cleanup_thread_state(ThreadState *ts) {
+  // Don't add logs to this function as it may be called from a signal
+  // handler.
+  if (ts->streamfd != -1)
+    close(ts->streamfd);
+  unlink(ts->unix_socket_filename);
+
+  JS_FreeValue(ts->ctx, ts->compiled_module);
+
+  // Valgrind seems to correctly have caught a memory leak in quickjs-libc.
+  // It's an inconsequential one, as it's an object that's allocated once at
+  // the start of execution and that lives for the life of the application.
+  // But to keep our valgrind output clean, let's fix it... See
+  // quickjs-libc.c:4086 for the offending allocation.
+  js_free(ts->ctx, JS_GetRuntimeOpaque(ts->rt));
+
+  JS_FreeContext(ts->ctx);
+  JS_FreeRuntime(ts->rt);
+
+  // This could fail, but no useful error handling to be done (we're exiting
+  // anyway).
+  pthread_mutex_destroy(&ts->doing_js_stuff_mutex);
+}
+
+static int write_all(int fd, const char *buf, size_t len) {
+  while (len > 0) {
+    int n = write(fd, buf, len);
+    if (n < 0) {
+      if (errno == EINTR)
+        continue; // interrupted, try again
+      return n;
+    }
+    len -= n;
+    buf += n;
+  }
+  return 0;
+}
+
+static void write_to_stream(ThreadState *ts, const char *buf, size_t len) {
+  if (0 != write_all(ts->streamfd, buf, len)) {
+    ts->stream_io_err = -1;
+    release_logf("Error writing newline to socket: %s\n", strerror(errno));
+    return;
+  }
+}
+
+#define write_const_to_stream(ts, str)                                         \
+  write_to_stream((ts), (str), sizeof(str) - 1)
+
+static int handle_line_1_message_uid(ThreadState *ts, const char *line,
+                                     int len) {
+  if (len > MESSAGE_UUID_MAX_BYTES) {
+    debug_logf("Error: message UUID has length %i and will be truncated to "
+               "first %i bytes\n",
+               len, MESSAGE_UUID_MAX_BYTES);
+    len = MESSAGE_UUID_MAX_BYTES;
+  }
+  strncpy(ts->current_uuid, line, len);
+  ts->current_uuid_len = len;
+  ts->line_n++;
+  return 0;
+}
+
+static int handle_line_2_query(ThreadState *ts, const char *line, int len) {
+  const uint64_t uid = get_hash_cache_uid(line, len);
+  size_t bytecode_size = 0;
+  const uint8_t *bytecode = get_cached_function(ts->ctx, uid, &bytecode_size);
+
+  if (bytecode) {
+    debug_log("Found cached function\n");
+    ts->compiled_query = func_from_bytecode(ts->ctx, bytecode, bytecode_size);
+  } else {
+    debug_log("Compiling...\n");
+    mutex_lock(&ts->doing_js_stuff_mutex);
+    // We compile and cache the function.
+    size_t bytecode_size;
+
+    const uint8_t *bytecode = compile_buf(ts->ctx, line, len, &bytecode_size);
+    if (!bytecode) {
+      ts->compiled_query = JS_EXCEPTION;
+    } else {
+      add_cached_function(ts->ctx, uid, bytecode, bytecode_size);
+      ts->compiled_query = func_from_bytecode(ts->ctx, bytecode, bytecode_size);
+    }
+  }
+  mutex_unlock(&ts->doing_js_stuff_mutex);
+
+  ts->line_n++;
+  return 0;
+}
+
+static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
+  const JSPrintValueOptions js_print_value_options = {.show_hidden = false,
+                                                      .raw_dump = false,
+                                                      .max_depth = 0,
+                                                      .max_string_length = 0,
+                                                      .max_item_count = 0};
+
+  ts->line_n = 0;
+
+  if (JS_IsException(ts->compiled_query)) {
+    mutex_lock(&ts->doing_js_stuff_mutex);
+    if (CMAKE_BUILD_TYPE_IS_DEBUG) {
+      JS_PrintValue(ts->ctx, js_print_value_debug_write, ts, ts->compiled_query,
+                    &js_print_value_options);
+      release_log("\n");
+    }
+    JS_FreeValue(ts->ctx, ts->compiled_query);
+    ts->compiled_query = JS_UNDEFINED;
+    mutex_unlock(&ts->doing_js_stuff_mutex);
+    write_to_stream(ts, ts->current_uuid, ts->current_uuid_len);
+    write_const_to_stream(ts, " exception\n");
+    return ts->stream_io_err;
+  }
+
+  mutex_lock(&ts->doing_js_stuff_mutex);
+  clock_gettime(CLOCK_MONOTONIC_RAW, &ts->last_js_execution_start);
+  JSValue parsed_arg = JS_ParseJSON(ts->ctx, line, len, "<input>");
+  if (JS_IsException(parsed_arg)) {
+    debug_logf("Error parsing JSON argument: <<END\n%.*sEND\n", len, line);
+    debug_dump_error(ts->ctx);
+    JS_FreeValue(ts->ctx, parsed_arg);
+    JS_FreeValue(ts->ctx, ts->compiled_query);
+    ts->compiled_query = JS_UNDEFINED;
+    mutex_unlock(&ts->doing_js_stuff_mutex);
+    write_to_stream(ts, ts->current_uuid, ts->current_uuid_len);
+    write_const_to_stream(ts, " json_input_parse_error\n");
+    return ts->stream_io_err;
+  }
+
+  JSValue argv[] = {ts->compiled_module, parsed_arg};
+  JSValue ret = JS_Call(ts->ctx, ts->compiled_query, JS_NULL,
+                        sizeof(argv) / sizeof(argv[0]), argv);
+  ret = js_std_await(ts->ctx, ret); // allow return of a promise
+  JS_FreeValue(ts->ctx, ts->compiled_query);
+  ts->compiled_query = JS_UNDEFINED;
+  if (JS_IsException(ret)) {
+    JS_FreeValue(ts->ctx, parsed_arg);
+    JS_FreeValue(ts->ctx, ret);
+    debug_log("Error calling cached function\n");
+    debug_dump_error(ts->ctx);
+    mutex_unlock(&ts->doing_js_stuff_mutex);
+    write_to_stream(ts, ts->current_uuid, ts->current_uuid_len);
+    write_const_to_stream(ts, " exception\n");
+    return ts->stream_io_err;
+  }
+
+  JSValue stringified =
+      JS_JSONStringify(ts->ctx, ret, JS_UNDEFINED, JS_UNDEFINED);
+  if (JS_IsException(stringified)) {
+    JS_FreeValue(ts->ctx, parsed_arg);
+    JS_FreeValue(ts->ctx, ret);
+    JS_FreeValue(ts->ctx, stringified);
+    debug_dump_error(ts->ctx);
+    mutex_unlock(&ts->doing_js_stuff_mutex);
+    write_to_stream(ts, ts->current_uuid, ts->current_uuid_len);
+    write_const_to_stream(ts, " exception\n");
+    return ts->stream_io_err;
+  }
+
+  if (JS_IsUndefined(stringified)) {
+    JS_FreeValue(ts->ctx, stringified);
+    JS_FreeValue(ts->ctx, parsed_arg);
+    JS_FreeValue(ts->ctx, ret);
+    write_to_stream(ts, ts->current_uuid, ts->current_uuid_len);
+    write_const_to_stream(ts, " unserializable\n");
+    mutex_unlock(&ts->doing_js_stuff_mutex);
+    return ts->stream_io_err;
+  }
+
+  size_t sz;
+  const char *str = JS_ToCStringLen(ts->ctx, &sz, stringified);
+
+  write_to_stream(ts, ts->current_uuid, ts->current_uuid_len);
+  write_const_to_stream(ts, " ");
+  write_to_stream(ts, str, sz);
+  write_const_to_stream(ts, "\n");
+
+  JS_FreeValue(ts->ctx, parsed_arg);
+  JS_FreeValue(ts->ctx, ret);
+
+  // Freeing twice because we create two refs via JS_ToCStringLen.
+  // (`JS_FreeValue` is a refcount decrement.)
+  JS_FreeValue(ts->ctx, stringified);
+  JS_FreeValue(ts->ctx, stringified);
+
+  mutex_unlock(&ts->doing_js_stuff_mutex);
+
+  return ts->stream_io_err;
+}
+
+static int line_handler(const char *line, size_t len, void *data) {
+  ThreadState *ts = (ThreadState *)data;
+  debug_logf("LINE on %s: %s\n", ts->unix_socket_filename, line);
+
+  if (!strcmp("?reset", line)) {
+    if (!JS_IsUndefined(ts->compiled_query)) {
+      JS_FreeValue(ts->ctx, ts->compiled_query);
+      ts->compiled_query = JS_UNDEFINED;
+    }
+    ts->line_n = 0;
+    write_const_to_stream(ts, "reset\n");
+    return 0;
+  }
+  if (!strcmp("?quit", line)) {
+    if (!JS_IsUndefined(ts->compiled_query)) {
+      JS_FreeValue(ts->ctx, ts->compiled_query);
+      ts->compiled_query = JS_UNDEFINED;
+    }
+    atomic_store(&g_interrupted_or_error, true);
+    write_const_to_stream(ts, "quit\n");
+    return EXIT_ON_QUIT_COMMAND;
+  }
+
+  switch (ts->line_n) {
+  case 0:
+    return handle_line_1_message_uid(ts, line, len);
+  case 1:
+    return handle_line_2_query(ts, line, len);
+  case 2:
+    return handle_line_3_parameter(ts, line, len);
+  default: {
+    assert(ts->line_n >= 0 && ts->line_n <= 2);
+    return -1; // won't get here, but avoids compiler warning
+  }
+  }
+}
+
+static void *listen_thread_func(void *data) {
+  ThreadState *ts = (ThreadState *)data;
+  JS_UpdateStackTop(ts->rt);
+  listen_on_unix_socket(ts->unix_socket_filename, line_handler, (void *)ts);
+  return NULL;
+}
+
+static pthread_t g_threads[MAX_THREADS];
+static ThreadState g_thread_states[MAX_THREADS];
+static atomic_int g_n_threads;
+
+static const uint8_t *load_module_bytecode(const char *filename,
+                                           size_t *out_size) {
+  int module_bytecode_fd = open(filename, O_RDONLY);
+  struct stat module_bytecode_stat;
+  if (0 != fstat(module_bytecode_fd, &module_bytecode_stat) ||
+      module_bytecode_stat.st_size == 0) {
+    release_logf(
+        "Error opening or reading bytecode file %s, or file empty: %s\n",
+        filename, strerror(errno));
+    close(module_bytecode_fd);
+    return NULL;
+  }
+  const uint8_t *module_bytecode =
+      (const uint8_t *)mmap(NULL, module_bytecode_stat.st_size, PROT_READ,
+                            MAP_PRIVATE, module_bytecode_fd, 0);
+  if (module_bytecode == MAP_FAILED) {
+    release_logf("Error mapping bytecode file %s: %s\n", filename,
+                 strerror(errno));
+    close(module_bytecode_fd);
+    return NULL;
+  }
+  if (module_bytecode_stat.st_size < ED25519_PUBLIC_KEY_SIZE + 1) {
+    release_logf("Module bytecode file is only %zu bytes. Too small!",
+                 module_bytecode_stat.st_size);
+    close(module_bytecode_fd);
+    return NULL;
+  }
+  *out_size = module_bytecode_stat.st_size - ED25519_PUBLIC_KEY_SIZE;
+  if (0 != close(module_bytecode_fd)) {
+    release_logf("Error closing bytecode file %s: %s\n", filename,
+                 strerror(errno));
+    munmap((void *)module_bytecode, module_bytecode_stat.st_size);
+    return NULL;
+  }
+
+  const char *pubkey = getenv("JSOCKD_BYTECODE_MODULE_PUBLIC_KEY");
+  if (!pubkey)
+    pubkey = "";
+  uint8_t pubkey_bytes[ED25519_PUBLIC_KEY_SIZE];
+  size_t decoded_size = hex_decode(
+      pubkey_bytes, sizeof(pubkey_bytes) / sizeof(pubkey_bytes[0]), pubkey);
+  if (decoded_size != ED25519_PUBLIC_KEY_SIZE) {
+    release_logf("Error decoding public key hex from environment variable "
+                 "JSOCKD_BYTECODE_MODULE_PUBLIC_KEY; decoded size=%zu\n",
+                 decoded_size);
+    munmap((void *)module_bytecode, module_bytecode_stat.st_size);
+    return NULL;
+  }
+  if (!verify_bytecode(module_bytecode, module_bytecode_stat.st_size,
+                       pubkey_bytes)) {
+    release_logf("Error verifying bytecode module %s with public key %s\n",
+                 filename, pubkey);
+    munmap((void *)module_bytecode, module_bytecode_stat.st_size);
+    return NULL;
+  }
+
+  return module_bytecode;
+}
+
+static void global_cleanup(void) {
+  mutex_lock(&g_cached_functions_mutex);
+  for (size_t i = 0;
+       i < sizeof(g_cached_functions) / sizeof(g_cached_functions[0]); ++i) {
+    if (g_cached_functions[i].bytecode) {
+      js_free(g_cached_functions[i].ctx,
+              (uint8_t *)g_cached_functions[i].bytecode);
+    }
+  }
+  mutex_unlock(&g_cached_functions_mutex);
+
+  // These can fail, but we're calling this when we're about to exit, so there
+  // is no useful error handling to be done.
+  pthread_mutex_destroy(&g_cached_functions_mutex);
+  pthread_mutex_destroy(&g_log_mutex);
+  wait_group_destroy(&g_thread_ready_wait_group);
+
+  if (g_module_bytecode_size != 0) // if it's zero, we know mem was never mapped
+    munmap((void *)g_module_bytecode,
+           g_module_bytecode_size + ED25519_SIGNATURE_SIZE);
+}
+
+static void SIGINT_handler(int sig) {
+  atomic_store(&g_interrupted_or_error, true);
+
+  // Using stdio inside an interrupt handler is not safe, but calls to write
+  // are explicilty allowed.
+  const char msg[] = "\nSIGINT received, cleaning up...\n";
+  write_all(2, msg, sizeof(msg) - 1);
+
+  // We received SIGINT while we were still in the middle of waiting for
+  // threads to be ready. Give up on trying to do a proper teardown.
+  if (wait_group_n_remaining(&g_thread_ready_wait_group) > 0)
+    exit(1);
+
+  for (int i = 0; i < atomic_load(&g_n_threads); ++i)
+    mutex_lock(&g_thread_states[i].doing_js_stuff_mutex);
+
+  for (int i = 0; i < atomic_load(&g_n_threads); ++i)
+    pthread_join(g_threads[i], NULL); // can fail, but no useful error handling
+                                      // to be done
+
+  for (int i = 0; i < atomic_load(&g_n_threads); ++i)
+    mutex_unlock(&g_thread_states[i].doing_js_stuff_mutex);
+
+  if (atomic_load(&g_global_init_complete))
+    global_cleanup();
+
+  // This should be safe because we locked 'doing_js_stuff_mutex' and then
+  // joined all the threads.
+  for (int i = 0; i < atomic_load(&g_n_threads); ++i)
+    cleanup_thread_state(&g_thread_states[i]);
+
+  exit(1);
+}
+
+int main(int argc, char *argv[]) {
+  struct sigaction sa = {.sa_handler = SIGINT_handler};
+  sigaction(SIGINT, &sa, NULL);
+
+  mutex_init(&g_log_mutex);
+  mutex_init(&g_cached_functions_mutex);
+
+  const char *sep_char_var = getenv("JSOCKD_JS_SERVER_SOCKET_SEP_CHAR");
+  if (sep_char_var && sep_char_var[0] != '\0')
+    MSG_SEP_CHAR = sep_char_var[0];
+
+  if (argc < 3) {
+    release_logf("Usage: %s <es6_module_bytecode_file> <socket_path> "
+                 "[<socket_path> ...]\n",
+                 argv[0]);
+    return 1;
+  }
+
+  g_module_bytecode = load_module_bytecode(argv[1], &g_module_bytecode_size);
+  if (g_module_bytecode == NULL) {
+    release_logf("Error loading module bytecode from %s\n", argv[1]);
+    pthread_mutex_destroy(&g_log_mutex);
+    pthread_mutex_destroy(&g_cached_functions_mutex);
+    return 1;
+  }
+
+  int n_threads = argc - 2;
+  if (n_threads > MAX_THREADS)
+    n_threads = MAX_THREADS;
+  atomic_store(&g_n_threads, n_threads);
+
+  if (0 != wait_group_init(&g_thread_ready_wait_group, n_threads)) {
+    release_logf("Error initializing wait group: %s", strerror(errno));
+    munmap((void *)g_module_bytecode,
+           g_module_bytecode_size + ED25519_SIGNATURE_SIZE);
+    pthread_mutex_destroy(&g_log_mutex);
+    pthread_mutex_destroy(&g_cached_functions_mutex);
+    return 1;
+  }
+  atomic_init(&g_global_init_complete, true);
+
+  for (int n = 0; n < n_threads; ++n) {
+    debug_logf("Creating thread %i\n", n);
+    if (0 != init_thread_state(&g_thread_states[n], argv[n + 2])) {
+      release_logf("Error initializing thread %i", n);
+      munmap((void *)g_module_bytecode, g_module_bytecode_size);
+      pthread_mutex_destroy(&g_log_mutex);
+      pthread_mutex_destroy(&g_cached_functions_mutex);
+      for (int i = n - 1; i >= 0; --i)
+        cleanup_thread_state(&g_thread_states[i]);
+      wait_group_destroy(&g_thread_ready_wait_group);
+      return 1;
+    }
+    pthread_create(&g_threads[n], NULL, listen_thread_func,
+                   &g_thread_states[n]);
+  }
+
+  // Wait for all threads to be ready
+  if (0 != wait_group_timed_wait(&g_thread_ready_wait_group,
+                                 10000000000 /* 10 sec in ns */)) {
+    release_logf(
+        "Error waiting for threads to be ready, or timeout; n_remaining=%i\n",
+        wait_group_n_remaining(&g_thread_ready_wait_group));
+    global_cleanup();
+    return 1;
+  }
+
+  printf("READY %i\n", n_threads);
+  fflush(stdout);
+
+  // pthread_join can fail, but we can't do any useful error handling
+  for (int i = 0; i < atomic_load(&g_n_threads); ++i)
+    pthread_join(g_threads[i], NULL);
+
+  debug_log("All threads joined\n");
+
+  global_cleanup();
+
+  for (int i = 0; i < atomic_load(&g_n_threads); ++i)
+    cleanup_thread_state(&g_thread_states[i]);
+
+  for (int i = 0; i < atomic_load(&g_n_threads); ++i) {
+    if (g_thread_states[i].exit_status != 0)
+      return 1;
+  }
+
+  return 0;
+}

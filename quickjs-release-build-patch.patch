@@ -1,0 +1,13 @@
+diff --git a/Makefile b/Makefile
+index 3b1c745..983be2f 100644
+--- a/Makefile
++++ b/Makefile
+@@ -97,7 +97,7 @@ endif
+ ifdef CONFIG_CLANG
+   HOST_CC=clang
+   CC=$(CROSS_PREFIX)clang
+-  CFLAGS+=-g -Wall -MMD -MF $(OBJDIR)/$(@F).d
++  CFLAGS+=-Wall -Oz -MMD -MF $(OBJDIR)/$(@F).d
+   CFLAGS += -Wextra
+   CFLAGS += -Wno-sign-compare
+   CFLAGS += -Wno-missing-field-initializers

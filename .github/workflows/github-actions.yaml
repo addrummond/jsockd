@@ -1,0 +1,94 @@
+name: jsockd CI pipeline
+run-name: ${{ github.actor }}
+on:
+  push:
+  pull_request:
+jobs:
+  CI:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Set up MacOS Cross Compiler
+        uses: Timmmm/setup-osxcross@v2
+        with:
+          osx-version: "15.5"
+
+      - name: Set up tools
+        run: ./ci.sh setup
+
+      - name: Log versions
+        run: ./ci.sh log_versions
+
+      - name: Check js_server formatting
+        run: |
+          ./ci.sh check_js_server_formatting
+
+      - name: Cache QuickJS build output
+        id: cache-quickjs-build-output
+        uses: actions/cache@v4
+        with:
+          path: |
+            .scratch/quickjs
+            tools-bin
+          # This key is based on the hash of the build script to ensure cache
+          # is updated when the script changes.
+          key: ${{ runner.os }}-quickjs-${{ hashFiles('build_quickjs.sh') }}
+
+      - name: Build QuickJS
+        if: steps.cache-quickjs-build-output.outputs.cache-hit != 'true'
+        run: ./ci.sh build_quickjs
+
+      - name: Build js_server
+        run: |
+          ./ci.sh build_js_server
+
+      - name: Run js_server tests
+        run: ./ci.sh run_js_server_tests
+
+      - name: Cross-compile js_server for Linux/ARM64
+        run: |
+          ./ci.sh build_js_server_linux_arm64
+
+      - name: Cross-compile js_server for MacOS/ARM64
+        run: |
+          ./ci.sh build_js_server_darwin_aarch64
+
+      - name: Run js_server Valgrind tests
+        run: ./ci.sh run_js_server_valgrind_tests
+
+      - name: Run js_server Valgrind tests with non-newline sep
+        run: ./ci.sh run_js_server_valgrind_tests_with_non_newline_sep
+
+      - name: Run js_server fuzz tests
+        run: ./ci.sh run_js_server_fuzz_tests
+
+      - name: Package binaries
+        run: ./ci.sh package_binaries
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts
+          path: |
+            ${{ github.workspace }}/js_server/release-artifacts/*.tar.gz
+            ${{ github.workspace }}/js_server/release-artifacts/*.txt
+  release:
+    runs-on: ubuntu-24.04
+    needs: CI
+    if: github.ref_type == 'tag'
+    permissions:
+      contents: write
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-artifacts
+          path: js_server/release-artifacts
+      - name: Create release
+        env:
+          GITHUB_TOKEN: ${{ github.TOKEN }}
+        run: ./ci.sh github_actions_create_release $(basename "${{ github.ref }}")

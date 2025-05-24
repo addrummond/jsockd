@@ -1,0 +1,16 @@
+# CMake toolchain file used by CI to build the project for ARM64 architecture
+# using GCC.
+
+set(CMAKE_SYSTEM_NAME Darwin)
+set(CMAKE_SYSTEM_PROCESSOR aarch64)
+set(CMAKE_CROSSCOMPILING TRUE)
+
+set(CMAKE_SYSTEM_PROCESSOR aarch64)
+set(CMAKE_C_COMPILER oa64-clang)
+set(CMAKE_INSTALL_NAME_TOOL aarch64-apple-darwin24.5-install_name_tool)
+set(CMAKE_OTOOL aarch64-apple-darwin24.5-otool)
+
+set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
