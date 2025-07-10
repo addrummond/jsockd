@@ -124,7 +124,7 @@ Unit tests can be run as follows:
 
 ## Releases
 
-Pre-built binaries are available for download from the [GitHub releases page](https://github.com/your-org/jsockd/releases). The following platforms are supported:
+Pre-built binaries are available for download from the [GitHub releases page](https://github.com/addrummond/jsockd/releases). The following platforms are supported:
 
 - Linux x86_64
 - Linux ARM64
