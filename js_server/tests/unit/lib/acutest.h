@@ -1,5 +1,5 @@
 /*
- * Acutest -- Another C/C++ Unit Test facility
+ * Acutest -- Another C Unit Test facility
  * <https://github.com/mity/acutest>
  *
  * Copyright 2013-2023 Martin Mitáš
@@ -28,7 +28,7 @@
 #define ACUTEST_H
 
 
-/* Try to auto-detect whether we need to disable C++ exception handling.
+/* Try to auto-detect whether we need to disable exception handling.
  * If the detection fails, you may always define TEST_NO_EXCEPTIONS before
  * including "acutest.h" manually. */
 #ifdef __cplusplus
@@ -130,7 +130,7 @@
 #ifdef __cplusplus
 #ifndef TEST_NO_EXCEPTIONS
 /* Macros to verify that the code (the 1st argument) throws exception of given
- * type (the 2nd argument). (Note these macros are only available in C++.)
+ * type (the 2nd argument).
  *
  * TEST_EXCEPTION_ is like TEST_EXCEPTION but accepts custom printf-like
  * message.
