@@ -18,7 +18,7 @@ Applications should generally connect to JSockD via a client library that manage
 Steps to add JSockD to your application:
 
 * Bundle all of the required Javascript library code into a single ES6 module. [Esbuild](https://esbuild.github.io/api/) is one example of a suitable bundler.
-* Compile the ES6 module into a QuickJS bytecode file using the `compile_es6_module` command (see next section).
+* Compile the ES6 module into a QuickJS bytecode file using the `compile_es6_module` command (see section 2).
 * Configure your client library with the path to the bytecode file and the public key used to sign it.
 * Use the client library to send commands to the JSockD server.
 
