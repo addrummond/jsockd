@@ -7,8 +7,15 @@ defmodule JSockDClient.JsServerManager do
   require Logger
 
   @impl true
-  def init(opts = %{js_server_exec: js_server_exec}) do
-    n_threads = opts[:n_threads] || :erlang.system_info(:logical_processors_online)
+  def init(
+        opts = %{
+          n_threads: n_threads,
+          js_server_exec: js_server_exec,
+          bytecode_module_file: bytecode_module_file,
+          bytecode_module_public_key: bytecode_module_public_key
+        }
+      ) do
+    n_threads = n_threads || :erlang.system_info(:logical_processors_online)
 
     uid = :crypto.strong_rand_bytes(16) |> Base.encode16()
 
@@ -25,7 +32,10 @@ defmodule JSockDClient.JsServerManager do
         :in,
         :exit_status,
         line: 80,
-        args: unix_socket_paths
+        args: [bytecode_module_file | unix_socket_paths],
+        env: [
+          {~c"JSOCKD_BYTECODE_MODULE_PUBLIC_KEY", String.to_charlist(bytecode_module_public_key)}
+        ]
       ])
 
     # we now wait for the handle_info call for the ready message

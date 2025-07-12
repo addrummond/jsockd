@@ -688,6 +688,14 @@ static const uint8_t *load_module_bytecode(const char *filename,
   const char *pubkey = getenv("JSOCKD_BYTECODE_MODULE_PUBLIC_KEY");
   if (!pubkey)
     pubkey = "";
+
+  // Not documented because we allow this in Debug builds only, and binaries
+  // uploaded to the GitHub release are Release builds.
+  if (CMAKE_BUILD_TYPE_IS_DEBUG &&
+      !strcmp(pubkey, "dangerously_allow_invalid_signatures")) {
+    return module_bytecode;
+  }
+
   uint8_t pubkey_bytes[ED25519_PUBLIC_KEY_SIZE];
   size_t decoded_size = hex_decode(
       pubkey_bytes, sizeof(pubkey_bytes) / sizeof(pubkey_bytes[0]), pubkey);

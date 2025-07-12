@@ -1,9 +1,9 @@
-defmodule JsockdClient.MixProject do
+defmodule ExampleApp.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :jsockd_client,
+      app: :example_app,
       version: "0.1.0",
       elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
@@ -14,14 +14,7 @@ defmodule JsockdClient.MixProject do
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      extra_applications: [:logger],
-      mod: {JSockDClient.Application, []},
-      env: [
-        n_threads: nil,
-        js_server_exec: "",
-        bytecode_module_file: "",
-        bytecode_module_public_key: ""
-      ]
+      extra_applications: [:logger]
     ]
   end
 
@@ -30,6 +23,7 @@ defmodule JsockdClient.MixProject do
     [
       # {:dep_from_hexpm, "~> 0.3.0"},
       # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}
+      {:jsockd_client, path: "../jsockd_client"}
     ]
   end
 end
