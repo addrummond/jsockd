@@ -9,9 +9,9 @@ The server listens on one or more UNIX domain sockets. It's intended for use a s
 - Low memory usage
 - Valgrind tests, fuzz tests
 
-## Using JSockD
+## 1. Using JSockD
 
-### Setting up JSockD for your application
+### 1.1 Setting up JSockD for your application
 
 Applications should generally connect to JSockD via a client library that manages the JSockD server process. At the moment, this repo contains one example of such a library in `clients/elixir/jsockd_client`. At this level of abstraction, JSockD is a simple command execution service. Commands are JavaScript functions executed with specified parameters.
 
@@ -22,13 +22,13 @@ Steps to add JSockD to your application:
 * Configure your client library with the path to the bytecode file and the public key used to sign it.
 * Use the client library to send commands to the JSockD server.
 
-### The JSockD execution model
+### 1.2 The JSockD execution model
 
 Commands are cached in the same sort of way that a SQL server caches queries. When a command is executed, the server first checks if the command has been executed before. If it has, the server executes the cached bytecode for that command. If not, the server compiles the command and caches it for future use.
 
 Commands should not mutate global state. Global state may or may not persist across command executions. JSockD reserves the right to reset global state at any time.
 
-## The module compiler
+## 2. The module compiler
 
 JSockD provides a command-line tool for compiling ES6 modules into QuickJS bytecode files.
 Bytecode must be signed using an ED25519 key to ensure that only trusted code is executed
@@ -53,7 +53,7 @@ compile_es6_module private_signing_key.pem my_module.mjs my_module.quickjs_bytec
 
 The value in `public_signing_key` should be passed to `js_server` via the `JSOCKD_BYTECODE_MODULE_PUBLIC_KEY` environment variable.
 
-## The JSockD server
+## 3. The JSockD server
 
 **JSockD is not intended to run as a standalone server; it is designed to be run as a subprocess of an application that needs to execute JavaScript commands. This section is therefore intended as a reference for developers implementing JSockD client libraries.**
 
@@ -68,7 +68,7 @@ The first argument is the path to a precompiled ES6 module bytecode file. This m
 
 When the server is ready to start accepting commands on the specified UNIX domain sockets, it prints `READY <N>` to the standard output followed by a line feed. The integer N specifies the number of threads that the server is using to process commands. This may be less than the number of sockets specified, in which case only the first N sockets will be used for command processing.
 
-## The socket protocol
+## 4. The socket protocol
 
 The server listens for commands on the specified UNIX domain sockets. Each command consists of three lines terminated with '\n':
 
@@ -90,7 +90,7 @@ The server responds with a single line consisting of the command ID followed by 
 As the protocol is synchronous, command IDs are not strictly necessary. However, it is recommended to check that responses have the expected
 command ID as a means of ensuring that the client code is working correctly.
 
-### Special commands
+### 4.1 Special commands
 
 The client may send either of the following lines to the server at any point:
 
@@ -103,7 +103,7 @@ The `?reset` command resets the server's command parser to its initial state (so
 
 The `?quit` command causes the server to exit immediately (closing all sockets, not just the socket on which the command was sent).
 
-## Building from source
+## 5. Building from source
 
 To build JSockD from source, you must first build QuickJS and then the JS server.
 
@@ -113,11 +113,11 @@ Tools necessary for the build can be installed using [mise-en-place](https://mis
 mise install
 ```
 
-### Building QuickJS
+### 5.1 Building QuickJS
 
 QuickJS is built by running `./build_quickjs.sh`. This script downloads the QuickJS source code, apples some patches, and then builds the QuickJS library. The QuickJS build is kept separate from the main JSockD build because it needs to be run only once, and the QuickJS build system is a bit finicky to configure for different environments.
 
-### Building the JS server
+### 5.2 Building the JS server
 
 This is built using CMake 4. The `mk.sh` wrapper script invokes CMake with the correct arguments for common use cases.
 
@@ -141,7 +141,7 @@ Unit tests can be run as follows:
 ./mk.sh Debug test
 ```
 
-## Releases
+## 6. Releases
 
 Pre-built binaries are available for download from the [GitHub releases page](https://github.com/addrummond/jsockd/releases). The following platforms are supported:
 
