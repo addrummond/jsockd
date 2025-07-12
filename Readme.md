@@ -17,7 +17,7 @@ Applications should generally connect to JSockD via a client library that manage
 
 Steps to add JSockD to your application:
 
-* Bundle all of the Javascript code that you want to execute into a single ES6 module. [Esbuild](https://esbuild.github.io/api/) is one example of a suitable bundler.
+* Bundle all of the required Javascript library code into a single ES6 module. [Esbuild](https://esbuild.github.io/api/) is one example of a suitable bundler.
 * Compile the ES6 module into a QuickJS bytecode file using the `compile_es6_module` command (see next section).
 * Configure your client library with the path to the bytecode file and the public key used to sign it.
 * Use the client library to send commands to the JSockD server.
@@ -32,8 +32,7 @@ Commands should not mutate global state. Global state may or may not persist acr
 
 JSockD provides a command-line tool for compiling ES6 modules into QuickJS bytecode files.
 Bytecode must be signed using an ED25519 key to ensure that only trusted code is executed
-by the server. (QuickJS does not verify bytecode, so the risk of executing untrused bytecode
-is far higher than even the risk of executing untrusted JavaScript code.)
+by the server.
 
 Generate a signing key as follows:
 
@@ -55,6 +54,8 @@ compile_es6_module private_signing_key.pem my_module.mjs my_module.quickjs_bytec
 The value in `public_signing_key` should be passed to `js_server` via the `JSOCKD_BYTECODE_MODULE_PUBLIC_KEY` environment variable.
 
 ## The JSockD server
+
+**JSockD is not intended to run as a standalone server; it is designed to be run as a subprocess of an application that needs to execute JavaScript commands. This section is therefore intended as a reference for developers implementing JSockD client libraries.**
 
 The server is started as follows:
 
