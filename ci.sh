@@ -42,6 +42,7 @@ case $1 in
 
     check_js_server_formatting)
         (
+            set -e
             cd js_server
             npm i # clang-format is installed via npm
             format_errors=$(CLANG_FORMAT_COMMAND="./node_modules/.bin/clang-format --dry-run --Werror" ./format.sh 2>&1)
@@ -55,6 +56,7 @@ case $1 in
 
     build_js_server)
         (
+            set -e
             cd js_server
             npm i
             ./mk.sh Debug
@@ -64,6 +66,7 @@ case $1 in
 
     run_js_server_tests)
         (
+            set -e
             cd js_server
 
             # Check that all tests are included in the list of tests.
@@ -87,6 +90,7 @@ case $1 in
 
     build_js_server_linux_arm64)
         (
+            set -e
             export TOOLCHAIN_FILE=TC-gcc-arm64.cmake
             cd js_server
             ./mk.sh Debug
@@ -96,6 +100,7 @@ case $1 in
 
     build_js_server_darwin_aarch64)
         (
+            set -e
             export TOOLCHAIN_FILE=TC-oa64.cmake
             cd js_server
             ./mk.sh Debug
@@ -109,6 +114,7 @@ case $1 in
 
     run_js_server_valgrind_tests_with_non_newline_sep)
         (
+            set -e
             export JSOCKD_JS_SERVER_SOCKET_SEP_CHAR="|"
             ./js_server/tests/valgrind/run.sh
         )
@@ -126,6 +132,7 @@ case $1 in
 
     package_binaries)
         (
+            set -e
             cd js_server
             mkdir -p release-artifacts
 
@@ -159,6 +166,7 @@ case $1 in
     github_actions_create_release)
         if [ ! -z "$2" ]; then
             (
+                set -e
                 cd js_server
                 gh release create $2 --title $2
                 gh release upload $2 release-artifacts/*.tar.gz release-artifacts/*.txt
