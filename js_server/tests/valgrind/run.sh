@@ -17,7 +17,7 @@ openssl pkey -inform pem -pubout -outform der -in private_signing_key.pem | tail
 export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=$(cat public_signing_key)
 
 # Compile the example module to QuickJS bytecode.
-./tools-bin/compile_es6_module private_signing_key.pem example_module.mjs /tmp/example_module.qjsb
+./tools-bin/compile_es6_module example_module.mjs /tmp/example_module.qjsb private_signing_key.pem
 
 cd js_server
 
