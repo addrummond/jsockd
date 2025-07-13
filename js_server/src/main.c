@@ -47,6 +47,12 @@ static const uint64_t MAX_COMMAND_RUNTIME_US = 250000; // 0.25 seconds
 // for exceptional conditions (e.g. SIGINT).
 static const int SOCKET_POLL_TIMEOUT_MS = 100;
 
+// check memory usage every 100 commands
+static const int MEMORY_CHECK_INTERVAL = 100;
+// if memory usage increases over this * MEMORY_CHECK_INTERVAL commands, reset
+// the interpreter state.
+static const int MEMORY_INCREASE_MAX_COUNT = 3;
+
 // Testing scenarios with collisions is less labor intensive if we use a smaller
 // number of bits in the debug build.
 #define CACHED_FUNCTION_HASH_BITS (CMAKE_BUILD_TYPE_IS_DEBUG ? 6 : 10)
@@ -133,6 +139,9 @@ typedef struct {
   struct timespec last_js_execution_start;
   char current_uuid[MESSAGE_UUID_MAX_BYTES + 1 /*zeroterm*/];
   size_t current_uuid_len;
+  int memory_check_count;
+  int memory_increase_count;
+  int64_t last_memory_usage;
 } ThreadState;
 
 static void js_print_value_debug_write(void *opaque, const char *buf,
@@ -392,32 +401,35 @@ static int init_thread_state(ThreadState *ts,
     return -1;
   }
 
-  ts->unix_socket_filename = unix_socket_filename;
+  if (unix_socket_filename) { // it's not a reinit
+    ts->unix_socket_filename = unix_socket_filename;
+    ts->sockfd = -1;   // to be set later
+    ts->streamfd = -1; // to be set later
+    mutex_init(&ts->doing_js_stuff_mutex);
+  } else {
+    // It is a reinit.
+    assert(JS_IsUndefined(ts->compiled_query));
+  }
+
   ts->rt = rt;
   ts->ctx = ctx;
-  ts->sockfd = -1;   // to be set later
-  ts->streamfd = -1; // to be set later
   ts->stream_io_err = 0;
   // set to nonzero if program should eventually exit with non-zero exit code
   ts->exit_status = 0;
-  mutex_init(&ts->doing_js_stuff_mutex);
   ts->line_n = 0;
   ts->compiled_query = JS_UNDEFINED;
   ts->last_js_execution_start.tv_sec = 0;
   ts->last_js_execution_start.tv_nsec = 0;
   ts->current_uuid[0] = '\0';
   ts->current_uuid_len = 0;
+  ts->memory_check_count = 0;
+  ts->memory_increase_count = 0;
+  ts->last_memory_usage = 0;
 
   return 0;
 }
 
-static void cleanup_thread_state(ThreadState *ts) {
-  // Don't add logs to this function as it may be called from a signal
-  // handler.
-  if (ts->streamfd != -1)
-    close(ts->streamfd);
-  unlink(ts->unix_socket_filename);
-
+static void cleanup_js_runtime(ThreadState *ts) {
   JS_FreeValue(ts->ctx, ts->compiled_module);
 
   // Valgrind seems to correctly have caught a memory leak in quickjs-libc.
@@ -429,6 +441,18 @@ static void cleanup_thread_state(ThreadState *ts) {
 
   JS_FreeContext(ts->ctx);
   JS_FreeRuntime(ts->rt);
+}
+
+static void cleanup_thread_state(ThreadState *ts) {
+  // Don't add logs to this function as it may be called from a signal
+  // handler.
+
+  // We're about to exit, so we don't need to check for errors.
+  if (ts->streamfd != -1)
+    close(ts->streamfd);
+  unlink(ts->unix_socket_filename);
+
+  cleanup_js_runtime(ts);
 
   // This could fail, but no useful error handling to be done (we're exiting
   // anyway).
@@ -452,7 +476,7 @@ static int write_all(int fd, const char *buf, size_t len) {
 static void write_to_stream(ThreadState *ts, const char *buf, size_t len) {
   if (0 != write_all(ts->streamfd, buf, len)) {
     ts->stream_io_err = -1;
-    release_logf("Error writing newline to socket: %s\n", strerror(errno));
+    release_logf("Error writing to socket: %s\n", strerror(errno));
     return;
   }
 }
@@ -597,6 +621,49 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
   JS_FreeValue(ts->ctx, stringified);
   JS_FreeValue(ts->ctx, stringified);
 
+  if (0 == (ts->memory_check_count =
+                ((ts->memory_check_count + 1) % MEMORY_CHECK_INTERVAL))) {
+    JSMemoryUsage mu;
+    JS_ComputeMemoryUsage(ts->rt, &mu);
+    debug_logf("Memory usage memory_used_size=%" PRId64 "\n",
+               mu.memory_used_size);
+    if (mu.memory_used_size > ts->last_memory_usage) {
+      ts->last_memory_usage = mu.memory_used_size;
+      ts->memory_increase_count++;
+      if (ts->memory_increase_count > MEMORY_INCREASE_MAX_COUNT) {
+        release_logf("Memory usage has increased over the last %i commands. "
+                     "Resetting interpreter state.\n",
+                     MEMORY_INCREASE_MAX_COUNT * MEMORY_CHECK_INTERVAL);
+        // We don't really want to free the cached functions, but their
+        // allocations are associated with a JS context, so we have to.
+        mutex_lock(&g_cached_functions_mutex);
+        for (size_t i = 0;
+             i < sizeof(g_cached_functions) / sizeof(g_cached_functions[0]);
+             ++i) {
+          if (g_cached_functions[i].bytecode &&
+              ts->ctx == g_cached_functions[i].ctx) {
+            debug_logf("Freeing cached function %zu\n", i);
+            js_free(g_cached_functions[i].ctx,
+                    (uint8_t *)g_cached_functions[i].bytecode);
+            memset(&g_cached_functions[i], 0, sizeof(g_cached_functions[0]));
+          }
+        }
+        mutex_unlock(&g_cached_functions_mutex);
+        cleanup_js_runtime(ts);
+        debug_log("Runtime cleaned up.\n");
+        if (0 != init_thread_state(ts, NULL)) {
+          release_log(
+              "Error re-initializing JS runtime after memory increase\n");
+          mutex_unlock(&ts->doing_js_stuff_mutex);
+          return -1;
+        }
+        debug_log("Thread state reinitialized.\n");
+      }
+    } else {
+      ts->memory_increase_count = 0;
+    }
+  }
+
   mutex_unlock(&ts->doing_js_stuff_mutex);
 
   return ts->stream_io_err;
@@ -623,6 +690,19 @@ static int line_handler(const char *line, size_t len, void *data) {
     atomic_store(&g_interrupted_or_error, true);
     write_const_to_stream(ts, "quit\n");
     return EXIT_ON_QUIT_COMMAND;
+  }
+  if (line[0] == '?' && line[1] == 's' && line[2] == 'e' && line[3] == 'p' &&
+      line[4] == '=' && line[5] && line[6] && line[7] == '\0') {
+    uint8_t d1 = hex_digit(line[5]);
+    uint8_t d2 = hex_digit(line[6]);
+    MSG_SEP_CHAR = (char)(d1 << 4 | d2);
+    debug_logf("Setting message separator to '%c'\n", MSG_SEP_CHAR);
+    write_const_to_stream(ts, "sep set\n");
+    return 0;
+  }
+  if (line[0] == '?') {
+    write_const_to_stream(ts, "bad command\n");
+    return 0;
   }
 
   switch (ts->line_n) {
@@ -671,13 +751,13 @@ static const uint8_t *load_module_bytecode(const char *filename,
     close(module_bytecode_fd);
     return NULL;
   }
-  if (module_bytecode_stat.st_size < ED25519_PUBLIC_KEY_SIZE + 1) {
+  if (module_bytecode_stat.st_size < ED25519_SIGNATURE_SIZE + 1) {
     release_logf("Module bytecode file is only %zu bytes. Too small!",
                  module_bytecode_stat.st_size);
     close(module_bytecode_fd);
     return NULL;
   }
-  *out_size = module_bytecode_stat.st_size - ED25519_PUBLIC_KEY_SIZE;
+  *out_size = module_bytecode_stat.st_size - ED25519_SIGNATURE_SIZE;
   if (0 != close(module_bytecode_fd)) {
     release_logf("Error closing bytecode file %s: %s\n", filename,
                  strerror(errno));

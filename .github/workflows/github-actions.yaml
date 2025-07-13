@@ -64,6 +64,9 @@ jobs:
       - name: Run js_server fuzz tests
         run: ./ci.sh run_js_server_fuzz_tests
 
+      - name: Run js_server E2E tests
+        run: ./ci.sh run_js_server_e2e_tests
+
       - name: Package binaries
         run: ./ci.sh package_binaries
 

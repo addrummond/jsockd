@@ -115,7 +115,13 @@ case $1 in
         ;;
 
     run_js_server_fuzz_tests)
-        ./js_server/tests/fuzz/fuzz.sh
+        for test_script in js_server/tests/e2e/*.sh; do
+            $test_script
+        done
+        ;;
+
+    run_js_server_e2e_tests)
+        ./js_server/tests/e2e/memory_increase_detection.sh
         ;;
 
     package_binaries)

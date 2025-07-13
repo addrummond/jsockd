@@ -46,7 +46,7 @@ openssl pkey -inform pem -pubout -outform der -in private_signing_key.pem | tail
 The JSockD release bundle includes a `compile_es6_module` command that compiles an ES6 module to a QuickJS bytecode file. This command is used to prepare the module that the server will execute. For example:
 
 ```sh
-compile_es6_module private_signing_key.pem my_module.mjs my_module.quickjs_bytecode
+compile_es6_module my_module.mjs my_module.quickjs_bytecode private_signing_key.pem
 ```
 
 **On MacOS you can use `JSOCKD_OPENSSL=/opt/bin/homebrew compile_es6_module ...` to override the default openssl when running the bytecode compiler.**

@@ -18,12 +18,10 @@ awk 'BEGIN{srand(); for (nl = 0; nl < ARGV[1]; nl++) { n_bytes = int(rand()*100)
 xxd -r -p > /tmp/jsockd_fuzz_test_random_data
 printf "\n?reset\nx\nx => x\n\"foo\"\n?quit\n" >> /tmp/jsockd_fuzz_test_random_data
 
-openssl genpkey -algorithm ed25519 -out private_signing_key.pem
-openssl pkey -inform pem -pubout -outform der -in private_signing_key.pem | tail -c 32 | xxd -p | tr -d '\n' > public_signing_key
-export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=$(cat public_signing_key)
+export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=dangerously_allow_invalid_signatures
 
 # Compile the example module to QuickJS bytecode.
-./tools-bin/compile_es6_module private_signing_key.pem example_module.mjs /tmp/example_module.qjsb
+./tools-bin/compile_es6_module example_module.mjs /tmp/example_module.qjsb
 
 cd js_server
 
