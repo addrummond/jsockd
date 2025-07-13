@@ -82,14 +82,13 @@ static const int LINE_BUF_BYTES = 1024 * 1024 * 1024;
 typedef struct {
   const uint8_t *bytecode;
   size_t bytecode_size;
-  JSContext *ctx;
 } cached_function_t;
 
 static HashCacheBucket g_cached_function_buckets[CACHED_FUNCTIONS_N_BUCKETS];
 static cached_function_t g_cached_functions[CACHED_FUNCTIONS_N_BUCKETS];
 
-static void add_cached_function(JSContext *ctx, uint64_t uid,
-                                const uint8_t *bytecode, size_t bytecode_size) {
+static void add_cached_function(uint64_t uid, const uint8_t *bytecode,
+                                size_t bytecode_size) {
   assert(0 != JS_TAG_FUNCTION_BYTECODE);
   assert(bytecode);
 
@@ -99,19 +98,17 @@ static void add_cached_function(JSContext *ctx, uint64_t uid,
                                          CACHED_FUNCTION_HASH_BITS, uid);
   if (b->data) {
     debug_log("Hash collision: freeing existing bytecode\n");
-    js_free(ctx, (void *)((cached_function_t *)(b->data))->bytecode);
+    free((void *)((cached_function_t *)(b->data))->bytecode);
   }
   size_t bi = b - g_cached_function_buckets;
   b->data = g_cached_functions + bi;
   g_cached_functions[bi].bytecode = bytecode;
   g_cached_functions[bi].bytecode_size = bytecode_size;
-  g_cached_functions[bi].ctx = ctx;
 
   mutex_unlock(&g_cached_functions_mutex);
 }
 
-static const uint8_t *get_cached_function(JSContext *ctx, uint64_t uid,
-                                          size_t *psize) {
+static const uint8_t *get_cached_function(uint64_t uid, size_t *psize) {
   mutex_lock(&g_cached_functions_mutex);
   cached_function_t *cf = get_hash_cache_entry(g_cached_function_buckets,
                                                CACHED_FUNCTION_HASH_BITS, uid);
@@ -330,7 +327,15 @@ static const uint8_t *compile_buf(JSContext *ctx, const char *buf, int buf_len,
       JS_WriteObject(ctx, bytecode_size, val, JS_WRITE_OBJ_BYTECODE);
   JS_FreeValue(ctx, val);
   debug_logf("Compiled bytecode size: %zu\n", *bytecode_size);
-  return (const uint8_t *)bytecode;
+
+  // We want to preserve the bytecode across runtime contexts, but js_free
+  // requires a context for some refcounting. So copy this over to some malloc'd
+  // memory.
+  const uint8_t *malloc_bytecode = malloc(*bytecode_size);
+  memcpy((void *)malloc_bytecode, bytecode, *bytecode_size);
+  js_free(ctx, (void *)bytecode);
+
+  return (const uint8_t *)malloc_bytecode;
 }
 
 static JSValue func_from_bytecode(JSContext *ctx, const uint8_t *bytecode,
@@ -501,7 +506,7 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
 static int handle_line_2_query(ThreadState *ts, const char *line, int len) {
   const uint64_t uid = get_hash_cache_uid(line, len);
   size_t bytecode_size = 0;
-  const uint8_t *bytecode = get_cached_function(ts->ctx, uid, &bytecode_size);
+  const uint8_t *bytecode = get_cached_function(uid, &bytecode_size);
 
   if (bytecode) {
     debug_log("Found cached function\n");
@@ -516,7 +521,7 @@ static int handle_line_2_query(ThreadState *ts, const char *line, int len) {
     if (!bytecode) {
       ts->compiled_query = JS_EXCEPTION;
     } else {
-      add_cached_function(ts->ctx, uid, bytecode, bytecode_size);
+      add_cached_function(uid, bytecode, bytecode_size);
       ts->compiled_query = func_from_bytecode(ts->ctx, bytecode, bytecode_size);
     }
   }
@@ -634,21 +639,6 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
         release_logf("Memory usage has increased over the last %i commands. "
                      "Resetting interpreter state.\n",
                      MEMORY_INCREASE_MAX_COUNT * MEMORY_CHECK_INTERVAL);
-        // We don't really want to free the cached functions, but their
-        // allocations are associated with a JS context, so we have to.
-        mutex_lock(&g_cached_functions_mutex);
-        for (size_t i = 0;
-             i < sizeof(g_cached_functions) / sizeof(g_cached_functions[0]);
-             ++i) {
-          if (g_cached_functions[i].bytecode &&
-              ts->ctx == g_cached_functions[i].ctx) {
-            debug_logf("Freeing cached function %zu\n", i);
-            js_free(g_cached_functions[i].ctx,
-                    (uint8_t *)g_cached_functions[i].bytecode);
-            memset(&g_cached_functions[i], 0, sizeof(g_cached_functions[0]));
-          }
-        }
-        mutex_unlock(&g_cached_functions_mutex);
         cleanup_js_runtime(ts);
         debug_log("Runtime cleaned up.\n");
         if (0 != init_thread_state(ts, NULL)) {
@@ -802,8 +792,7 @@ static void global_cleanup(void) {
   for (size_t i = 0;
        i < sizeof(g_cached_functions) / sizeof(g_cached_functions[0]); ++i) {
     if (g_cached_functions[i].bytecode) {
-      js_free(g_cached_functions[i].ctx,
-              (uint8_t *)g_cached_functions[i].bytecode);
+      free((void *)g_cached_functions[i].bytecode);
     }
   }
   mutex_unlock(&g_cached_functions_mutex);
