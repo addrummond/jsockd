@@ -1,6 +1,6 @@
 #include "hex.h"
 
-uint8_t hex_digit(uint8_t c) {
+static uint8_t hex_digit(uint8_t c) {
   if (c >= '0' && c <= '9')
     return c - '0';
   if (c >= 'A' && c <= 'F')
