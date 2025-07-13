@@ -115,7 +115,7 @@ case $1 in
     run_js_server_valgrind_tests_with_non_newline_sep)
         (
             set -e
-            export JSOCKD_JS_SERVER_SOCKET_SEP_CHAR="|"
+            export JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX="7C" # '|'
             ./js_server/tests/valgrind/run.sh
         )
         ;;

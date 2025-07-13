@@ -683,20 +683,6 @@ static int line_handler(const char *line, size_t len, void *data) {
     write_const_to_stream(ts, "quit\n");
     return EXIT_ON_QUIT_COMMAND;
   }
-  if (line[0] == '?' && line[1] == 's' && line[2] == 'e' && line[3] == 'p' &&
-      line[4] == '=' && line[5] && line[6] && line[7] == '\0') {
-    uint8_t d1 = hex_digit(line[5]);
-    uint8_t d2 = hex_digit(line[6]);
-    uint8_t msg_sep_char = (d1 << 4) | d2;
-    if (strchr(TRUNCATION_APPEND, msg_sep_char)) {
-      write_const_to_stream(ts, "bad sep\n");
-      return 0;
-    }
-    MSG_SEP_CHAR = msg_sep_char;
-    debug_logf("Setting message separator to '%c'\n", MSG_SEP_CHAR);
-    write_const_to_stream(ts, "sep set\n");
-    return 0;
-  }
   if (line[0] == '?') {
     write_const_to_stream(ts, "bad command\n");
     return 0;
@@ -856,15 +842,18 @@ int main(int argc, char *argv[]) {
   mutex_init(&g_log_mutex);
   mutex_init(&g_cached_functions_mutex);
 
-  const char *sep_char_var = getenv("JSOCKD_JS_SERVER_SOCKET_SEP_CHAR");
-  if (sep_char_var && sep_char_var[0] != '\0')
-    MSG_SEP_CHAR = sep_char_var[0];
+  const char *sep_char_var = getenv("JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX");
+  if (sep_char_var && strlen(sep_char_var) == 2) {
+    MSG_SEP_CHAR =
+        (hex_digit(sep_char_var[0]) << 4) | hex_digit(sep_char_var[1]);
+  }
   if (strchr(TRUNCATION_APPEND, MSG_SEP_CHAR)) {
     release_logf(
-        "Error: message separator character '%c' is in the truncation append "
-        "set '%s'. Please set JSOCKD_JS_SERVER_SOCKET_SEP_CHAR to a "
+        "Error: message separator character '%c' (= 0x%X) is in the "
+        "truncation append "
+        "set '%s'. Please set JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX to a "
         "different character.\n",
-        MSG_SEP_CHAR, TRUNCATION_APPEND);
+        MSG_SEP_CHAR, MSG_SEP_CHAR, TRUNCATION_APPEND);
     return 1;
   }
 
