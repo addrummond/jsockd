@@ -40,6 +40,7 @@ static const uint8_t *g_module_bytecode;
 static size_t g_module_bytecode_size;
 
 static char MSG_SEP_CHAR = '\n'; // the default (can be overriden by env var)
+static const char *TRUNCATION_APPEND = "!;";
 static const uint64_t MAX_COMMAND_RUNTIME_US = 250000; // 0.25 seconds
 #define MESSAGE_UUID_MAX_BYTES 32
 
@@ -270,8 +271,9 @@ static void listen_on_unix_socket(const char *unix_socket_filename,
     } break;
     }
 
-    int exit_value = line_buf_read(&line_buf, MSG_SEP_CHAR, lb_read,
-                                   &ts->streamfd, line_handler, data, "!;");
+    int exit_value =
+        line_buf_read(&line_buf, MSG_SEP_CHAR, lb_read, &ts->streamfd,
+                      line_handler, data, TRUNCATION_APPEND);
     if (exit_value == EXIT_ON_QUIT_COMMAND)
       ; // "?quit"
     else if (exit_value < 0)
@@ -685,7 +687,12 @@ static int line_handler(const char *line, size_t len, void *data) {
       line[4] == '=' && line[5] && line[6] && line[7] == '\0') {
     uint8_t d1 = hex_digit(line[5]);
     uint8_t d2 = hex_digit(line[6]);
-    MSG_SEP_CHAR = (char)(d1 << 4 | d2);
+    uint8_t msg_sep_char = (d1 << 4) | d2;
+    if (strchr(TRUNCATION_APPEND, msg_sep_char)) {
+      write_const_to_stream(ts, "bad sep\n");
+      return 0;
+    }
+    MSG_SEP_CHAR = msg_sep_char;
     debug_logf("Setting message separator to '%c'\n", MSG_SEP_CHAR);
     write_const_to_stream(ts, "sep set\n");
     return 0;
@@ -852,6 +859,14 @@ int main(int argc, char *argv[]) {
   const char *sep_char_var = getenv("JSOCKD_JS_SERVER_SOCKET_SEP_CHAR");
   if (sep_char_var && sep_char_var[0] != '\0')
     MSG_SEP_CHAR = sep_char_var[0];
+  if (strchr(TRUNCATION_APPEND, MSG_SEP_CHAR)) {
+    release_logf(
+        "Error: message separator character '%c' is in the truncation append "
+        "set '%s'. Please set JSOCKD_JS_SERVER_SOCKET_SEP_CHAR to a "
+        "different character.\n",
+        MSG_SEP_CHAR, TRUNCATION_APPEND);
+    return 1;
+  }
 
   if (argc < 3) {
     release_logf("Usage: %s <es6_module_bytecode_file> <socket_path> "
