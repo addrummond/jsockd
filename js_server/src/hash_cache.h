@@ -7,7 +7,6 @@
 
 typedef struct {
   uint64_t uid;
-  void *data;
 } HashCacheBucket;
 
 #define HASH_CACHE_BUCKET_ARRAY_SIZE_FROM_HASH_BITS(hash_bits)                 \
@@ -16,6 +15,7 @@ typedef struct {
 uint64_t get_hash_cache_uid(const void *data, size_t size);
 HashCacheBucket *add_to_hash_cache(HashCacheBucket buckets[], int n_bits,
                                    uint64_t uid);
-void *get_hash_cache_entry(HashCacheBucket buckets[], int n_bits, uint64_t uid);
+HashCacheBucket *get_hash_cache_entry(HashCacheBucket buckets[], int n_bits,
+                                      uint64_t uid);
 
 #endif

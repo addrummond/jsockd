@@ -43,8 +43,8 @@ HashCacheBucket *add_to_hash_cache(HashCacheBucket buckets[], int n_bits,
   return bucket;
 }
 
-void *get_hash_cache_entry(HashCacheBucket buckets[], int n_bits,
-                           uint64_t uid) {
+HashCacheBucket *get_hash_cache_entry(HashCacheBucket buckets[], int n_bits,
+                                      uint64_t uid) {
   size_t bucket = get_cache_bucket(uid, n_bits);
 
   size_t n_buckets = HASH_CACHE_BUCKET_ARRAY_SIZE_FROM_HASH_BITS(n_bits);
@@ -53,7 +53,7 @@ void *get_hash_cache_entry(HashCacheBucket buckets[], int n_bits,
   for (i = bucket; i < bucket + bucket_look_forward; ++i) {
     size_t j = i % n_buckets; // wrap around if we reach the end
     if (buckets[j].uid == uid)
-      return buckets[j].data;
+      return &buckets[j];
   }
 
   return NULL;

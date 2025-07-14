@@ -97,12 +97,12 @@ static void add_cached_function(uint64_t uid, const uint8_t *bytecode,
 
   HashCacheBucket *b = add_to_hash_cache(g_cached_function_buckets,
                                          CACHED_FUNCTION_HASH_BITS, uid);
-  if (b->data) {
+  if (b->uid) {
     debug_log("Hash collision: freeing existing bytecode\n");
-    free((void *)((cached_function_t *)(b->data))->bytecode);
+    size_t bi = b - g_cached_function_buckets;
+    free((void *)(g_cached_functions[bi].bytecode));
   }
   size_t bi = b - g_cached_function_buckets;
-  b->data = g_cached_functions + bi;
   g_cached_functions[bi].bytecode = bytecode;
   g_cached_functions[bi].bytecode_size = bytecode_size;
 
@@ -111,12 +111,13 @@ static void add_cached_function(uint64_t uid, const uint8_t *bytecode,
 
 static const uint8_t *get_cached_function(uint64_t uid, size_t *psize) {
   mutex_lock(&g_cached_functions_mutex);
-  cached_function_t *cf = get_hash_cache_entry(g_cached_function_buckets,
-                                               CACHED_FUNCTION_HASH_BITS, uid);
+  HashCacheBucket *b = get_hash_cache_entry(g_cached_function_buckets,
+                                            CACHED_FUNCTION_HASH_BITS, uid);
   mutex_unlock(&g_cached_functions_mutex);
-  if (cf) {
-    *psize = cf->bytecode_size;
-    return cf->bytecode;
+  if (b) {
+    size_t bi = b - g_cached_function_buckets;
+    *psize = g_cached_functions[bi].bytecode_size;
+    return g_cached_functions[bi].bytecode;
   }
   return NULL;
 }

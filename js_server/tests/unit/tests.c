@@ -43,10 +43,9 @@ static void TEST_hash_cache_add_and_retrieve(void) {
   const char *data = "test data";
 
   HashCacheBucket *bucket = add_to_hash_cache(buckets, 3, uid);
-  bucket->data = (void *)data;
 
-  void *retrieved_data = get_hash_cache_entry(buckets, 3, uid);
-  TEST_ASSERT(retrieved_data == (void *)data);
+  void *retrieved_bucket = get_hash_cache_entry(buckets, 3, uid);
+  TEST_ASSERT(retrieved_bucket == bucket);
 }
 
 static void TEST_hash_cache_handles_duplicate_hash_values(void) {
@@ -58,16 +57,14 @@ static void TEST_hash_cache_handles_duplicate_hash_values(void) {
   const char *data2 = "test data 2";
 
   HashCacheBucket *bucket1 = add_to_hash_cache(buckets, 3, uid1);
-  bucket1->data = (void *)data1;
 
   HashCacheBucket *bucket2 = add_to_hash_cache(buckets, 3, uid2);
-  bucket2->data = (void *)data2;
 
-  void *retrieved_data1 = get_hash_cache_entry(buckets, 3, uid1);
-  TEST_ASSERT(retrieved_data1 == (void *)data1);
+  HashCacheBucket *retrieved_bucket1 = get_hash_cache_entry(buckets, 3, uid1);
+  TEST_ASSERT(retrieved_bucket1 == bucket1);
 
-  void *retrieved_data2 = get_hash_cache_entry(buckets, 3, uid2);
-  TEST_ASSERT(retrieved_data2 == (void *)data2);
+  HashCacheBucket *retrieved_bucket2 = get_hash_cache_entry(buckets, 3, uid2);
+  TEST_ASSERT(retrieved_bucket2 == bucket2);
 }
 
 static void TEST_hash_cash_values_with_same_bucket_id_eventually_booted(void) {
@@ -76,7 +73,6 @@ static void TEST_hash_cash_values_with_same_bucket_id_eventually_booted(void) {
 
   for (uint64_t i = 0; i < 8; ++i) {
     HashCacheBucket *b = add_to_hash_cache(buckets, 3, (i << 48) | 1);
-    b->data = &data[i];
   }
 
   int retrieved_count = 0;
@@ -102,8 +98,7 @@ static void TEST_hash_cash_size_2_bucket_array(void) {
   int data;
   HashCacheBucket buckets[2] = {0};
   HashCacheBucket *b = add_to_hash_cache(buckets, 1, 123);
-  b->data = &data;
-  TEST_ASSERT(&data == get_hash_cache_entry(buckets, 1, 123));
+  TEST_ASSERT(b == get_hash_cache_entry(buckets, 1, 123));
 }
 
 static void TEST_hash_cash_fuzz(void) {
@@ -120,7 +115,6 @@ static void TEST_hash_cash_fuzz(void) {
     case 0: {
       // Add a new entry
       HashCacheBucket *b = add_to_hash_cache(buckets, 6, next_uid++);
-      b->data = &data;
     } break;
     case 1:
       if (next_uid != 0) {
