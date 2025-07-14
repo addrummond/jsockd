@@ -2,6 +2,8 @@
 
 set -e
 
+QUICKJS_COMMIT=1fdc768fdc8571300755cdd3e4654ce99c0255ce
+
 # The qjsc tool in Bellard's QuickJS repo doesn't support binary output.
 # This is because QuickJS doesn't do bytecode verification, so it is unsafe to
 # load bytecode from untrusted sources. To get around this, we add a signature
@@ -55,7 +57,7 @@ mkdir -p .scratch
 cd .scratch
 git clone https://github.com/bellard/quickjs
 cd quickjs
-git checkout bb986e55ff563ea9791d1a98450c3ca57e88366c
+git checkout $QUICKJS_COMMIT
 git apply ../../quickjs-all-build-patch.patch
 
 # Unicode tables fetch script uses wget, which is not available on all systems.
