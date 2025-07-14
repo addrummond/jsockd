@@ -192,8 +192,7 @@ static void listen_on_unix_socket(const char *unix_socket_filename,
     goto error;
   }
 
-  struct sockaddr_un addr;
-  memset(&addr, 0, sizeof(addr));
+  struct sockaddr_un addr = {0};
   addr.sun_family = AF_UNIX;
   if (sizeof(addr.sun_path) / sizeof(addr.sun_path[0]) <
       strlen(unix_socket_filename) + 1 /* zeroterm */) {
