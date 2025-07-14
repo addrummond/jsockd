@@ -5,6 +5,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+// We don't actually store anything in the buckets. The idea is for the user
+// to define another array the same size as the bucket array holding the data
+// corresponding to each bucket. That way we don't need to do any void* casting.
 typedef struct {
   uint64_t uid;
 } HashCacheBucket;
