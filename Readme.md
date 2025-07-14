@@ -1,7 +1,7 @@
 # JSockD — Lightweight Multi-Threaded SSR
 
 JSockD provides a lightweight multi-threaded server for executing parameterized JavaScript commands.
-The server listens on one or more UNIX domain sockets. It's intended for use a subprocess of a web server.
+The server listens on one or more UNIX domain sockets. It's intended for use as a subprocess of a web server.
 
 - Uses the lightweight [QuickJS](https://bellard.org/quickjs/) JavaScript engine
 - Loads precompiled bytecode for fast startup and execution
