@@ -40,7 +40,6 @@ static void TEST_wait_group_inc_and_wait_basic_use_case(void) {
 static void TEST_hash_cache_add_and_retrieve(void) {
   HashCacheBucket buckets[8] = {0};
   uint64_t uid = 123456789;
-  const char *data = "test data";
 
   HashCacheBucket *bucket = add_to_hash_cache(buckets, 3, uid);
 
@@ -53,8 +52,6 @@ static void TEST_hash_cache_handles_duplicate_hash_values(void) {
   uint64_t uid1 = 0x0000000000000001;
   uint64_t uid2 =
       0xFF00000000000001; // lower bits identical, so shares same bucket
-  const char *data1 = "test data 1";
-  const char *data2 = "test data 2";
 
   HashCacheBucket *bucket1 = add_to_hash_cache(buckets, 3, uid1);
 
@@ -69,10 +66,9 @@ static void TEST_hash_cache_handles_duplicate_hash_values(void) {
 
 static void TEST_hash_cash_values_with_same_bucket_id_eventually_booted(void) {
   HashCacheBucket buckets[8] = {0};
-  int data[8];
 
   for (uint64_t i = 0; i < 8; ++i) {
-    HashCacheBucket *b = add_to_hash_cache(buckets, 3, (i << 48) | 1);
+    add_to_hash_cache(buckets, 3, (i << 48) | 1);
   }
 
   int retrieved_count = 0;
@@ -95,7 +91,6 @@ static void TEST_hash_cash_empty_bucket_array(void) {
 }
 
 static void TEST_hash_cash_size_2_bucket_array(void) {
-  int data;
   HashCacheBucket buckets[2] = {0};
   HashCacheBucket *b = add_to_hash_cache(buckets, 1, 123);
   TEST_ASSERT(b == get_hash_cache_entry(buckets, 1, 123));
@@ -105,7 +100,6 @@ static void TEST_hash_cash_fuzz(void) {
   HashCacheBucket buckets[64] = {0};
   pcg32_random_t rng = {.inc = 0x12345678, .state = 0x87654321};
   uint64_t next_uid = 0;
-  int data;
 
   // Adding at most 64 entries with sequential UIDs to a 64 bucket hash cache,
   // so we know that no old entries will be booted.
@@ -114,7 +108,7 @@ static void TEST_hash_cash_fuzz(void) {
     switch (r % 3) {
     case 0: {
       // Add a new entry
-      HashCacheBucket *b = add_to_hash_cache(buckets, 6, next_uid++);
+      add_to_hash_cache(buckets, 6, next_uid++);
     } break;
     case 1:
       if (next_uid != 0) {
