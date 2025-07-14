@@ -34,7 +34,8 @@ defmodule JSockDClient.JsServerManager do
         line: 80,
         args: [bytecode_module_file | unix_socket_paths],
         env: [
-          {~c"JSOCKD_BYTECODE_MODULE_PUBLIC_KEY", String.to_charlist(bytecode_module_public_key)}
+          {~c"JSOCKD_BYTECODE_MODULE_PUBLIC_KEY", String.to_charlist(bytecode_module_public_key)},
+          {~c"JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX", String.to_charlist("00")}
         ]
       ])
 
@@ -42,6 +43,7 @@ defmodule JSockDClient.JsServerManager do
 
     {:ok,
      %{
+       opts: opts,
        js_server_exec: js_server_exec,
        port_id: port_id,
        unix_socket_paths: unix_socket_paths,
@@ -141,7 +143,7 @@ defmodule JSockDClient.JsServerManager do
   @impl true
   def handle_info(:hup, state) do
     Port.close(state.port_id)
-    {:ok, state} = init(%{js_server_exec: state.js_server_exec})
+    {:ok, state} = init(state.opts)
     {:noreply, nil, state}
   end
 
@@ -165,12 +167,12 @@ defmodule JSockDClient.JsServerManager do
             function = String.trim(function)
             argument = String.trim(argument)
 
-            if String.contains?(function, "\n") or
-                 String.contains?(argument, "\n") do
-              raise "Function or argument contains newline character: #{inspect(function)}, #{inspect(argument)}"
+            if String.contains?(function, "\x00") or
+                 String.contains?(argument, "\x00") do
+              raise "Function or argument contains null byte: #{inspect(function)}, #{inspect(argument)}"
             end
 
-            :ok = :socket.send(sock, [message_uuid, "\n", function, "\n", argument, "\n"])
+            :ok = :socket.send(sock, [message_uuid, "\x00", function, "\x00", argument, "\x00"])
 
             recv_loop = fn recv_loop, acc ->
               case :socket.recv(sock, 0) do

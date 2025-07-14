@@ -845,7 +845,7 @@ int main(int argc, char *argv[]) {
   const char *sep_char_var = getenv("JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX");
   if (sep_char_var && strlen(sep_char_var) == 2)
     hex_decode((unsigned char *)&MSG_SEP_CHAR, 1, sep_char_var);
-  if (strchr(TRUNCATION_APPEND, MSG_SEP_CHAR)) {
+  if (MSG_SEP_CHAR != '\0' && strchr(TRUNCATION_APPEND, MSG_SEP_CHAR)) {
     release_logf(
         "Error: message separator character '%c' (= 0x%X) is in the "
         "truncation append "

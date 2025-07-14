@@ -10,7 +10,7 @@ int line_buf_read(LineBuf *b, char sep_char,
                   int (*line_handler)(const char *line, size_t line_len,
                                       void *data),
                   void *line_handler_data, const char *truncation_append) {
-  assert(strchr(truncation_append, sep_char) == NULL);
+  assert(sep_char == '\0' || !strchr(truncation_append, sep_char));
   assert(strlen(truncation_append) <= b->size - 1);
   assert((long long int)b->size >= (long long int)b->start);
 
