@@ -18,8 +18,9 @@ uint64_t get_hash_cache_uid(const void *data, size_t len) {
                                       h = h << 31 | h >> 33;
   while (p < e)
     h = h * r ^ *(p++);
-  return (h = h * r + len, h ^= h >> 31, h *= r, h ^= h >> 31, h *= r,
-          h ^= h >> 31, h *= r, h);
+  r = (h = h * r + len, h ^= h >> 31, h *= r, h ^= h >> 31, h *= r,
+       h ^= h >> 31, h *= r, h);
+  return r == 0 ? 1 : r; // avoid zero hash
 }
 
 HashCacheBucket *add_to_hash_cache(HashCacheBucket buckets[], int n_bits,
