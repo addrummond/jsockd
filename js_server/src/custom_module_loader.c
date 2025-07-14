@@ -41,7 +41,6 @@ JSValue load_binary_module(JSContext *ctx, const uint8_t *buf, size_t buf_len) {
 
 JSModuleDef *jsockd_js_module_loader(JSContext *ctx, const char *module_name,
                                      void *opaque, JSValueConst attributes) {
-  // 😡😡 YOU CANNOT IMPORT ANYTHING!! 😡😡
-  JS_ThrowReferenceError(ctx, "Fool! You have tried to import a module.");
+  JS_ThrowReferenceError(ctx, "JSockD doesn't allow module imports");
   return NULL;
 }
