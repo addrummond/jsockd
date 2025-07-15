@@ -70,31 +70,39 @@ When the server is ready to start accepting commands on the specified UNIX domai
 
 ## 4. The socket protocol
 
-The server listens for commands on the specified UNIX domain sockets. Each command consists of three lines terminated with '\n':
+The server listens for commands on the specified UNIX domain sockets. Each command consists of three fields separated
+by a separator byte:
 
 ```
 <unique command ID>
+<separator byte>
 (module, param) => { ...}
+<separator byte>
 <JSON-encoded parameter>
+<separator byte>
 ```
+
+The separator byte is `\n` by default. This default can be overriden by setting the `JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX`
+environment variable to a two-digit hexadecimal value. A useful value is `00`, as the null byte cannot be present in valid JSON or JavaScript
+(assuming UTF-8 encoding).
 
 A unique command ID is any sequence of 32 or fewer bytes that does not contain a space character.
 
-The second line, the command, is a JavaScript expression evaluating to a function. The function is called with two arguments.
+The second field, the command, is a JavaScript expression evaluating to a function. The function is called with two arguments.
 The first is the module that was loaded from the bytecode file; the second is the parameter passed on the third line.
 
-The third line is the JSON-encoded parameter value.
+The third field is the JSON-encoded parameter value.
 
-The server responds with a single line consisting of the command ID followed by a space and then the JSON-encoded result of executing the command.
+The server responds with a single line (terminated with `\n`) consisting of the command ID followed by a space and then the JSON-encoded result of executing the command.
 
 As the protocol is synchronous, command IDs are not strictly necessary. However, it is recommended to check that responses have the expected
 command ID as a means of ensuring that the client code is working correctly.
 
-The client may send either of the following lines to the server at any point:
+The client may send either of the following commands to the server at any point:
 
 ```
-?reset
-?quit
+?reset<separator byte>
+?quit<separator byte>
 ```
 
 The `?reset` command resets the server's command parser to its initial state (so that it expects the next line to be a unique command ID).
