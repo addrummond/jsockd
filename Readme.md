@@ -75,11 +75,11 @@ by a separator byte:
 
 ```
 <unique command ID>
-<separator byte>
+----- separator byte -----
 (module, param) => { ...}
-<separator byte>
+----- separator byte -----
 <JSON-encoded parameter>
-<separator byte>
+----- separator byte -----
 ```
 
 The separator byte is `\n` by default. This default can be overriden by setting the `JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX`
@@ -98,11 +98,11 @@ The server responds with a single line (terminated with `\n`) consisting of the 
 As the protocol is synchronous, command IDs are not strictly necessary. However, it is recommended to check that responses have the expected
 command ID as a means of ensuring that the client code is working correctly.
 
-The client may send either of the following commands to the server at any point:
+The client may send either of the following commands at any point, terminated by the separator byte:
 
 ```
-?reset<separator byte>
-?quit<separator byte>
+?reset
+?quit
 ```
 
 The `?reset` command resets the server's command parser to its initial state (so that it expects the next field to be a unique command ID).
