@@ -12,8 +12,6 @@ defmodule JSockDClient.Application do
     n_threads =
       Application.fetch_env!(:jsockd_client, :n_threads)
 
-    js_server_exec = Application.fetch_env!(:jsockd_client, :js_server_exec)
-
     bytecode_module_file =
       Application.fetch_env!(:jsockd_client, :bytecode_module_file)
 
@@ -24,7 +22,6 @@ defmodule JSockDClient.Application do
       {JSockDClient.JsServerManager,
        %{
          n_threads: n_threads,
-         js_server_exec: js_server_exec,
          bytecode_module_file: bytecode_module_file,
          bytecode_module_public_key: bytecode_module_public_key
        }}

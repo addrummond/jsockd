@@ -24,7 +24,6 @@ defmodule JsockdClient.MixProject do
       mod: {JSockDClient.Application, []},
       env: [
         n_threads: nil,
-        js_server_exec: "",
         bytecode_module_file: "",
         bytecode_module_public_key: ""
       ]

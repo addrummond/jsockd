@@ -10,7 +10,6 @@ defmodule JSockDClient.JsServerManager do
   def init(
         opts = %{
           n_threads: n_threads,
-          js_server_exec: js_server_exec,
           bytecode_module_file: bytecode_module_file,
           bytecode_module_public_key: bytecode_module_public_key
         }
@@ -25,6 +24,9 @@ defmodule JSockDClient.JsServerManager do
         # TODO: in /tmp?
         "/tmp/stardust_stass_quickjs_#{uid}_#{i}.sock"
       end)
+
+    js_server_exec =
+      Path.join([:code.priv_dir(:jsockd_client), "release-artifacts/jsockd/js_server"])
 
     port_id =
       Port.open({:spawn_executable, js_server_exec}, [
@@ -44,7 +46,6 @@ defmodule JSockDClient.JsServerManager do
     {:ok,
      %{
        opts: opts,
-       js_server_exec: js_server_exec,
        port_id: port_id,
        unix_socket_paths: unix_socket_paths,
        unix_sockets_with_threads: [],
