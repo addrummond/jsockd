@@ -42,9 +42,6 @@ defmodule JsockdClient.MixProject do
   defp download_js_server_binary(_) do
     release_url = get_release_url()
 
-    ensure_app!(:inets)
-    ensure_app!(:ssl)
-
     priv_dir = Path.join(__DIR__, "priv")
     File.mkdir_p!(priv_dir)
     release_filename = Path.basename(release_url)
@@ -57,6 +54,9 @@ defmodule JsockdClient.MixProject do
                  "jsockd_js_server_version_tag_#{@jsockd_version}"
                ])
              ) do
+      ensure_app!(:inets)
+      ensure_app!(:ssl)
+
       # https://security.erlef.org/secure_coding_and_deployment_hardening/inets
       # https://github.com/phoenixframework/phoenix/blob/a106791ea9ee94b4f1e9286e45a319794b3838e2/lib/mix/tasks/phx.gen.release.ex#L334
       http_options = [
