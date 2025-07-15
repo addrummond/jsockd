@@ -89,7 +89,7 @@ environment variable to a two-digit hexadecimal value. A useful value is `00`, a
 A unique command ID is any sequence of 32 or fewer bytes that does not contain a space character.
 
 The second field, the command, is a JavaScript expression evaluating to a function. The function is called with two arguments.
-The first is the module that was loaded from the bytecode file; the second is the parameter passed on the third line.
+The first is the module that was loaded from the bytecode file; the second is the parameter passed as the third field.
 
 The third field is the JSON-encoded parameter value.
 
@@ -105,7 +105,7 @@ The client may send either of the following commands to the server at any point:
 ?quit<separator byte>
 ```
 
-The `?reset` command resets the server's command parser to its initial state (so that it expects the next line to be a unique command ID).
+The `?reset` command resets the server's command parser to its initial state (so that it expects the next field to be a unique command ID).
 
 The `?quit` command causes the server to exit immediately (closing all sockets, not just the socket on which the command was sent).
 
