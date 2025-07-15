@@ -20,7 +20,7 @@ defmodule JsockdClient.MixProject do
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      extra_applications: [:logger],
+      extra_applications: [:logger, :inets, :ssl],
       mod: {JSockDClient.Application, []},
       env: [
         n_threads: nil,
@@ -36,6 +36,7 @@ defmodule JsockdClient.MixProject do
     [
       # {:dep_from_hexpm, "~> 0.3.0"}
       # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}
+      {:httpoison, "~> 2.0"}
     ]
   end
 
@@ -47,13 +48,14 @@ defmodule JsockdClient.MixProject do
     release_filename = Path.basename(release_url)
     release_path = Path.join(priv_dir, release_filename)
 
-    unless File.exists?(Path.join([priv_dir, "release_artifacts", "js_server"])) and
+    unless File.exists?(Path.join([priv_dir, "release-artifacts/jsockd/js_server"])) and
              File.exists?(
                Path.join([
                  priv_dir,
                  "jsockd_js_server_version_tag_#{@jsockd_version}"
                ])
              ) do
+      IO.puts("HERE!!")
       ensure_app!(:inets)
       ensure_app!(:ssl)
 
@@ -75,6 +77,8 @@ defmodule JsockdClient.MixProject do
         :httpc.request(:get, {release_url, []}, http_options, body_format: :binary)
 
       File.write!(release_path, body)
+
+      File.rm_rf!(Path.join([priv_dir, "release-artifacts"]))
 
       :ok =
         :erl_tar.extract(String.to_charlist(release_path), [
@@ -105,11 +109,6 @@ defmodule JsockdClient.MixProject do
           "release-artifacts",
           "jsockd"
         ])
-      )
-
-      File.rename!(
-        Path.join([priv_dir, "release-artifacts"]),
-        Path.join([priv_dir, "jsockd-release-artifacts"])
       )
 
       File.touch!(Path.join([priv_dir, "jsockd_js_server_version_tag_#{@jsockd_version}"]))
