@@ -82,7 +82,7 @@ by a separator byte:
 ----- separator byte -----
 ```
 
-The separator byte is `\n` by default. This default can be overriden by setting the `JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX`
+The separator byte is `\n` by default. It can be changed by setting the `JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX`
 environment variable to a two-digit hexadecimal value. A useful value is `00`, as the null byte cannot be present in valid JSON or JavaScript
 (assuming UTF-8 encoding).
 
