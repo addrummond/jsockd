@@ -1,13 +1,13 @@
 defmodule JsockdClient.MixProject do
   use Mix.Project
 
-  @jsockd_version "0.0.8"
+  @jsockd_version "0.0.10"
 
   def project do
     [
       app: :jsockd_client,
       version: "0.1.0",
-      elixir: "~> 1.18",
+      elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       compilers: Mix.compilers() ++ [:download_js_server_binary],
