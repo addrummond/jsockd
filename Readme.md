@@ -28,6 +28,8 @@ Commands are cached in the same sort of way that a SQL server caches queries. Wh
 
 Commands should not mutate global state. Global state may or may not persist across command executions. JSockD reserves the right to reset global state at any time.
 
+JSockD monitors each QuickJS VM to see if memory usage is increasing with the number of commands executed. Once a certain threshold is reached, the VM is restarted. This provides some protection against memory leaks. (The QuickJS VM itself does not leak memory, but the JavaScript code executed by the server may do so if improperly written.)
+
 ## 2. The module compiler
 
 JSockD provides a command-line tool for compiling ES6 modules into QuickJS bytecode files.
