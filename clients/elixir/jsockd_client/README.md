@@ -1,20 +1,18 @@
 # JSockDClient
 
-**TODO: Add description**
+An Elixir client for the JSockD server. This library starts and managers the
+server process. Commands can be sent to the server using `JSockDClient.send_js/2`:
+
+```elixir
+JSockDClient.send_js("(module,params) => 99", %{"param1" => "value1", "param2" => "value2"})
+```
 
 ## Installation
-
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `jsockd_client` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
   [
-    {:jsockd_client, "~> 0.1.0"}
+    {:jsockd_client, git: "git@github.com:addrummond/jsockd.git", sparse: "/clients/elixir/jsockd_client", tag: "v0.0.8"}
   ]
 end
 ```
-
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at <https://hexdocs.pm/jsockd_client>.
