@@ -1,5 +1,5 @@
 # CMake toolchain file used by CI to build the project for ARM64 architecture
-# using GCC.
+# on MacOS using clang.
 
 set(CMAKE_SYSTEM_NAME Darwin)
 set(CMAKE_SYSTEM_PROCESSOR aarch64)
