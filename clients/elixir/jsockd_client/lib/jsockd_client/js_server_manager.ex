@@ -37,7 +37,7 @@ defmodule JSockDClient.JsServerManager do
         args: [bytecode_module_file | unix_socket_paths],
         env: [
           {~c"JSOCKD_BYTECODE_MODULE_PUBLIC_KEY", String.to_charlist(bytecode_module_public_key)},
-          {~c"JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX", String.to_charlist("00")}
+          {~c"JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX", ~c"00"}
         ]
       ])
 
