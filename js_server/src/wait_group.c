@@ -32,8 +32,10 @@ int wait_group_inc(WaitGroup *wg, int n) {
 
     if (0 != (r = pthread_mutex_lock(&wg->mutex)))
       return r;
-    if (wg->wait_called && (0 != (r = pthread_cond_signal(&wg->cond))))
+    if (wg->wait_called && (0 != (r = pthread_cond_signal(&wg->cond)))) {
+      pthread_mutex_unlock(&wg->mutex);
       return r;
+    }
     return pthread_mutex_unlock(&wg->mutex);
   }
   return 0;
