@@ -12,8 +12,7 @@ defmodule JSockDClient.Application do
     n_threads =
       Application.fetch_env!(:jsockd_client, :n_threads)
 
-    bytecode_module_file =
-      Application.fetch_env!(:jsockd_client, :bytecode_module_file)
+    bytecode_module_file = get_bytecode_module_file()
 
     bytecode_module_public_key =
       Application.fetch_env!(:jsockd_client, :bytecode_module_public_key)
@@ -32,5 +31,14 @@ defmodule JSockDClient.Application do
 
   def stop(_state) do
     :ok
+  end
+
+  defp get_bytecode_module_file do
+    :jsockd_client
+    |> Application.fetch_env!(:bytecode_module_file)
+    |> case do
+      {:priv, application, file} -> Path.join([:code.priv_dir(application), file])
+      file -> file
+    end
   end
 end

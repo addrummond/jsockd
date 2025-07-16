@@ -21,3 +21,7 @@ example_app-*.tar
 
 # Temporary files, for example, from tests.
 /tmp/
+
+private_signing_key.pem
+!public_signing_key
+!example_module.qjsbc
