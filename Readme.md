@@ -55,7 +55,7 @@ The value in `public_signing_key` should be passed to `js_server` via the `JSOCK
 
 ## 3. The JSockD server
 
-**JSockD is not intended to run as a standalone server; it is designed to be run as a subprocess of an application that needs to execute JavaScript commands. This section is therefore intended as a reference for developers implementing JSockD client libraries.**
+**JSockD is not intended to run as a standalone server; it is designed to be run as a subprocess of an application that needs to execute JavaScript commands. This section is intended as a reference for developers implementing JSockD client libraries.**
 
 The server is started as follows:
 
@@ -86,7 +86,7 @@ The separator byte is `\n` by default. It can be changed by setting the `JSOCKD_
 environment variable to a two-digit hexadecimal value. A useful value is `00`, as the null byte cannot be present in valid JSON or JavaScript
 (assuming UTF-8 encoding).
 
-A unique command ID is any sequence of 32 or fewer bytes that does not contain a space character.
+A unique command ID is any sequence of 32 or fewer bytes that does not contain a space character or a separator byte.
 
 The second field, the command, is a JavaScript expression evaluating to a function. The function is called with two arguments.
 The first is the module that was loaded from the bytecode file; the second is the parameter passed as the third field.
