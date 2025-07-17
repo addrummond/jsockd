@@ -405,7 +405,7 @@ static int init_thread_state(ThreadState *ts,
       load_binary_module(ctx, g_module_bytecode, g_module_bytecode_size);
   if (JS_IsException(ts->compiled_module)) {
     release_log("Failed to load precompiled module\n");
-    debug_dump_error(ctx);
+    js_std_dump_error(ctx);
     JS_FreeValue(ctx, ts->compiled_module);
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
