@@ -143,6 +143,7 @@ typedef struct {
   int memory_check_count;
   int memory_increase_count;
   int64_t last_memory_usage;
+  char error_msg_buf[8192];
 } ThreadState;
 
 static void js_print_value_debug_write(void *opaque, const char *buf,
@@ -529,10 +530,10 @@ typedef struct {
   char *buf;
   size_t index;
   size_t length;
-} Buf;
+} WBuf;
 
 static void write_to_buf(void *opaque_buf, const char *inp, size_t size) {
-  Buf *buf = (Buf *)opaque_buf;
+  WBuf *buf = (WBuf *)opaque_buf;
   size_t to_write = MIN(buf->length - buf->index, size);
   memcpy(buf->buf + buf->index, inp, to_write);
   buf->index += to_write;
@@ -584,20 +585,19 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
   JS_FreeValue(ts->ctx, ts->compiled_query);
   ts->compiled_query = JS_UNDEFINED;
   if (JS_IsException(ret)) {
-    JS_FreeValue(ts->ctx, parsed_arg);
-    JS_FreeValue(ts->ctx, ret);
     debug_log("Error calling cached function\n");
     mutex_unlock(&ts->doing_js_stuff_mutex);
     write_to_stream(ts, ts->current_uuid, ts->current_uuid_len);
     write_const_to_stream(ts, " exception ");
-    char raw_error_msg_buf[8192];
-    Buf remb = {.buf = raw_error_msg_buf,
+    WBuf emb = {.buf = ts->error_msg_buf,
                 .index = 0,
-                .length = sizeof(raw_error_msg_buf)};
-    JS_PrintValue(ts->ctx, write_to_buf, &remb, JS_GetException(ts->ctx), NULL);
-    write_json_string(ts->streamfd, raw_error_msg_buf, remb.index);
-    write_const_to_stream(ts, "\n");
-    JS_FreeValue(ts->ctx, JS_GetException(ts->ctx));
+                .length = sizeof(ts->error_msg_buf)};
+    JSValue exception = JS_GetException(ts->ctx);
+    JS_PrintValue(ts->ctx, write_to_buf, &emb, exception, NULL);
+    write_json_string(ts->streamfd, ts->error_msg_buf, emb.index);
+    JS_FreeValue(ts->ctx, exception);
+    JS_FreeValue(ts->ctx, parsed_arg);
+    JS_FreeValue(ts->ctx, ret);
     return ts->stream_io_err;
   }
 
