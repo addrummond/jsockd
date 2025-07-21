@@ -17,12 +17,16 @@ defmodule JSockDClient.Application do
     bytecode_module_public_key =
       Application.fetch_env!(:jsockd_client, :bytecode_module_public_key)
 
+    js_server_exec =
+      Application.get_env(:jsockd_client, :js_server_exec)
+
     children = [
       {JSockDClient.JsServerManager,
        %{
          n_threads: n_threads,
          bytecode_module_file: bytecode_module_file,
-         bytecode_module_public_key: bytecode_module_public_key
+         bytecode_module_public_key: bytecode_module_public_key,
+         js_server_exec: js_server_exec
        }}
     ]
 

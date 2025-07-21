@@ -4,7 +4,8 @@ defmodule JSockDClient do
   """
 
   @doc """
-  Sends a command to the JSockD server and returns the response.
+  Sends a command to the JSockD server and returns the response, which is either
+  `{:ok, value}` or `{:error, error_message_string}`.
 
   `function` is a string containing a JavaScript expression that evaluates to a function.
 
@@ -21,7 +22,7 @@ defmodule JSockDClient do
         {:send_command, message_uuid, function, JSON.encode!(argument)},
         _timeout = 800
       )
-      |> JSON.decode!()
+      |> parse_response()
     catch
       :exit, reason ->
         # The JS server implements its own timeout mechanism, so if we've been
@@ -30,6 +31,14 @@ defmodule JSockDClient do
         send(JSockDClient.JsServerManager, :hup)
 
         raise "JSockDClient.JsServerManager call timed out: #{inspect(reason)}"
+    end
+  end
+
+  def parse_response(response) do
+    if String.starts_with?(response, "exception ") do
+      {:error, JSON.decode!(String.trim_leading(response, "exception "))}
+    else
+      {:ok, JSON.decode!(response)}
     end
   end
 end

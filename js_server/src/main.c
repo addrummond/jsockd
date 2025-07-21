@@ -556,7 +556,7 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
     ts->compiled_query = JS_UNDEFINED;
     mutex_unlock(&ts->doing_js_stuff_mutex);
     write_to_stream(ts, ts->current_uuid, ts->current_uuid_len);
-    write_const_to_stream(ts, " exception\n");
+    write_const_to_stream(ts, " exception \"error compiling command\"\n");
     return ts->stream_io_err;
   }
 
@@ -571,7 +571,7 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
     ts->compiled_query = JS_UNDEFINED;
     mutex_unlock(&ts->doing_js_stuff_mutex);
     write_to_stream(ts, ts->current_uuid, ts->current_uuid_len);
-    write_const_to_stream(ts, " json_input_parse_error\n");
+    write_const_to_stream(ts, " exception \"JSON input parse error\"\n");
     return ts->stream_io_err;
   }
 
@@ -608,7 +608,8 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
     debug_dump_error(ts->ctx);
     mutex_unlock(&ts->doing_js_stuff_mutex);
     write_to_stream(ts, ts->current_uuid, ts->current_uuid_len);
-    write_const_to_stream(ts, " exception\n");
+    write_const_to_stream(
+        ts, " exception \"error attempting to JSON serialize return value\"\n");
     return ts->stream_io_err;
   }
 
@@ -617,7 +618,7 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
     JS_FreeValue(ts->ctx, parsed_arg);
     JS_FreeValue(ts->ctx, ret);
     write_to_stream(ts, ts->current_uuid, ts->current_uuid_len);
-    write_const_to_stream(ts, " unserializable\n");
+    write_const_to_stream(ts, " exception \"unserializable return value \"\n");
     mutex_unlock(&ts->doing_js_stuff_mutex);
     return ts->stream_io_err;
   }

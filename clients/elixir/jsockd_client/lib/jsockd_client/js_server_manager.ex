@@ -11,7 +11,8 @@ defmodule JSockDClient.JsServerManager do
         opts = %{
           n_threads: n_threads,
           bytecode_module_file: bytecode_module_file,
-          bytecode_module_public_key: bytecode_module_public_key
+          bytecode_module_public_key: bytecode_module_public_key,
+          js_server_exec: js_server_exec
         }
       ) do
     n_threads = n_threads || :erlang.system_info(:logical_processors_online)
@@ -25,11 +26,12 @@ defmodule JSockDClient.JsServerManager do
         "/tmp/stardust_stass_quickjs_#{uid}_#{i}.sock"
       end)
 
-    js_server_exec =
-      Path.join([:code.priv_dir(:jsockd_client), "release-artifacts/jsockd/js_server"])
+    exec =
+      js_server_exec ||
+        Path.join([:code.priv_dir(:jsockd_client), "release-artifacts/jsockd/js_server"])
 
     port_id =
-      Port.open({:spawn_executable, js_server_exec}, [
+      Port.open({:spawn_executable, exec}, [
         :use_stdio,
         :in,
         :exit_status,
