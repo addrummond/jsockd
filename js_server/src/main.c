@@ -69,9 +69,11 @@ static pthread_mutex_t g_cached_functions_mutex;
 
 static atomic_bool g_global_init_complete;
 
-static void debug_dump_error(JSContext *ctx) {
+static void dump_error(JSContext *ctx) {
   if (CMAKE_BUILD_TYPE_IS_DEBUG)
     js_std_dump_error(ctx);
+  else
+    JS_FreeValue(ctx, JS_GetException(ctx));
 }
 
 // The input buffer gets malloced to this size once per thread. Longer inputs
@@ -320,7 +322,7 @@ static const uint8_t *compile_buf(JSContext *ctx, const char *buf, int buf_len,
   JSValue val = JS_Eval(ctx, (const char *)buf, buf_len, "<buffer>",
                         JS_EVAL_FLAG_ASYNC | JS_EVAL_FLAG_COMPILE_ONLY);
   if (JS_IsException(val)) {
-    debug_dump_error(ctx);
+    dump_error(ctx);
     JS_FreeValue(ctx, val);
     return NULL;
   }
@@ -349,7 +351,7 @@ static JSValue func_from_bytecode(JSContext *ctx, const uint8_t *bytecode,
   JSValue val = JS_ReadObject(ctx, bytecode, len, JS_READ_OBJ_BYTECODE);
   if (JS_IsException(val)) {
     debug_log("Exception returned when reading bytecode via JS_ReadObject\n");
-    debug_dump_error(ctx);
+    dump_error(ctx);
     return val;
   }
   JSValue evald = JS_EvalFunction(ctx, val); // this call frees val
@@ -357,7 +359,7 @@ static JSValue func_from_bytecode(JSContext *ctx, const uint8_t *bytecode,
   if (JS_VALUE_GET_TAG(evald) != JS_TAG_OBJECT) {
     debug_log("JS_EvalFunction did not return an object\n");
     if (CMAKE_BUILD_TYPE_IS_DEBUG && JS_IsException(evald))
-      debug_dump_error(ctx);
+      dump_error(ctx);
     JS_FreeValue(ctx, evald);
     return JS_EXCEPTION;
   }
@@ -565,7 +567,7 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
   JSValue parsed_arg = JS_ParseJSON(ts->ctx, line, len, "<input>");
   if (JS_IsException(parsed_arg)) {
     debug_logf("Error parsing JSON argument: <<END\n%.*sEND\n", len, line);
-    debug_dump_error(ts->ctx);
+    dump_error(ts->ctx);
     JS_FreeValue(ts->ctx, parsed_arg);
     JS_FreeValue(ts->ctx, ts->compiled_query);
     ts->compiled_query = JS_UNDEFINED;
@@ -596,6 +598,7 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
     JS_PrintValue(ts->ctx, write_to_buf, &remb, JS_GetException(ts->ctx), NULL);
     write_json_string(ts->streamfd, raw_error_msg_buf, remb.index);
     write_const_to_stream(ts, "\n");
+    JS_FreeValue(ts->ctx, JS_GetException(ts->ctx));
     return ts->stream_io_err;
   }
 
@@ -605,7 +608,7 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
     JS_FreeValue(ts->ctx, parsed_arg);
     JS_FreeValue(ts->ctx, ret);
     JS_FreeValue(ts->ctx, stringified);
-    debug_dump_error(ts->ctx);
+    dump_error(ts->ctx);
     mutex_unlock(&ts->doing_js_stuff_mutex);
     write_to_stream(ts, ts->current_uuid, ts->current_uuid_len);
     write_const_to_stream(
