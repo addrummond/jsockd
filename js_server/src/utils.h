@@ -16,6 +16,8 @@ void release_log(const char *s);
 #define mutex_unlock(m) mutex_unlock_((m), __LINE__)
 #define mutex_init(m) mutex_init_((m), __LINE__)
 
+int write_all(int fd, const char *buf, size_t len);
+
 #ifdef CMAKE_BUILD_TYPE_DEBUG
 #define debug_logf(fmt, ...) release_logf((fmt), __VA_ARGS__)
 #define debug_log(s) release_logf("%s", (s));
@@ -27,5 +29,7 @@ void release_log(const char *s);
   do {                                                                         \
   } while (0)
 #endif
+
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
 
 #endif

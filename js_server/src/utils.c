@@ -3,6 +3,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 pthread_mutex_t g_log_mutex;
 
@@ -40,3 +41,17 @@ void release_logf(const char *fmt, ...) {
 }
 
 void release_log(const char *s) { release_logf("%s", s); }
+
+int write_all(int fd, const char *buf, size_t len) {
+  while (len > 0) {
+    int n = write(fd, buf, len);
+    if (n < 0) {
+      if (errno == EINTR)
+        continue; // interrupted, try again
+      return n;
+    }
+    len -= n;
+    buf += n;
+  }
+  return 0;
+}

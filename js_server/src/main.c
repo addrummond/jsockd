@@ -9,6 +9,7 @@
 #include "utils.h"
 #include "verify_bytecode.h"
 #include "wait_group.h"
+#include "writejsonstring.h"
 #include <assert.h>
 #include <err.h>
 #include <errno.h>
@@ -97,12 +98,11 @@ static void add_cached_function(uint64_t uid, const uint8_t *bytecode,
 
   HashCacheBucket *b = add_to_hash_cache(g_cached_function_buckets,
                                          CACHED_FUNCTION_HASH_BITS, uid);
-  if (b->uid) {
+  size_t bi = b - g_cached_function_buckets;
+  if (g_cached_functions[bi].bytecode) {
     debug_log("Hash collision: freeing existing bytecode\n");
-    size_t bi = b - g_cached_function_buckets;
     free((void *)(g_cached_functions[bi].bytecode));
   }
-  size_t bi = b - g_cached_function_buckets;
   g_cached_functions[bi].bytecode = bytecode;
   g_cached_functions[bi].bytecode_size = bytecode_size;
 
@@ -470,20 +470,6 @@ static void cleanup_thread_state(ThreadState *ts) {
   pthread_mutex_destroy(&ts->doing_js_stuff_mutex);
 }
 
-static int write_all(int fd, const char *buf, size_t len) {
-  while (len > 0) {
-    int n = write(fd, buf, len);
-    if (n < 0) {
-      if (errno == EINTR)
-        continue; // interrupted, try again
-      return n;
-    }
-    len -= n;
-    buf += n;
-  }
-  return 0;
-}
-
 static void write_to_stream(ThreadState *ts, const char *buf, size_t len) {
   if (0 != write_all(ts->streamfd, buf, len)) {
     ts->stream_io_err = -1;
@@ -537,6 +523,19 @@ static int handle_line_2_query(ThreadState *ts, const char *line, int len) {
   return 0;
 }
 
+typedef struct {
+  char *buf;
+  size_t index;
+  size_t length;
+} Buf;
+
+static void write_to_buf(void *opaque_buf, const char *inp, size_t size) {
+  Buf *buf = (Buf *)opaque_buf;
+  size_t to_write = MIN(buf->length - buf->index, size);
+  memcpy(buf->buf + buf->index, inp, to_write);
+  buf->index += to_write;
+}
+
 static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
   const JSPrintValueOptions js_print_value_options = {.show_hidden = false,
                                                       .raw_dump = false,
@@ -586,10 +585,17 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
     JS_FreeValue(ts->ctx, parsed_arg);
     JS_FreeValue(ts->ctx, ret);
     debug_log("Error calling cached function\n");
-    debug_dump_error(ts->ctx);
+    // debug_dump_error(ts->ctx);
     mutex_unlock(&ts->doing_js_stuff_mutex);
     write_to_stream(ts, ts->current_uuid, ts->current_uuid_len);
-    write_const_to_stream(ts, " exception\n");
+    write_const_to_stream(ts, " exception ");
+    char raw_error_msg_buf[8192];
+    Buf remb = {.buf = raw_error_msg_buf,
+                .index = 0,
+                .length = sizeof(raw_error_msg_buf)};
+    JS_PrintValue(ts->ctx, write_to_buf, &remb, JS_GetException(ts->ctx), NULL);
+    write_json_string(ts->streamfd, raw_error_msg_buf, remb.index);
+    write_const_to_stream(ts, "\n");
     return ts->stream_io_err;
   }
 
