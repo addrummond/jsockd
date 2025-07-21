@@ -95,7 +95,9 @@ The first is the module that was loaded from the bytecode file; the second is th
 
 The third field is the JSON-encoded parameter value.
 
-The server responds with a single line (terminated with `\n`) consisting of the command ID followed by a space and then the JSON-encoded result of executing the command.
+The server responds with a single line (terminated with `\n`) consisting of the command ID followed by a space and then either
+* the JSON-encoded result of the command, if successful; or
+* the string `exception` followed by a space and an error message encoded as a JSON string.
 
 As the protocol is synchronous, command IDs are not strictly necessary. However, it is recommended to check that responses have the expected
 command ID as a means of ensuring that the client code is working correctly.
