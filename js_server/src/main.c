@@ -620,7 +620,7 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
     JS_FreeValue(ts->ctx, parsed_arg);
     JS_FreeValue(ts->ctx, ret);
     write_to_stream(ts, ts->current_uuid, ts->current_uuid_len);
-    write_const_to_stream(ts, " exception \"unserializable return value \"\n");
+    write_const_to_stream(ts, " exception \"unserializable return value\"\n");
     mutex_unlock(&ts->doing_js_stuff_mutex);
     return ts->stream_io_err;
   }
