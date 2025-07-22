@@ -153,6 +153,8 @@ Unit tests can be run as follows:
 
 ## 6. Releases
 
+## 6.1 Creating a release
+
 Pre-built binaries are available for download from the [GitHub releases page](https://github.com/addrummond/jsockd/releases). The following platforms are supported:
 
 - Linux x86_64
@@ -169,3 +171,10 @@ Each release includes:
 
 - Platform-specific tar.gz archives containing the `js_server` and `compile_es6_module` binaries
 - SHA256 checksums for verification
+
+### 6.2 New version checklist
+
+* Update `@jsockd_version` in `clients/elixir/jsockd_client/mix.exs`.
+* Update the example `deps` entry in `clients/elixir/jsockd_client/README.md`.
+* Push to `main`.
+* Tag with the version number and push the tag.
