@@ -595,6 +595,7 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
     JSValue exception = JS_GetException(ts->ctx);
     JS_PrintValue(ts->ctx, write_to_buf, &emb, exception, NULL);
     write_json_string(ts->streamfd, ts->error_msg_buf, emb.index);
+    write_const_to_stream(ts, "\n");
     JS_FreeValue(ts->ctx, exception);
     JS_FreeValue(ts->ctx, parsed_arg);
     JS_FreeValue(ts->ctx, ret);
