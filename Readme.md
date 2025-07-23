@@ -72,7 +72,7 @@ The first argument is the path to a precompiled ES6 module bytecode file. This m
 
 When the server is ready to start accepting commands on the specified UNIX domain sockets, it prints `READY <N>` to the standard output followed by a line feed. The integer N specifies the number of threads that the server is using to process commands. This may be less than the number of sockets specified, in which case only the first N sockets will be used for command processing.
 
-## 3.2 The socket protocol
+### 3.2 The socket protocol
 
 The server listens for commands on the specified UNIX domain sockets. Each command consists of three fields separated
 by a separator byte:
