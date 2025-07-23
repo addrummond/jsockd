@@ -57,6 +57,8 @@ The value in `public_signing_key` should be passed to `js_server` via the `JSOCK
 
 ## 3. The JSockD server
 
+### 3.1 Starting the server
+
 **JSockD is not intended to run as a standalone server; it is designed to be run as a subprocess of an application that needs to execute JavaScript commands. This section is intended as a reference for developers implementing JSockD client libraries.**
 
 The server is started as follows:
@@ -70,7 +72,7 @@ The first argument is the path to a precompiled ES6 module bytecode file. This m
 
 When the server is ready to start accepting commands on the specified UNIX domain sockets, it prints `READY <N>` to the standard output followed by a line feed. The integer N specifies the number of threads that the server is using to process commands. This may be less than the number of sockets specified, in which case only the first N sockets will be used for command processing.
 
-## 4. The socket protocol
+## 3.2 The socket protocol
 
 The server listens for commands on the specified UNIX domain sockets. Each command consists of three fields separated
 by a separator byte:
@@ -113,7 +115,7 @@ The `?reset` command resets the server's command parser to its initial state (so
 
 The `?quit` command causes the server to exit immediately (closing all sockets, not just the socket on which the command was sent).
 
-## 5. Building from source
+## 4. Building from source
 
 To build JSockD from source, you must first build QuickJS and then the JS server.
 
@@ -123,11 +125,11 @@ Tools necessary for the build can be installed using [mise-en-place](https://mis
 mise install
 ```
 
-### 5.1 Building QuickJS
+### 4.1 Building QuickJS
 
 QuickJS is built by running `./build_quickjs.sh`. This script downloads the QuickJS source code, apples some patches, and then builds the QuickJS library. The QuickJS build is kept separate from the main JSockD build because it needs to be run only once, and the QuickJS build system is a bit finicky to configure for different environments.
 
-### 5.2 Building the JS server
+### 4.2 Building the JS server
 
 This is built using CMake 4. The `mk.sh` wrapper script invokes CMake with the correct arguments for common use cases.
 
@@ -151,9 +153,9 @@ Unit tests can be run as follows:
 ./mk.sh Debug test
 ```
 
-## 6. Releases
+## 5. Releases
 
-### 6.1 Creating a release
+### 5.1 Creating a release
 
 Pre-built binaries are available for download from the [GitHub releases page](https://github.com/addrummond/jsockd/releases). The following platforms are supported:
 
@@ -172,7 +174,7 @@ Each release includes:
 - Platform-specific tar.gz archives containing the `js_server` and `compile_es6_module` binaries
 - SHA256 checksums for verification
 
-### 6.2 New version checklist
+### 5.2 New version checklist
 
 * Update `@jsockd_version` in `clients/elixir/jsockd_client/mix.exs`.
 * Update the example `deps` entry in `clients/elixir/jsockd_client/README.md`.
