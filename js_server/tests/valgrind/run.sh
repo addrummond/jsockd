@@ -40,15 +40,17 @@ server_pid=$!
     done
     sleep 1
 
+    test_input_file="/tmp/jsockd_js_server_valgrind_test_input${JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX}"
+
     if [ -z "$JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX" ]; then
-      ./tests/valgrind/gen_test_cases.sh $N_ITERATIONS > /tmp/jsockd_js_server_valgrind_test_input
-      echo "?quit" >> /tmp/jsockd_js_server_valgrind_test_input
+      ./tests/valgrind/gen_test_cases.sh $N_ITERATIONS > $test_input_file
+      echo "?quit" >> $test_input_file
     else
-      ./tests/valgrind/gen_test_cases.sh $N_ITERATIONS | awk 1 ORS=$(printf "\x${JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX}") > /tmp/jsockd_js_server_valgrind_test_input
-      printf "?quit\x$$JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX}" >> /tmp/jsockd_js_server_valgrind_test_input
+      ./tests/valgrind/gen_test_cases.sh $N_ITERATIONS | awk 1 ORS=$(printf "\x${JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX}") > $test_input_file
+      printf "?quit\x$$JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX}" >> $test_input_file
     fi
 
-    nc -w 5 -U /tmp/jsockd_test_sock < /tmp/jsockd_js_server_valgrind_test_input
+    nc -w 5 -U /tmp/jsockd_test_sock < $test_input_file
 ) 2>&1 &
 client_pid=$!
 
