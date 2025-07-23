@@ -44,8 +44,8 @@ server_pid=$!
       ./tests/valgrind/gen_test_cases.sh $N_ITERATIONS > /tmp/jsockd_js_server_valgrind_test_input
       echo "?quit" >> /tmp/jsockd_js_server_valgrind_test_input
     else
-      ./tests/valgrind/gen_test_cases.sh $N_ITERATIONS | awk 1 ORS=$(printf "\x66${JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX}") > /tmp/jsockd_js_server_valgrind_test_input
-      printf "?quit\x$JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX" >> /tmp/jsockd_js_server_valgrind_test_input
+      ./tests/valgrind/gen_test_cases.sh $N_ITERATIONS | awk 1 ORS=$(printf "\x${JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX}") > /tmp/jsockd_js_server_valgrind_test_input
+      printf "?quit\x$$JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX}" >> /tmp/jsockd_js_server_valgrind_test_input
     fi
 
     nc -w 5 -U /tmp/jsockd_test_sock < /tmp/jsockd_js_server_valgrind_test_input
