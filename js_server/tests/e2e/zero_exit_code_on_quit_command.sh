@@ -15,7 +15,7 @@ echo "?quit" > /tmp/jsockd_memory_increase_test_input
 
 # Start the server
 (
-    ./build_Debug/js_server /tmp/jsockd_memory_increase_test_example_module.qjsb /tmp/jsockd_memory_increase_test_sock > /tmp/jsockd_memory_increase_test_output 2>&1
+    ./build_Debug/js_server -m /tmp/jsockd_memory_increase_test_example_module.qjsb -s /tmp/jsockd_memory_increase_test_sock > /tmp/jsockd_memory_increase_test_output 2>&1
     echo $? > /tmp/jsockd_memory_increase_test_server_exit_code
 ) &
 server_pid=$!
