@@ -893,12 +893,6 @@ static int parse_cmd_args(int argc, char **argv) {
         return -1;
       }
       g_cmd_args.n_sockets++;
-      if (g_cmd_args.n_sockets > MAX_THREADS) {
-        release_logf("Error: too many sockets specified, max is %i\n",
-                     MAX_THREADS);
-        print_usage(argv[0]);
-        return -1;
-      }
       g_cmd_args.socket_path[g_cmd_args.n_sockets - 1] = argv[i];
     } else if (0 == strcmp(argv[i], "-b")) {
       if (g_cmd_args.socket_sep_char_set) {
@@ -968,10 +962,8 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  int n_threads = argc - 2;
-  if (n_threads > MAX_THREADS)
-    n_threads = MAX_THREADS;
-  atomic_store(&g_n_threads, n_threads);
+  int n_threads = MIN(g_cmd_args.n_sockets, MAX_THREADS);
+  atomic_store(&g_n_threads, g_cmd_args.n_sockets);
 
   if (0 != wait_group_init(&g_thread_ready_wait_group, n_threads)) {
     release_logf("Error initializing wait group: %s", strerror(errno));
@@ -984,7 +976,7 @@ int main(int argc, char *argv[]) {
   }
   atomic_init(&g_global_init_complete, true);
 
-  for (int n = 0; n < g_cmd_args.n_sockets; ++n) {
+  for (int n = 0; n < n_threads; ++n) {
     debug_logf("Creating thread %i\n", n);
     if (0 !=
         init_thread_state(&g_thread_states[n], g_cmd_args.socket_path[n])) {
