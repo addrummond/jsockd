@@ -36,10 +36,14 @@ defmodule JSockDClient.JsServerManager do
         :in,
         :exit_status,
         line: 80,
-        args: [bytecode_module_file | unix_socket_paths],
+        args: [
+          "-b",
+          "00",
+          "-m",
+          bytecode_module_file | Enum.concat(unix_socket_paths |> Enum.map(fn p -> ["-s", p] end))
+        ],
         env: [
-          {~c"JSOCKD_BYTECODE_MODULE_PUBLIC_KEY", String.to_charlist(bytecode_module_public_key)},
-          {~c"JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX", ~c"00"}
+          {~c"JSOCKD_BYTECODE_MODULE_PUBLIC_KEY", String.to_charlist(bytecode_module_public_key)}
         ]
       ])
 

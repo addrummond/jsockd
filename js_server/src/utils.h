@@ -6,15 +6,15 @@
 
 extern pthread_mutex_t g_log_mutex;
 
-void mutex_lock_(pthread_mutex_t *m, int line);
-void mutex_unlock_(pthread_mutex_t *m, int line);
-void mutex_init_(pthread_mutex_t *m, int line);
+void mutex_lock_(pthread_mutex_t *m, const char *file, int line);
+void mutex_unlock_(pthread_mutex_t *m, const char *file, int line);
+void mutex_init_(pthread_mutex_t *m, const char *file, int line);
 void release_logf(const char *fmt, ...);
 void release_log(const char *s);
 
-#define mutex_lock(m) mutex_lock_((m), __LINE__)
-#define mutex_unlock(m) mutex_unlock_((m), __LINE__)
-#define mutex_init(m) mutex_init_((m), __LINE__)
+#define mutex_lock(m) mutex_lock_((m), __FILE__, __LINE__)
+#define mutex_unlock(m) mutex_unlock_((m), __FILE__, __LINE__)
+#define mutex_init(m) mutex_init_((m), __FILE__, __LINE__)
 
 int write_all(int fd, const char *buf, size_t len);
 

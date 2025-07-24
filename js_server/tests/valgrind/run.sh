@@ -21,11 +21,16 @@ export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=$(cat public_signing_key)
 
 cd js_server
 
+DASH_B_ARG=""
+if [ ! -z "$JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX" ]; then
+    DASH_B_ARG="-b $JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX"
+fi
+
 # Start the server with Valgrind
 ./mk.sh Debug
 (
     valgrind --error-exitcode=1 --leak-check=full --track-origins=yes -- \
-        ./build_Debug/js_server /tmp/example_module.qjsb /tmp/jsockd_test_sock
+        ./build_Debug/js_server $DASH_B_ARG -m /tmp/example_module.qjsb -s /tmp/jsockd_test_sock
     echo $? > /tmp/jsockd_test_valgrind_exit_code
 ) &
 server_pid=$!

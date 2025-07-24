@@ -40,7 +40,6 @@
 static const uint8_t *g_module_bytecode;
 static size_t g_module_bytecode_size;
 
-static char MSG_SEP_CHAR = '\n'; // the default (can be overriden by env var)
 static const char *TRUNCATION_APPEND = "!;";
 static const uint64_t MAX_COMMAND_RUNTIME_US = 250000; // 0.25 seconds
 #define MESSAGE_UUID_MAX_BYTES 32
@@ -174,6 +173,14 @@ static int lb_read(char *buf, size_t n, void *data) {
 
 static const int EXIT_ON_QUIT_COMMAND = -999;
 
+static struct {
+  const char *es6_module_bytecode_file;
+  const char *socket_path[MAX_THREADS];
+  int n_sockets;
+  char socket_sep_char;
+  bool socket_sep_char_set;
+} g_cmd_args;
+
 static void listen_on_unix_socket(const char *unix_socket_filename,
                                   int (*line_handler)(const char *line,
                                                       size_t len, void *data),
@@ -275,8 +282,8 @@ static void listen_on_unix_socket(const char *unix_socket_filename,
     }
 
     int exit_value =
-        line_buf_read(&line_buf, MSG_SEP_CHAR, lb_read, &ts->streamfd,
-                      line_handler, data, TRUNCATION_APPEND);
+        line_buf_read(&line_buf, g_cmd_args.socket_sep_char, lb_read,
+                      &ts->streamfd, line_handler, data, TRUNCATION_APPEND);
     if (exit_value == EXIT_ON_QUIT_COMMAND)
       ; // "?quit"
     else if (exit_value < 0)
@@ -404,8 +411,11 @@ static int init_thread_state(ThreadState *ts,
   JS_SetInterruptHandler(rt, interrupt_handler, ts);
 
   // Load the precompiled module.
-  ts->compiled_module =
-      load_binary_module(ctx, g_module_bytecode, g_module_bytecode_size);
+  if (g_module_bytecode)
+    ts->compiled_module =
+        load_binary_module(ctx, g_module_bytecode, g_module_bytecode_size);
+  else
+    ts->compiled_module = JS_UNDEFINED;
   if (JS_IsException(ts->compiled_module)) {
     release_log("Failed to load precompiled module\n");
     js_std_dump_error(ctx);
@@ -849,6 +859,93 @@ static void SIGINT_handler(int sig) {
   exit(1);
 }
 
+static void print_usage(const char *prog_name) {
+  release_logf(
+      "Usage: %s [-s socket_path]+ [-m module_bytecode_file] [-b XX]\n",
+      prog_name);
+}
+
+static int parse_cmd_args(int argc, char **argv) {
+  g_cmd_args.socket_sep_char = '\n';
+  if (argc < 1) {
+    print_usage("js_server");
+    return -1;
+  }
+  for (int i = 1; i < argc; ++i) {
+    if (0 == strcmp(argv[i], "-m")) {
+      ++i;
+      if (i >= argc) {
+        release_logf(
+            "Error: -m requires an argument (ES6 module bytecode file)\n");
+        print_usage(argv[0]);
+      }
+      if (g_cmd_args.es6_module_bytecode_file) {
+        release_logf("Error: -m can be specified at most once\n");
+        print_usage(argv[0]);
+        return -1;
+      }
+      g_cmd_args.es6_module_bytecode_file = argv[i];
+    } else if (0 == strcmp(argv[i], "-s")) {
+      ++i;
+      if (i >= argc) {
+        release_logf("Error: -s requires an argument (socket file)\n");
+        print_usage(argv[0]);
+        return -1;
+      }
+      g_cmd_args.n_sockets++;
+      if (g_cmd_args.n_sockets > MAX_THREADS) {
+        release_logf("Error: too many sockets specified, max is %i\n",
+                     MAX_THREADS);
+        print_usage(argv[0]);
+        return -1;
+      }
+      g_cmd_args.socket_path[g_cmd_args.n_sockets - 1] = argv[i];
+    } else if (0 == strcmp(argv[i], "-b")) {
+      if (g_cmd_args.socket_sep_char_set) {
+        release_logf("Error: -b can be specified at most once\n");
+        print_usage(argv[0]);
+        return -1;
+      }
+      ++i;
+      if (i >= argc) {
+        release_logf("Error: -b requires an argument (two hex digits giving "
+                     "separator byte)\n");
+        print_usage(argv[0]);
+        return -1;
+      }
+      if (strlen(argv[i]) != 2 || -1 == hex_digit(argv[i][0]) ||
+          -1 == hex_digit(argv[i][1])) {
+        release_logf("Error: -b requires an argument of exactly two hex digits "
+                     "(e.g. '0A')\n");
+        print_usage(argv[0]);
+        return -1;
+      }
+      hex_decode((uint8_t *)&g_cmd_args.socket_sep_char, sizeof(char), argv[i]);
+      if (g_cmd_args.socket_sep_char != '\0' &&
+          strchr(TRUNCATION_APPEND, g_cmd_args.socket_sep_char)) {
+        release_logf("Error: message separator character '%c' (= 0x%X) is in "
+                     "the truncation append set '%s'. Please set it to a "
+                     "different character via the -b option.\n",
+                     g_cmd_args.socket_sep_char, g_cmd_args.socket_sep_char,
+                     TRUNCATION_APPEND);
+        return -1;
+      }
+      g_cmd_args.socket_sep_char_set = true;
+    } else {
+      release_logf("Error: unknown argument '%s'\n", argv[i]);
+      print_usage(argv[0]);
+      return -1;
+    }
+  }
+
+  if (g_cmd_args.n_sockets == 0) {
+    release_log("No sockets specified.\n");
+    return -1;
+  }
+
+  return 0;
+}
+
 int main(int argc, char *argv[]) {
   struct sigaction sa = {.sa_handler = SIGINT_handler};
   sigaction(SIGINT, &sa, NULL);
@@ -856,32 +953,19 @@ int main(int argc, char *argv[]) {
   mutex_init(&g_log_mutex);
   mutex_init(&g_cached_functions_mutex);
 
-  const char *sep_char_var = getenv("JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX");
-  if (sep_char_var && strlen(sep_char_var) == 2)
-    hex_decode((unsigned char *)&MSG_SEP_CHAR, 1, sep_char_var);
-  if (MSG_SEP_CHAR != '\0' && strchr(TRUNCATION_APPEND, MSG_SEP_CHAR)) {
-    release_logf(
-        "Error: message separator character '%c' (= 0x%X) is in the "
-        "truncation append "
-        "set '%s'. Please set JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX to a "
-        "different character.\n",
-        MSG_SEP_CHAR, MSG_SEP_CHAR, TRUNCATION_APPEND);
+  if (0 != parse_cmd_args(argc, argv))
     return 1;
-  }
 
-  if (argc < 3) {
-    release_logf("Usage: %s <es6_module_bytecode_file> <socket_path> "
-                 "[<socket_path> ...]\n",
-                 argv[0]);
-    return 1;
-  }
-
-  g_module_bytecode = load_module_bytecode(argv[1], &g_module_bytecode_size);
-  if (g_module_bytecode == NULL) {
-    release_logf("Error loading module bytecode from %s\n", argv[1]);
-    pthread_mutex_destroy(&g_log_mutex);
-    pthread_mutex_destroy(&g_cached_functions_mutex);
-    return 1;
+  if (g_cmd_args.es6_module_bytecode_file) {
+    g_module_bytecode = load_module_bytecode(
+        g_cmd_args.es6_module_bytecode_file, &g_module_bytecode_size);
+    if (g_module_bytecode == NULL) {
+      release_logf("Error loading module bytecode from %s\n",
+                   g_cmd_args.es6_module_bytecode_file);
+      pthread_mutex_destroy(&g_log_mutex);
+      pthread_mutex_destroy(&g_cached_functions_mutex);
+      return 1;
+    }
   }
 
   int n_threads = argc - 2;
@@ -891,19 +975,22 @@ int main(int argc, char *argv[]) {
 
   if (0 != wait_group_init(&g_thread_ready_wait_group, n_threads)) {
     release_logf("Error initializing wait group: %s", strerror(errno));
-    munmap((void *)g_module_bytecode,
-           g_module_bytecode_size + ED25519_SIGNATURE_SIZE);
+    if (g_module_bytecode)
+      munmap((void *)g_module_bytecode,
+             g_module_bytecode_size + ED25519_SIGNATURE_SIZE);
     pthread_mutex_destroy(&g_log_mutex);
     pthread_mutex_destroy(&g_cached_functions_mutex);
     return 1;
   }
   atomic_init(&g_global_init_complete, true);
 
-  for (int n = 0; n < n_threads; ++n) {
+  for (int n = 0; n < g_cmd_args.n_sockets; ++n) {
     debug_logf("Creating thread %i\n", n);
-    if (0 != init_thread_state(&g_thread_states[n], argv[n + 2])) {
+    if (0 !=
+        init_thread_state(&g_thread_states[n], g_cmd_args.socket_path[n])) {
       release_logf("Error initializing thread %i", n);
-      munmap((void *)g_module_bytecode, g_module_bytecode_size);
+      if (g_module_bytecode)
+        munmap((void *)g_module_bytecode, g_module_bytecode_size);
       pthread_mutex_destroy(&g_log_mutex);
       pthread_mutex_destroy(&g_cached_functions_mutex);
       for (int i = n - 1; i >= 0; --i)
