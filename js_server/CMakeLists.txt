@@ -61,6 +61,7 @@ set(JS_SERVER_SOURCES
   src/hex.c
   src/verify_bytecode.c
   src/writejsonstring.c
+  src/cmdargs.c
   ${ED25519_LIB_SOURCES}
   )
 

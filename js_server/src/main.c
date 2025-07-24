@@ -1,4 +1,6 @@
 #define _REENTRANT
+#include "cmdargs.h"
+#include "config.h"
 #include "custom_module_loader.h"
 #include "fchmod.h"
 #include "hash_cache.h"
@@ -40,23 +42,11 @@
 static const uint8_t *g_module_bytecode;
 static size_t g_module_bytecode_size;
 
-static const char *TRUNCATION_APPEND = "!;";
-static const uint64_t MAX_COMMAND_RUNTIME_US = 250000; // 0.25 seconds
-#define MESSAGE_UUID_MAX_BYTES 32
-
-// This is the interval at which threads pause IO on the UNIX socket to check
-// for exceptional conditions (e.g. SIGINT).
-static const int SOCKET_POLL_TIMEOUT_MS = 100;
-
-// check memory usage every 100 commands
-static const int MEMORY_CHECK_INTERVAL = 100;
-// if memory usage increases over this * MEMORY_CHECK_INTERVAL commands, reset
-// the interpreter state.
-static const int MEMORY_INCREASE_MAX_COUNT = 3;
-
 // Testing scenarios with collisions is less labor intensive if we use a smaller
 // number of bits in the debug build.
-#define CACHED_FUNCTION_HASH_BITS (CMAKE_BUILD_TYPE_IS_DEBUG ? 6 : 10)
+#define CACHED_FUNCTION_HASH_BITS                                              \
+  (CMAKE_BUILD_TYPE_IS_DEBUG ? CACHED_FUNCTIONS_HASH_BITS_DEBUG                \
+                             : CACHED_FUNCTIONS_HASH_BITS_RELEASE)
 #define CACHED_FUNCTIONS_N_BUCKETS                                             \
   HASH_CACHE_BUCKET_ARRAY_SIZE_FROM_HASH_BITS(CACHED_FUNCTION_HASH_BITS)
 
@@ -80,7 +70,6 @@ static void dump_error(JSContext *ctx) {
 // needed, but it doesn't actually improve memory usage. I guess most of the
 // large allocation doesn't get paged in till it's needed anyway.
 static const int LINE_BUF_BYTES = 1024 * 1024 * 1024;
-#define MAX_THREADS 8
 
 typedef struct {
   const uint8_t *bytecode;
@@ -173,13 +162,7 @@ static int lb_read(char *buf, size_t n, void *data) {
 
 static const int EXIT_ON_QUIT_COMMAND = -999;
 
-static struct {
-  const char *es6_module_bytecode_file;
-  const char *socket_path[MAX_THREADS];
-  int n_sockets;
-  char socket_sep_char;
-  bool socket_sep_char_set;
-} g_cmd_args;
+static CmdArgs g_cmd_args;
 
 static void listen_on_unix_socket(const char *unix_socket_filename,
                                   int (*line_handler)(const char *line,
@@ -859,87 +842,6 @@ static void SIGINT_handler(int sig) {
   exit(1);
 }
 
-static void print_usage(const char *prog_name) {
-  release_logf(
-      "Usage: %s [-s socket_path]+ [-m module_bytecode_file] [-b XX]\n",
-      prog_name);
-}
-
-static int parse_cmd_args(int argc, char **argv) {
-  g_cmd_args.socket_sep_char = '\n';
-  if (argc < 1) {
-    print_usage("js_server");
-    return -1;
-  }
-  for (int i = 1; i < argc; ++i) {
-    if (0 == strcmp(argv[i], "-m")) {
-      ++i;
-      if (i >= argc) {
-        release_logf(
-            "Error: -m requires an argument (ES6 module bytecode file)\n");
-        print_usage(argv[0]);
-      }
-      if (g_cmd_args.es6_module_bytecode_file) {
-        release_logf("Error: -m can be specified at most once\n");
-        print_usage(argv[0]);
-        return -1;
-      }
-      g_cmd_args.es6_module_bytecode_file = argv[i];
-    } else if (0 == strcmp(argv[i], "-s")) {
-      ++i;
-      if (i >= argc) {
-        release_logf("Error: -s requires an argument (socket file)\n");
-        print_usage(argv[0]);
-        return -1;
-      }
-      g_cmd_args.n_sockets++;
-      g_cmd_args.socket_path[g_cmd_args.n_sockets - 1] = argv[i];
-    } else if (0 == strcmp(argv[i], "-b")) {
-      if (g_cmd_args.socket_sep_char_set) {
-        release_logf("Error: -b can be specified at most once\n");
-        print_usage(argv[0]);
-        return -1;
-      }
-      ++i;
-      if (i >= argc) {
-        release_logf("Error: -b requires an argument (two hex digits giving "
-                     "separator byte)\n");
-        print_usage(argv[0]);
-        return -1;
-      }
-      if (strlen(argv[i]) != 2 || -1 == hex_digit(argv[i][0]) ||
-          -1 == hex_digit(argv[i][1])) {
-        release_logf("Error: -b requires an argument of exactly two hex digits "
-                     "(e.g. '0A')\n");
-        print_usage(argv[0]);
-        return -1;
-      }
-      hex_decode((uint8_t *)&g_cmd_args.socket_sep_char, sizeof(char), argv[i]);
-      if (g_cmd_args.socket_sep_char != '\0' &&
-          strchr(TRUNCATION_APPEND, g_cmd_args.socket_sep_char)) {
-        release_logf("Error: message separator character '%c' (= 0x%X) is in "
-                     "the truncation append set '%s'. Please set it to a "
-                     "different character via the -b option.\n",
-                     g_cmd_args.socket_sep_char, g_cmd_args.socket_sep_char,
-                     TRUNCATION_APPEND);
-        return -1;
-      }
-      g_cmd_args.socket_sep_char_set = true;
-    } else {
-      release_logf("Error: unknown argument '%s'\n", argv[i]);
-      print_usage(argv[0]);
-      return -1;
-    }
-  }
-
-  if (g_cmd_args.n_sockets == 0) {
-    release_log("No sockets specified.\n");
-    return -1;
-  }
-
-  return 0;
-}
-
 int main(int argc, char *argv[]) {
   struct sigaction sa = {.sa_handler = SIGINT_handler};
   sigaction(SIGINT, &sa, NULL);
@@ -947,8 +849,18 @@ int main(int argc, char *argv[]) {
   mutex_init(&g_log_mutex);
   mutex_init(&g_cached_functions_mutex);
 
-  if (0 != parse_cmd_args(argc, argv))
+  if (0 != parse_cmd_args(argc, argv, &g_cmd_args))
     return 1;
+
+  if (g_cmd_args.socket_sep_char != '\0' &&
+      strchr(TRUNCATION_APPEND, g_cmd_args.socket_sep_char)) {
+    release_logf("Error: message separator character '%c' (= 0x%X) is in the "
+                 "truncation append set '%s'. Please set it to a "
+                 "different character via the -b option.\n",
+                 g_cmd_args.socket_sep_char, g_cmd_args.socket_sep_char,
+                 TRUNCATION_APPEND);
+    return 1;
+  }
 
   if (g_cmd_args.es6_module_bytecode_file) {
     g_module_bytecode = load_module_bytecode(
