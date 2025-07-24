@@ -1,10 +1,11 @@
 #include "cmdargs.h"
 #include "hex.h"
+#include <libgen.h>
 #include <string.h>
 
 #define print_usage(prog_name)                                                 \
   errlog("Usage: %s [-s socket_path]+ [-m module_bytecode_file] [-b XX]\n",    \
-         (prog_name))
+         basename((prog_name)))
 
 int parse_cmd_args(int argc, char **argv, void (*errlog)(const char *fmt, ...),
                    CmdArgs *cmdargs) {
