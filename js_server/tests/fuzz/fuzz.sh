@@ -27,7 +27,7 @@ cd js_server
 
 ./mk.sh Debug
 (
-    ./build_Debug/js_server /tmp/example_module.qjsb /tmp/jsockd_test_sock
+    ./build_Debug/js_server -m /tmp/example_module.qjsb -s /tmp/jsockd_test_sock
     echo $? > /tmp/jsockd_fuzz_test_exit_code
 ) >/dev/null 2>&1 &
 server_pid=$!
