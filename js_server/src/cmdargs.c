@@ -4,7 +4,8 @@
 #include <string.h>
 
 #define print_usage(prog_name)                                                 \
-  errlog("Usage: %s [-s socket_path]+ [-m module_bytecode_file] [-b XX]\n",    \
+  errlog("Usage: %s -s socket_path [-s socket_path ...] [-m "                  \
+         "module_bytecode_file] [-b XX]\n",                                    \
          basename((prog_name)))
 
 int parse_cmd_args(int argc, char **argv, void (*errlog)(const char *fmt, ...),
