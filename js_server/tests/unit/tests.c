@@ -2,6 +2,7 @@
 // to building and running tests. As yet we don't really have enough modules
 // to test that this is too big of a problem.
 
+#include "../../src/cmdargs.h"
 #include "../../src/hash_cache.h"
 #include "../../src/hex.h"
 #include "../../src/line_buf.h"
@@ -306,6 +307,99 @@ static void TEST_hex_decode_gives_expected_result(void) {
 }
 
 /******************************************************************************
+    Tests for cmdargs
+******************************************************************************/
+
+static char cmdargs_errlog_buf[1024];
+static char *cmdargs_errlog_ptr = cmdargs_errlog_buf;
+
+static void cmdargs_errlog(const char *fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  int n = vsnprintf(cmdargs_errlog_ptr,
+                    sizeof(cmdargs_errlog_buf) / sizeof(cmdargs_errlog_buf[0]) -
+                        (cmdargs_errlog_ptr - cmdargs_errlog_buf),
+                    fmt, args);
+  va_end(args);
+  cmdargs_errlog_ptr += n;
+}
+
+static void TEST_cmdargs_returns_error_for_no_args(void) {
+  CmdArgs cmdargs = {0};
+  int r = parse_cmd_args(0, NULL, cmdargs_errlog, &cmdargs);
+  TEST_ASSERT(r == -1);
+}
+
+static void TEST_cmdargs_returns_success_for_just_one_socket(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"js_server", "-s", "my_socket"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r == 0);
+  TEST_ASSERT(cmdargs.n_sockets == 1);
+  TEST_ASSERT(0 == strcmp(cmdargs.socket_path[0], "my_socket"));
+}
+
+static void TEST_cmdargs_returns_success_for_multiple_sockets(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"js_server",  "-s", "my_socket1", "-s",
+                  "my_socket2", "-s", "my_socket3"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r == 0);
+  TEST_ASSERT(cmdargs.n_sockets == 3);
+  TEST_ASSERT(0 == strcmp(cmdargs.socket_path[0], "my_socket1"));
+  TEST_ASSERT(0 == strcmp(cmdargs.socket_path[1], "my_socket2"));
+  TEST_ASSERT(0 == strcmp(cmdargs.socket_path[2], "my_socket3"));
+}
+
+static void TEST_cmdargs_returns_error_for_multiple_dash_b(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"js_server", "-s", "my_socket1", "-b", "FF", "-b", "00"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r != 0);
+  TEST_ASSERT(strstr(cmdargs_errlog_buf, "-b"));
+  TEST_ASSERT(strstr(cmdargs_errlog_buf, "at most once"));
+}
+
+static void TEST_cmdargs_returns_error_for_multiple_dash_m(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"js_server",  "-s", "my_socket1", "-m",
+                  "mod1.qjsbc", "-m", "mod2.qjsbc"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r != 0);
+  TEST_ASSERT(strstr(cmdargs_errlog_buf, "-m"));
+  TEST_ASSERT(strstr(cmdargs_errlog_buf, "at most once"));
+}
+
+static void TEST_cmdargs_returns_success_for_full_set_of_options(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"js_server",      "-s", "my_socket1", "-s",
+                  "my_socket2",     "-s", "my_socket3", "-m",
+                  "my_module.qjsc", "-b", "1F"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r == 0);
+  TEST_ASSERT(cmdargs.n_sockets == 3);
+  TEST_ASSERT(0 == strcmp(cmdargs.socket_path[0], "my_socket1"));
+  TEST_ASSERT(0 == strcmp(cmdargs.socket_path[1], "my_socket2"));
+  TEST_ASSERT(0 == strcmp(cmdargs.socket_path[2], "my_socket3"));
+  TEST_ASSERT(cmdargs.socket_sep_char == 0x1F);
+  TEST_ASSERT(0 == strcmp(cmdargs.es6_module_bytecode_file, "my_module.qjsc"));
+}
+
+static void TEST_cmdargs_returns_error_if_no_sockets_specified(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"js_server", "-m", "my_module.qjsc", "-b", "1F"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r != 0);
+  TEST_ASSERT(strstr(cmdargs_errlog_buf, "No sockets specified"));
+}
+
+/******************************************************************************
     Add all tests to the list below.
 ******************************************************************************/
 
@@ -325,4 +419,11 @@ TEST_LIST = {T(wait_group_inc_and_wait_basic_use_case),
              T(hex_decode_empty_string_zero_length),
              T(hex_decode_nonempty_string_zero_length),
              T(hex_decode_gives_expected_result),
+             T(cmdargs_returns_error_for_no_args),
+             T(cmdargs_returns_success_for_just_one_socket),
+             T(cmdargs_returns_success_for_multiple_sockets),
+             T(cmdargs_returns_error_for_multiple_dash_b),
+             T(cmdargs_returns_success_for_full_set_of_options),
+             T(cmdargs_returns_error_for_multiple_dash_m),
+             T(cmdargs_returns_error_if_no_sockets_specified),
              {NULL, NULL}};

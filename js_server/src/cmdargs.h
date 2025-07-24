@@ -3,6 +3,7 @@
 
 #include "config.h"
 #include <stdbool.h>
+#include <stdio.h>
 
 typedef struct {
   const char *es6_module_bytecode_file;
@@ -12,6 +13,7 @@ typedef struct {
   bool socket_sep_char_set;
 } CmdArgs;
 
-int parse_cmd_args(int argc, char **argv, CmdArgs *cmdargs);
+int parse_cmd_args(int argc, char **argv, void (*errlog)(const char *fmt, ...),
+                   CmdArgs *cmdargs);
 
 #endif

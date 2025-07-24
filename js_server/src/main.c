@@ -849,7 +849,7 @@ int main(int argc, char *argv[]) {
   mutex_init(&g_log_mutex);
   mutex_init(&g_cached_functions_mutex);
 
-  if (0 != parse_cmd_args(argc, argv, &g_cmd_args))
+  if (0 != parse_cmd_args(argc, argv, release_logf, &g_cmd_args))
     return 1;
 
   if (g_cmd_args.socket_sep_char != '\0' &&
