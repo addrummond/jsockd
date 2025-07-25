@@ -61,7 +61,8 @@ static int parse_cmd_args_helper(int argc, char **argv,
                "(e.g. '0A')\n");
         return -1;
       }
-      hex_decode((uint8_t *)&cmdargs->socket_sep_char, sizeof(char), argv[i]);
+      hex_decode((uint8_t *)&cmdargs->socket_sep_char,
+                 sizeof(cmdargs->socket_sep_char), argv[i]);
       cmdargs->socket_sep_char_set = true;
     } else if (argv[i][0] == '-') {
       errlog("Error: unrecognized option: %s\n", argv[i]);
