@@ -40,7 +40,10 @@ defmodule JSockDClient.JsServerManager do
           "-b",
           "00",
           "-m",
-          bytecode_module_file | Enum.concat(unix_socket_paths |> Enum.map(fn p -> ["-s", p] end))
+          bytecode_module_file,
+          "-s",
+          "--",
+          unix_socket_paths
         ],
         env: [
           {~c"JSOCKD_BYTECODE_MODULE_PUBLIC_KEY", String.to_charlist(bytecode_module_public_key)}
