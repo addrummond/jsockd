@@ -369,7 +369,7 @@ static int interrupt_handler(JSRuntime *rt, void *opaque) {
                         (uint64_t)(now.tv_nsec - start->tv_nsec) / 1000ULL;
     return delta_us > MAX_COMMAND_RUNTIME_US;
   }
-  return atomic_load(&g_interrupted_or_error);
+  return (bool)atomic_load(&g_interrupted_or_error);
 }
 
 static int init_thread_state(ThreadState *ts,
