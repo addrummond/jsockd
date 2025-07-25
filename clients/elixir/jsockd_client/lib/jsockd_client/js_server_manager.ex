@@ -42,8 +42,8 @@ defmodule JSockDClient.JsServerManager do
           "-m",
           bytecode_module_file,
           "-s",
-          "--",
-          unix_socket_paths
+          "--"
+          | unix_socket_paths
         ],
         env: [
           {~c"JSOCKD_BYTECODE_MODULE_PUBLIC_KEY", String.to_charlist(bytecode_module_public_key)}
