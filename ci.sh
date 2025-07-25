@@ -79,7 +79,7 @@ case $1 in
                     error=true
                 fi
             done
-            if [ "$error" == "true" ]; then
+            if [ "$error" = "true" ]; then
                 echo "Some unit tests are not included in the test list (see above). Aborting."
                 exit 1
             fi
