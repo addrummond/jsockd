@@ -23,7 +23,7 @@ defmodule JSockDClient.JsServerManager do
       1..n_threads
       |> Enum.map(fn i ->
         # TODO: in /tmp?
-        "/tmp/stardust_stass_quickjs_#{uid}_#{i}.sock"
+        "/tmp/jsockd_#{uid}_#{i}.sock"
       end)
 
     exec =
