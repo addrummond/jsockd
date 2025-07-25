@@ -84,7 +84,7 @@ case $1 in
                 exit 1
             fi
 
-            ./build_Debug/js_server_tests
+            ./mk.sh Debug test
         )
         ;;
 
