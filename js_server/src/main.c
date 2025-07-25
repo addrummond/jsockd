@@ -842,6 +842,10 @@ static void SIGINT_handler(int sig) {
   exit(1);
 }
 
+#ifndef VERSION
+#define VERSION unknown_version
+#endif
+
 int main(int argc, char *argv[]) {
   struct sigaction sa = {.sa_handler = SIGINT_handler};
   sigaction(SIGINT, &sa, NULL);
@@ -849,8 +853,18 @@ int main(int argc, char *argv[]) {
   mutex_init(&g_log_mutex);
   mutex_init(&g_cached_functions_mutex);
 
-  if (0 != parse_cmd_args(argc, argv, release_logf, &g_cmd_args))
+  if (0 != parse_cmd_args(argc, argv, release_logf, &g_cmd_args)) {
+    pthread_mutex_destroy(&g_log_mutex);
+    pthread_mutex_destroy(&g_cached_functions_mutex);
     return 1;
+  }
+
+  if (g_cmd_args.version) {
+    printf("js_server %s", STRINGIFY(VERSION));
+    pthread_mutex_destroy(&g_log_mutex);
+    pthread_mutex_destroy(&g_cached_functions_mutex);
+    return 0;
+  }
 
   if (g_cmd_args.socket_sep_char != '\0' &&
       strchr(TRUNCATION_APPEND, g_cmd_args.socket_sep_char)) {
@@ -859,6 +873,8 @@ int main(int argc, char *argv[]) {
                  "different character via the -b option.\n",
                  g_cmd_args.socket_sep_char, g_cmd_args.socket_sep_char,
                  TRUNCATION_APPEND);
+    pthread_mutex_destroy(&g_log_mutex);
+    pthread_mutex_destroy(&g_cached_functions_mutex);
     return 1;
   }
 

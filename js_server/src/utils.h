@@ -32,4 +32,7 @@ int write_all(int fd, const char *buf, size_t len);
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
+#define STRINGIFY_(x) #x
+#define STRINGIFY(x) STRINGIFY_(x)
+
 #endif

@@ -12,7 +12,9 @@ static int parse_cmd_args_helper(int argc, char **argv,
     return -1;
   }
   for (int i = 1; i < argc; ++i) {
-    if (0 == strcmp(argv[i], "-m")) {
+    if (0 == strcmp(argv[i], "-v")) {
+      cmdargs->version = true;
+    } else if (0 == strcmp(argv[i], "-m")) {
       ++i;
       if (i >= argc) {
         errlog("Error: -m requires an argument (ES6 module bytecode file)\n");
@@ -72,6 +74,16 @@ static int parse_cmd_args_helper(int argc, char **argv,
       return -1;
     }
   }
+
+  if (cmdargs->version &&
+      (cmdargs->n_sockets > 0 || cmdargs->socket_sep_char_set ||
+       cmdargs->es6_module_bytecode_file)) {
+    errlog("Error: -v (version) cannot be used with other flags.\n");
+    return -1;
+  }
+
+  if (cmdargs->version)
+    return 0;
 
   if (cmdargs->n_sockets == 0) {
     errlog("No sockets specified.\n");

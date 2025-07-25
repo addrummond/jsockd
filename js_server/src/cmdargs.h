@@ -11,6 +11,7 @@ typedef struct {
   int n_sockets;
   char socket_sep_char;
   bool socket_sep_char_set;
+  bool version;
 } CmdArgs;
 
 int parse_cmd_args(int argc, char **argv, void (*errlog)(const char *fmt, ...),

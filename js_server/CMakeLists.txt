@@ -7,6 +7,22 @@ project(
 
 MESSAGE(STATUS "Using toolchain file: ${CMAKE_TOOLCHAIN_FILE}")
 
+execute_process(COMMAND git describe --tags --match "v*.*.*"
+  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  OUTPUT_VARIABLE VERSION_STRING
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+  COMMAND_ERROR_IS_FATAL NONE)
+string(REPLACE "v" "" VERSION_STRING "${VERSION_STRING}")
+string(STRIP VERSION_STRING "${VERSION_STRING}")
+MESSAGE(STATUS "Version string: '${VERSION_STRING}'")
+
+# If the version string matches /-[0-9]+-g[0-9a-f]+$/ then the current commit is not
+# tagged, so we don't know the version
+if((NOT "${VERSION_STRING}" STREQUAL "") AND NOT (VERSION_STRING MATCHES "-[0-9]+-g[0-9a-f]+$"))
+    string(REGEX REPLACE "-[0-9]+-g[0-9a-f]+$" "" VERSION_STRING "${VERSION_STRING}")
+    add_compile_definitions(VERSION=${VERSION_STRING})
+endif()
+
 if(UNIX)
     add_compile_definitions(UNIX)
     if (APPLE)
