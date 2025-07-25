@@ -1,7 +1,7 @@
 defmodule JsockdClient.MixProject do
   use Mix.Project
 
-  @jsockd_version "0.0.20"
+  @jsockd_version "0.0.21"
 
   def project do
     [
