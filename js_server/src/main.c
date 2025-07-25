@@ -860,7 +860,7 @@ int main(int argc, char *argv[]) {
   }
 
   if (g_cmd_args.version) {
-    printf("js_server %s", STRINGIFY(VERSION));
+    printf("JSockD js_server %s", STRINGIFY(VERSION));
     pthread_mutex_destroy(&g_log_mutex);
     pthread_mutex_destroy(&g_cached_functions_mutex);
     return 0;

@@ -419,11 +419,29 @@ static void TEST_cmdargs_returns_error_if_s_has_no_arg(void) {
   TEST_ASSERT(strstr(cmdargs_errlog_buf, "-s requires at least"));
 }
 
+static void TEST_cmdargs_dash_v(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"js_server", "-v"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r == 0);
+}
+
+static void
+TEST_cmdargs_returns_error_if_dash_v_combined_with_other_opts(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"js_server", "-v", "-s", "my_socket"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r != 0);
+}
+
 /******************************************************************************
     Add all tests to the list below.
 ******************************************************************************/
 
-#define T(name) {#name, TEST_##name}
+#define T(name)                                                                \
+  { #name, TEST_##name }
 
 TEST_LIST = {T(wait_group_inc_and_wait_basic_use_case),
              T(hash_cache_add_and_retrieve),
@@ -448,4 +466,6 @@ TEST_LIST = {T(wait_group_inc_and_wait_basic_use_case),
              T(cmdargs_returns_error_for_multiple_dash_m),
              T(cmdargs_returns_error_if_no_sockets_specified),
              T(cmdargs_returns_error_if_s_has_no_arg),
+             T(cmdargs_dash_v),
+             T(cmdargs_returns_error_if_dash_v_combined_with_other_opts),
              {NULL, NULL}};
