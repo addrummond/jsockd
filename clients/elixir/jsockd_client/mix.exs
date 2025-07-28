@@ -2,6 +2,7 @@ defmodule JsockdClient.MixProject do
   use Mix.Project
 
   @jsockd_version "0.0.21"
+  @jscckd_binary_public_key "d05333e916cba1e50bf5e286d332f429a67da158713059194329539e6b785137"
 
   def project do
     [
@@ -150,5 +151,10 @@ defmodule JsockdClient.MixProject do
   defp protocol_versions do
     otp_major_vsn = :erlang.system_info(:otp_release) |> List.to_integer()
     if otp_major_vsn < 25, do: [:"tlsv1.2"], else: [:"tlsv1.2", :"tlsv1.3"]
+  end
+
+  defp verify_signature(public_key_hex, signature, challenge) do
+    public_key = Base.decode16!(public_key_hex, case: :mixed)
+    :enacl.sign_verify_detached(signature, challenge, public_key)
   end
 end
