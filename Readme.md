@@ -80,7 +80,7 @@ by a separator byte:
 ```
 <unique command ID>
 ----- separator byte -----
-(module, param) => { ...}
+(module, param) => { ... }
 ----- separator byte -----
 <JSON-encoded parameter>
 ----- separator byte -----
@@ -90,7 +90,7 @@ The separator byte is `\n` by default. It can be changed using the `-b XX` comma
 A useful value is `00`, as the null byte cannot be present in valid JSON or JavaScript
 (assuming UTF-8 encoding).
 
-A unique command ID is any sequence of 32 or fewer bytes that does not contain a space character or a separator byte.
+A unique command ID is any non-empty sequence of 32 or fewer bytes that does not contain a space character or a separator byte.
 
 The second field, the command, is a JavaScript expression evaluating to a function. The function is called with two arguments.
 The first is the module that was loaded from the bytecode file; the second is the parameter passed as the third field.
