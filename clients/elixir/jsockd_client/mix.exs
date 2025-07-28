@@ -1,8 +1,8 @@
 defmodule JsockdClient.MixProject do
   use Mix.Project
 
-  @jsockd_version "0.0.21"
-  @jscckd_binary_public_key "b136fca8fbfc42fe6dc95dedd035b0b50ad93b6a5d6fcaf8fc0552e9d29ee406"
+  @jsockd_version "0.0.22"
+  @jsockd_binary_public_key "b136fca8fbfc42fe6dc95dedd035b0b50ad93b6a5d6fcaf8fc0552e9d29ee406"
 
   def project do
     [
@@ -88,22 +88,36 @@ defmodule JsockdClient.MixProject do
 
       File.rm!(release_path)
 
-      File.chmod!(
+      js_server_binary_filename =
         Path.join([
           priv_dir,
           "release-artifacts",
           String.replace(release_filename, ".tar.gz", ""),
           "js_server"
-        ]),
+        ])
+
+      js_server_signature_filename =
+        Path.join([
+          priv_dir,
+          "release-artifacts",
+          String.replace(release_filename, ".tar.gz", ""),
+          "js_server_signature.bin"
+        ])
+
+      unless verify_signature(
+               File.read!(js_server_signature_filename),
+               File.read!(js_server_binary_filename)
+             ) do
+        raise "Signature verification failed for JSockD server binary."
+      end
+
+      File.chmod!(
+        js_server_binary_filename,
         0o500
       )
 
       File.rename!(
-        Path.join([
-          priv_dir,
-          "release-artifacts",
-          String.replace(release_filename, ".tar.gz", "")
-        ]),
+        Path.dirname(js_server_binary_filename),
         Path.join([
           priv_dir,
           "release-artifacts",
@@ -153,8 +167,8 @@ defmodule JsockdClient.MixProject do
     if otp_major_vsn < 25, do: [:"tlsv1.2"], else: [:"tlsv1.2", :"tlsv1.3"]
   end
 
-  defp verify_signature(public_key_hex, signature, challenge) do
-    public_key = Base.decode16!(public_key_hex, case: :mixed)
-    :enacl.sign_verify_detached(signature, challenge, public_key)
+  defp verify_signature(signature, challenge) do
+    public_key = Base.decode16!(@jsockd_binary_public_key, case: :mixed)
+    :crypto.verify(:eddsa, :none, challenge, signature, [public_key, :ed25519])
   end
 end
