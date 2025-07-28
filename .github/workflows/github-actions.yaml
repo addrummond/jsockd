@@ -71,7 +71,7 @@ jobs:
 
       - name: Package binaries
         env:
-          JSOCKD_BINARY_PRIVATE_SIGNING_KEY: ${{ secrets.jsockd_binary_private_signing_key }}"
+          JSOCKD_BINARY_PRIVATE_SIGNING_KEY: ${{ secrets.JSOCKD_BINARY_PRIVATE_SIGNING_KEY }}"
         run: ./ci.sh package_binaries
 
       - name: Upload release artifacts
