@@ -136,7 +136,7 @@ case $1 in
             cd js_server
             mkdir -p release-artifacts
 
-            echo "$JSOCKD_BINARY_PRIVATE_SIGNING_KEY" | xargs | base64 -d > jsockd_binary_private_signing_key.pem
+            echo "$JSOCKD_BINARY_PRIVATE_SIGNING_KEY" | sed 's/[[:space:]]//g' | base64 -d > jsockd_binary_private_signing_key.pem
             echo "Lines count of PEM file:"
             wc -l jsockd_binary_private_signing_key.pem
 
