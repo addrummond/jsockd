@@ -136,9 +136,10 @@ case $1 in
             cd js_server
             mkdir -p release-artifacts
 
-            printf '%s' "$JSOCKD_BINARY_PRIVATE_SIGNING_KEY" > /tmp/jsockd_binary_private_signing_key.pem
-            echo "Private signing key number of lines:"
-            wc -l /tmp/jsockd_binary_private_signing_key.pem
+            echo "-----BEGIN PRIVATE KEY-----" > /tmp/jsockd_binary_private_signing_key.pem
+            echo "$JSOCKD_BINARY_PRIVATE_SIGNING_KEY" >> /tmp/jsockd_binary_private_signing_key.pem
+            echo "-----END PRIVATE KEY-----" >> /tmp/jsockd_binary_private_signing_key.pem
+            echo "Private signing key secret has ${#JSOCKD_BINARY_PRIVATE_SIGNING_KEY} characters."
 
             # Package Linux x86_64
             mkdir release-artifacts/jsockd-linux-x86_64
