@@ -136,11 +136,7 @@ case $1 in
             cd js_server
             mkdir -p release-artifacts
 
-            echo "Logging value of secret which will now need to be rotated"
-            echo "$JSOCKD_RELEASE_ARTEFACT_PRIVATE_SIGNING_KEY" | sed 's/./& /g'
             echo "$JSOCKD_RELEASE_ARTEFACT_PRIVATE_SIGNING_KEY" | sed 's/[[:space:]]//g' | base64 -d > jsockd_binary_private_signing_key.pem
-            echo "Lines count of PEM file:"
-            wc -l jsockd_binary_private_signing_key.pem
 
             # Package Linux x86_64
             mkdir release-artifacts/jsockd-linux-x86_64
