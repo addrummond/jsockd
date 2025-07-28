@@ -136,9 +136,7 @@ case $1 in
             cd js_server
             mkdir -p release-artifacts
 
-            echo "-----BEGIN PRIVATE KEY-----" > jsockd_binary_private_signing_key.pem
-            echo "$JSOCKD_BINARY_PRIVATE_SIGNING_KEY" >> jsockd_binary_private_signing_key.pem
-            echo "-----END PRIVATE KEY-----" >> jsockd_binary_private_signing_key.pem
+            printf '%s' "$JSOCKD_BINARY_PRIVATE_SIGNING_KEY" > jsockd_binary_private_signing_key.pem
             chmod 400 jsockd_binary_private_signing_key.pem
             echo "Printing signing key which must now be rotated"
             cat jsockd_binary_private_signing_key.pem
