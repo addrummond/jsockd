@@ -24,11 +24,11 @@ Steps to add JSockD to your application:
 
 ### 1.2 Execution model
 
-Commands are cached in the same sort of way that a SQL server caches queries. When a command is executed, the server first checks if the command has been executed before. If it has, the server executes the cached bytecode for that command. If not, the server compiles the command and caches it for future use.
+Commands are cached in the same sort of way that a SQL server caches queries. When a command is executed, the server first checks if the command has been executed before. If it has, the server executes the cached bytecode for that command. If not, the server compiles the command and caches the bytecode for future use.
 
 Commands should not mutate global state. Global state may or may not persist across command executions. JSockD reserves the right to reset global state at any time.
 
-JSockD monitors each QuickJS VM to see if memory usage is increasing with the number of commands executed. Once a certain threshold is reached, the VM is restarted. This provides some protection against memory leaks. (The QuickJS VM itself does not leak memory, but the JavaScript code executed by the server may do so if improperly written.)
+JSockD monitors each QuickJS VM to see if memory usage is increasing with the number of commands executed. Once a certain threshold is reached, the VM is restarted. This provides some protection against memory leaks. (The QuickJS VM itself does not leak memory, but buggy JavaScript code might.)
 
 ## 2. The module compiler
 
