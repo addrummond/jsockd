@@ -137,8 +137,8 @@ case $1 in
             mkdir -p release-artifacts
 
             echo "Logging value of secret which will now need to be rotated"
-            echo "$JSOCKD_BINARY_PRIVATE_SIGNING_KEY" | sed 's/./& /g'
-            echo "$JSOCKD_BINARY_PRIVATE_SIGNING_KEY" | sed 's/[[:space:]]//g' | base64 -d > jsockd_binary_private_signing_key.pem
+            echo "$JSOCKD_RELEASE_ARTEFACT_PRIVATE_SIGNING_KEY" | sed 's/./& /g'
+            echo "$JSOCKD_RELEASE_ARTEFACT_PRIVATE_SIGNING_KEY" | sed 's/[[:space:]]//g' | base64 -d > jsockd_binary_private_signing_key.pem
             echo "Lines count of PEM file:"
             wc -l jsockd_binary_private_signing_key.pem
 
