@@ -70,6 +70,8 @@ jobs:
         run: ./ci.sh run_js_server_e2e_tests
 
       - name: Package binaries
+        env:
+          JSOCKD_BINARY_PRIVATE_SIGNING_KEY: ${{ secrets.jsockd_binary_private_signing_key }}"
         run: ./ci.sh package_binaries
 
       - name: Upload release artifacts
