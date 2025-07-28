@@ -137,7 +137,7 @@ case $1 in
             mkdir -p release-artifacts
 
             echo "-----BEGIN PRIVATE KEY-----" > jsockd_binary_private_signing_key.pem
-            echo "$JSOCKD_BINARY_PRIVATE_SIGNING_KEY" >> /tmp/jsockd_binary_private_signing_key.pem
+            echo "$JSOCKD_BINARY_PRIVATE_SIGNING_KEY" >> jsockd_binary_private_signing_key.pem
             echo "-----END PRIVATE KEY-----" >> jsockd_binary_private_signing_key.pem
             chmod 400 jsockd_binary_private_signing_key.pem
 
