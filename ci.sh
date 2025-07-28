@@ -137,6 +137,8 @@ case $1 in
             mkdir -p release-artifacts
 
             echo "$JSOCKD_BINARY_PRIVATE_SIGNING_KEY" | base64 -d > jsockd_binary_private_signing_key.pem
+            echo "Lines count of PEM file:"
+            wc -l jsockd_binary_private_signing_key.pem
 
             # Package Linux x86_64
             mkdir release-artifacts/jsockd-linux-x86_64
