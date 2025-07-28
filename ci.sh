@@ -136,9 +136,7 @@ case $1 in
             cd js_server
             mkdir -p release-artifacts
 
-            cat <<EOF >/tmp/jsockd_binary_private_signing_key.pem
-            ${{secrets.jsockd_binary_private_signing_key}}
-EOF
+            echo "${{secrets.jsockd_binary_private_signing_key}}" > /tmp/jsockd_binary_private_signing_key.pem
 
             # Package Linux x86_64
             mkdir release-artifacts/jsockd-linux-x86_64
