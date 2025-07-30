@@ -2,7 +2,6 @@
 #include <assert.h>
 #include <memory.h>
 #include <stdbool.h>
-#include <stdio.h>
 
 int line_buf_read(LineBuf *b, char sep_char,
                   int (*readf)(char *buf, size_t n, void *data),

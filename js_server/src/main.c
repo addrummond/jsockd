@@ -953,3 +953,6 @@ int main(int argc, char *argv[]) {
 
   return 0;
 }
+
+// supress the annoying warning that inttypes.h is not used directly
+static const char *supress_unused_header_warning UNUSED = PRId64;
