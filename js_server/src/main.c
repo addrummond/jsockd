@@ -527,7 +527,8 @@ typedef struct {
 
 static void write_to_buf(void *opaque_buf, const char *inp, size_t size) {
   WBuf *buf = (WBuf *)opaque_buf;
-  size_t to_write = MIN(buf->length - buf->index, size);
+  size_t to_write =
+      buf->length >= buf->index ? MIN(buf->length - buf->index, size) : 0;
   memcpy(buf->buf + buf->index, inp, to_write);
   buf->index += to_write;
 }
