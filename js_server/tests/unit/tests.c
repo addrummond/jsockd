@@ -141,12 +141,14 @@ static void TEST_hash_cash_fuzz(void) {
 int line_handler_data;
 int line_handler_input_i = 0;
 
-static int line_handler_1(const char *line, size_t line_len, void *data) {
+static int line_handler_1(const char *line, size_t line_len, void *data,
+                          bool truncated) {
   TEST_ASSERT((int *)data == &line_handler_data);
   TEST_ASSERT(line_len == 5);
   TEST_ASSERT(line[0] == 'l' && line[1] == 'i' && line[2] == 'n' &&
               line[3] == 'e' && line[4] == '0' + *((int *)data) &&
               line[5] == '\0');
+  TEST_ASSERT(!truncated);
   *((int *)data) = -1; // Mark as handled
   return 0;
 }
@@ -164,19 +166,19 @@ static void TEST_line_buf_simple_case(void) {
   int r;
   line_handler_data = 1;
   r = line_buf_read(&b, '\n', read_6_from_string, (void *)input, line_handler_1,
-                    &line_handler_data, "");
+                    &line_handler_data);
   TEST_ASSERT(line_handler_data == -1);
   TEST_ASSERT(r == 6);
 
   line_handler_data = 2;
   r = line_buf_read(&b, '\n', read_6_from_string, (void *)(input + 6),
-                    line_handler_1, &line_handler_data, "");
+                    line_handler_1, &line_handler_data);
   TEST_ASSERT(line_handler_data == -1);
   TEST_ASSERT(r == 6);
 
   line_handler_data = 3;
   r = line_buf_read(&b, '\n', read_6_from_string, (void *)(input + 12),
-                    line_handler_1, &line_handler_data, "");
+                    line_handler_1, &line_handler_data);
   TEST_ASSERT(line_handler_data == -1);
   TEST_ASSERT(r == 6);
 
@@ -196,31 +198,31 @@ static void TEST_line_buf_awkward_chunking(void) {
   int r;
   line_handler_data = 1;
   r = line_buf_read(&b, '\n', read_4_from_string, (void *)input, line_handler_1,
-                    &line_handler_data, "");
+                    &line_handler_data);
   TEST_ASSERT(line_handler_data ==
               1); // not handled yet as we didn't get to newline
   TEST_ASSERT(r == 4);
 
   r = line_buf_read(&b, '\n', read_4_from_string, (void *)(input + 4),
-                    line_handler_1, &line_handler_data, "");
+                    line_handler_1, &line_handler_data);
   TEST_ASSERT(line_handler_data == -1);
   TEST_ASSERT(r == 4);
 
   line_handler_data = 2;
   r = line_buf_read(&b, '\n', read_4_from_string, (void *)(input + 8),
-                    line_handler_1, &line_handler_data, "");
+                    line_handler_1, &line_handler_data);
   TEST_ASSERT(line_handler_data == -1);
   TEST_ASSERT(r == 4);
 
   line_handler_data = 3;
   r = line_buf_read(&b, '\n', read_4_from_string, (void *)(input + 12),
-                    line_handler_1, &line_handler_data, "");
+                    line_handler_1, &line_handler_data);
   TEST_ASSERT(line_handler_data ==
               3); // not handled yet as we didn't get to newline
   TEST_ASSERT(r == 4);
 
   r = line_buf_read(&b, '\n', read_4_from_string, (void *)(input + 16),
-                    line_handler_1, &line_handler_data, "");
+                    line_handler_1, &line_handler_data);
   TEST_ASSERT(line_handler_data == -1);
   TEST_ASSERT(r == 4);
 
@@ -228,7 +230,7 @@ static void TEST_line_buf_awkward_chunking(void) {
 }
 
 static int line_handler_never_called(const char *line, size_t line_len,
-                                     void *data) {
+                                     void *data, bool truncated) {
   // This handler should never be called.
   TEST_ASSERT(0);
   return 0;
@@ -236,32 +238,67 @@ static int line_handler_never_called(const char *line, size_t line_len,
 
 static void TEST_line_buf_truncation(void) {
   LineBuf b = {.buf = malloc(sizeof(char) * 8), .size = 8};
-  const char *input = "12345678901234567";
+  const char *input = "123456";
 
   line_handler_data = 0;
 
   int r;
   r = line_buf_read(&b, '\n', read_6_from_string, (void *)input,
-                    line_handler_never_called, &line_handler_data, "trunc");
+                    line_handler_never_called, &line_handler_data);
   TEST_ASSERT(r >= 0);
 
-  r = line_buf_read(&b, '\n', read_6_from_string, (void *)(input + 6),
-                    line_handler_never_called, &line_handler_data, "trunc");
+  r = line_buf_read(&b, '\n', read_6_from_string, (void *)(input),
+                    line_handler_never_called, &line_handler_data);
   TEST_ASSERT(r >= 0);
 
   // Read more than the buffer size, should truncate
-  r = line_buf_read(&b, '\n', read_6_from_string, (void *)(input + 6),
-                    line_handler_never_called, &line_handler_data, "trunc");
+  r = line_buf_read(&b, '\n', read_6_from_string, (void *)(input),
+                    line_handler_never_called, &line_handler_data);
   TEST_ASSERT(r >= 0);
-
-  TEST_ASSERT(b.buf[0] == 't' && b.buf[1] == 'r' && b.buf[2] == 'u' &&
-              b.buf[3] == 'n' && b.buf[4] == 'c');
+  TEST_ASSERT(b.truncated == true);
 
   free(b.buf);
 }
 
-static int line_handler_inc_count(const char *line, size_t line_len,
-                                  void *data) {
+static int line_handler_trunc_then_not_trunc(const char *line, size_t line_len,
+                                             void *data, bool truncated) {
+  static bool first_call = true;
+  TEST_ASSERT((first_call && truncated) ||
+              (!first_call && !truncated && line[0] == '1' && line[1] == '2' &&
+               line[2] == '3' && line[3] == '4' && line[4] == '5' &&
+               line[5] == '\0'));
+  first_call = false;
+  return 0;
+}
+
+static void TEST_line_buf_truncation_then_normal_read(void) {
+  LineBuf b = {.buf = malloc(sizeof(char) * 8), .size = 8};
+  const char *input = "12345612345\n";
+
+  line_handler_data = 0;
+
+  int r;
+  r = line_buf_read(&b, '\n', read_6_from_string, (void *)input,
+                    line_handler_never_called, &line_handler_data);
+  TEST_ASSERT(r >= 0);
+
+  r = line_buf_read(&b, '\n', read_6_from_string, (void *)(input + 6),
+                    line_handler_never_called, &line_handler_data);
+  TEST_ASSERT(r >= 0);
+
+  // Read more than the buffer size, should truncate
+  r = line_buf_read(&b, '\n', read_6_from_string, (void *)(input + 6),
+                    line_handler_trunc_then_not_trunc, &line_handler_data);
+  TEST_ASSERT(r >= 0);
+  r = line_buf_read(&b, '\n', read_6_from_string, (void *)(input + 6),
+                    line_handler_trunc_then_not_trunc, &line_handler_data);
+  TEST_ASSERT(r >= 0);
+
+  free(b.buf);
+}
+
+static int line_handler_inc_count(const char *line, size_t line_len, void *data,
+                                  bool truncated) {
   ++*((int *)data);
   return 0;
 }
@@ -278,7 +315,7 @@ static void TEST_line_buf_one_shot(void) {
   int r;
   int count = 0;
   r = line_buf_read(&b, '\n', read_all_from_string, (void *)input,
-                    line_handler_inc_count, &count, "trunc");
+                    line_handler_inc_count, &count);
   TEST_ASSERT(r >= 0);
   TEST_ASSERT(count == 3);
 
@@ -440,7 +477,8 @@ TEST_cmdargs_returns_error_if_dash_v_combined_with_other_opts(void) {
     Add all tests to the list below.
 ******************************************************************************/
 
-#define T(name) {#name, TEST_##name}
+#define T(name)                                                                \
+  { #name, TEST_##name }
 
 TEST_LIST = {T(wait_group_inc_and_wait_basic_use_case),
              T(hash_cache_add_and_retrieve),
@@ -453,6 +491,7 @@ TEST_LIST = {T(wait_group_inc_and_wait_basic_use_case),
              T(line_buf_awkward_chunking),
              T(line_buf_truncation),
              T(line_buf_one_shot),
+             T(line_buf_truncation_then_normal_read),
              T(hex_decode_empty_string_zero_length),
              T(hex_decode_nonempty_string_zero_length),
              T(hex_decode_gives_expected_result),

@@ -19,6 +19,18 @@ awk 'BEGIN { for (i = 0; i < ARGV[1]; i++) { print i"\n(m) => { "i"; ({}).foo.ba
 # A command that does a bunch of allocation and then times out.
 printf "uniqueid\n() => { let a = []; for (let i = 0; i < 10; ++i) { a.push({}); } ; for (;;) ; }\n\"dummy_input4\"\n"
 
+# A command where the command id is truncated
+printf "?truncated\n(m) => 1\n\"dummy_input5\"\n"
+
+# A command where the query is truncated
+printf "a_unique_id\n?truncated\n\"(m) => 1\n\"dummy_input6\"\n"
+
+# A command where the param is truncated
+printf "a_unique_id2\n(m) => 1\n?truncated\n"
+
+# A command where field is truncated
+printf "?truncated\n?truncated\n?truncated\n"
+
 # An invalid input sequence that triggered a memory leak bug once.
 cat <<EOF
 x

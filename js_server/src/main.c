@@ -132,6 +132,7 @@ typedef struct {
   int memory_increase_count;
   int64_t last_memory_usage;
   char error_msg_buf[8192];
+  bool truncated;
 } ThreadState;
 
 static void js_print_value_debug_write(void *opaque, const char *buf,
@@ -166,7 +167,8 @@ static CmdArgs g_cmd_args;
 
 static void listen_on_unix_socket(const char *unix_socket_filename,
                                   int (*line_handler)(const char *line,
-                                                      size_t len, void *data),
+                                                      size_t len, void *data,
+                                                      bool truncated),
                                   void *data) {
   ThreadState *ts = (ThreadState *)data;
 
@@ -264,9 +266,8 @@ static void listen_on_unix_socket(const char *unix_socket_filename,
     } break;
     }
 
-    int exit_value =
-        line_buf_read(&line_buf, g_cmd_args.socket_sep_char, lb_read,
-                      &ts->streamfd, line_handler, data, TRUNCATION_APPEND);
+    int exit_value = line_buf_read(&line_buf, g_cmd_args.socket_sep_char,
+                                   lb_read, &ts->streamfd, line_handler, data);
     if (exit_value == EXIT_ON_QUIT_COMMAND)
       ; // "?quit"
     else if (exit_value < 0)
@@ -669,19 +670,45 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
   return ts->stream_io_err;
 }
 
-static int line_handler(const char *line, size_t len, void *data) {
+static int line_handler(const char *line, size_t len, void *data,
+                        bool truncated) {
   ThreadState *ts = (ThreadState *)data;
-  debug_logf("LINE on %s: %s\n", ts->unix_socket_filename, line);
+  debug_logf("LINE %i on %s: %s\n", ts->line_n, ts->unix_socket_filename, line);
 
-  if (!strcmp("?reset", line)) {
+  if (!truncated && !strcmp("?reset", line)) {
     if (!JS_IsUndefined(ts->compiled_query)) {
       JS_FreeValue(ts->ctx, ts->compiled_query);
       ts->compiled_query = JS_UNDEFINED;
     }
     ts->line_n = 0;
+    ts->truncated = false;
     write_const_to_stream(ts, "reset\n");
     return 0;
   }
+
+  // Allow the truncation logic to be triggered by a special '?truncated' line
+  // in debug builds so that we don't have to generate large inputs in the
+  // Valgrind tests.
+  if (truncated || (CMAKE_BUILD_TYPE_IS_DEBUG && !strcmp(line, "?truncated")))
+    ts->truncated = true;
+
+  if (ts->truncated) {
+    if (ts->line_n == 2) {
+      ts->truncated = false;
+      ts->line_n = 0;
+      if (!JS_IsUndefined(ts->compiled_query)) {
+        JS_FreeValue(ts->ctx, ts->compiled_query);
+        ts->compiled_query = JS_UNDEFINED;
+      }
+      write_to_stream(ts, ts->current_uuid, ts->current_uuid_len);
+      write_const_to_stream(ts, " exception \"js_server command was too long "
+                                "and had to be truncated\"\n");
+    } else {
+      ts->line_n++;
+    }
+    return 0;
+  }
+
   if (!strcmp("?quit", line)) {
     if (!JS_IsUndefined(ts->compiled_query)) {
       JS_FreeValue(ts->ctx, ts->compiled_query);
@@ -865,18 +892,6 @@ int main(int argc, char *argv[]) {
     pthread_mutex_destroy(&g_log_mutex);
     pthread_mutex_destroy(&g_cached_functions_mutex);
     return 0;
-  }
-
-  if (g_cmd_args.socket_sep_char != '\0' &&
-      strchr(TRUNCATION_APPEND, g_cmd_args.socket_sep_char)) {
-    release_logf("Error: message separator character '%c' (= 0x%X) is in the "
-                 "truncation append set '%s'. Please set it to a "
-                 "different character via the -b option.\n",
-                 g_cmd_args.socket_sep_char, g_cmd_args.socket_sep_char,
-                 TRUNCATION_APPEND);
-    pthread_mutex_destroy(&g_log_mutex);
-    pthread_mutex_destroy(&g_cached_functions_mutex);
-    return 1;
   }
 
   if (g_cmd_args.es6_module_bytecode_file) {
