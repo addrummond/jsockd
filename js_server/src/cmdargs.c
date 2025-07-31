@@ -8,9 +8,8 @@ static int parse_cmd_args_helper(int argc, char **argv,
                                  CmdArgs *cmdargs) {
   memset(cmdargs, 0, sizeof(*cmdargs));
   cmdargs->socket_sep_char = '\n';
-  if (argc < 1) {
+  if (argc < 1)
     return -1;
-  }
   for (int i = 1; i < argc; ++i) {
     if (0 == strcmp(argv[i], "-v")) {
       cmdargs->version = true;
