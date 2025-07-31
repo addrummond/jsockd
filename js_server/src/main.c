@@ -856,8 +856,6 @@ static void SIGINT_handler(int sig) {
   if (atomic_load(&g_global_init_complete))
     global_cleanup();
 
-  // This should be safe because we locked 'doing_js_stuff_mutex' and then
-  // joined all the threads.
   for (int i = 0; i < atomic_load(&g_n_threads); ++i)
     cleanup_thread_state(&g_thread_states[i]);
 
