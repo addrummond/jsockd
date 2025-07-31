@@ -1,7 +1,9 @@
 
 #include "wait_group.h"
 #include <assert.h>
+#include <stdio.h>
 #include <time.h>
+#include <unistd.h>
 
 int wait_group_init(WaitGroup *wg, int n_waiting_for) {
   // Don't need a monotonic clock on Mac because we can use
@@ -59,7 +61,7 @@ int wait_group_timed_wait(WaitGroup *wg, uint64_t timeout_ns) {
 
   wg->wait_called = true;
 
-#if defined LINUX
+#if defined LINUX && !defined FORCE_BUSY_LOOP_FOR_WG
   struct timespec abstime;
   if (0 != clock_gettime(CLOCK_MONOTONIC, &abstime))
     return -1;
@@ -67,12 +69,34 @@ int wait_group_timed_wait(WaitGroup *wg, uint64_t timeout_ns) {
   abstime.tv_sec += abstime.tv_nsec / 1000000000;
   abstime.tv_nsec %= 1000000000;
   r = pthread_cond_timedwait(&wg->cond, &wg->mutex, &abstime);
-#elif defined MACOS
+#elif defined MACOS && !defined FORCE_BUSY_LOOP_FOR_WG
   struct timespec relative_time = {.tv_nsec = timeout_ns % 1000000000,
                                    .tv_sec = timeout_ns / 1000000000};
   r = pthread_cond_timedwait_relative_np(&wg->cond, &wg->mutex, &relative_time);
 #else
-#error "Unsupported platform for wait_group_timed_wait"
+  // If we can't do a timed wait then use a simple loop, as we don't want the
+  // program to hang indefinitely if there's a bug (which is what will happen if
+  // we use pthread_cond_wait).
+  useconds_t w = 50;
+  struct timespec start_time;
+  if (0 != clock_gettime(CLOCK_MONOTONIC, &start_time))
+    return -1;
+  while (atomic_load(&wg->n_remaining) > 0) {
+    usleep(w);
+    if (w < 100000)
+      w = w * 5 / 4;
+    struct timespec current_time;
+    if (0 != clock_gettime(CLOCK_MONOTONIC, &current_time))
+      return -1;
+    if ((uint64_t)(current_time.tv_sec - start_time.tv_sec) >
+            timeout_ns / 1000000000 ||
+        ((uint64_t)(current_time.tv_sec - start_time.tv_sec) ==
+             timeout_ns / 1000000000 &&
+         (uint64_t)(current_time.tv_nsec - start_time.tv_nsec) >=
+             timeout_ns % 1000000000)) {
+      return -1;
+    }
+  }
 #endif
 
   if (r != 0)
