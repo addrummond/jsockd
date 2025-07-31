@@ -33,12 +33,6 @@
 #include <time.h>
 #include <unistd.h>
 
-#ifdef CMAKE_BUILD_TYPE_DEBUG
-#define CMAKE_BUILD_TYPE_IS_DEBUG 1
-#else
-#define CMAKE_BUILD_TYPE_IS_DEBUG 0
-#endif
-
 static const uint8_t *g_module_bytecode;
 static size_t g_module_bytecode_size;
 

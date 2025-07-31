@@ -41,4 +41,10 @@ int write_all(int fd, const char *buf, size_t len);
 #define UNUSED
 #endif
 
+#ifdef CMAKE_BUILD_TYPE_DEBUG
+#define CMAKE_BUILD_TYPE_IS_DEBUG 1
+#else
+#define CMAKE_BUILD_TYPE_IS_DEBUG 0
+#endif
+
 #endif
