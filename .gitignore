@@ -15,3 +15,5 @@ tools-bin
 private_signing_key.pem
 public_signing_key
 jsockd_binary_private_signing_key.pem
+js_server/src/js/gen_*
+

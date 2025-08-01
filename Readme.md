@@ -99,7 +99,7 @@ The third field is the JSON-encoded parameter value.
 
 The server responds with a single line (terminated with `\n`) consisting of the command ID followed by a space and then either
 * the JSON-encoded result of the command, if successful; or
-* the string `exception` followed by a space and an error message encoded as a JSON string.
+* the string `exception` followed by a JSON-encoded error message and backtrace (see next subsection).
 
 As the protocol is synchronous, command IDs are not strictly necessary. However, it is recommended to check that responses have the expected
 command ID as a means of ensuring that the client code is working correctly.
@@ -114,6 +114,24 @@ The client may send either of the following commands at any point, terminated by
 The `?reset` command resets the server's command parser to its initial state (so that it expects the next field to be a unique command ID).
 
 The `?quit` command causes the server to exit immediately (closing all sockets, not just the socket on which the command was sent).
+
+### 3.3 Error message and backtrace format
+
+```jsonb
+{
+  "raw": "Error: foo\n  at <anonymous> (<buffer>:1:26)" // the raw QuickJS error message + stack trace
+  "errorMessage": "Error: foo", // the error message
+  "trace": [
+     {
+        "functionName": "flubFoo", // the function containing this line in the backtrace
+        "location: "foo.js",       // the source file (null if unavailable)
+        "line": 1,                 // the line number (null if unavailable)
+        "column": 26,              // the column number (null if unavailable)
+     },
+     ...
+  ]
+}
+```
 
 ## 4. Building from source
 

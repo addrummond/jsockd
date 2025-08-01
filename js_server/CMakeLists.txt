@@ -55,6 +55,12 @@ if(CMAKE_C_COMPILER_ID MATCHES "GNU")
     add_link_options(-lm)
 endif()
 
+add_custom_command(
+  OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/src/js/gen_backtrace.c
+  COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../tools-bin/qjsc -c -o ${CMAKE_CURRENT_SOURCE_DIR}/src/js/gen_backtrace.c -N g_backtrace_module_bytecode ${CMAKE_CURRENT_SOURCE_DIR}/src/js/backtrace.mjs
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/js/backtrace.mjs
+  )
+
 set(ED25519_LIB_SOURCES
   src/lib/ed25519/add_scalar.c
   src/lib/ed25519/fe.c
@@ -76,8 +82,8 @@ set(JS_SERVER_SOURCES
   src/utils.c
   src/hex.c
   src/verify_bytecode.c
-  src/writejsonstring.c
   src/cmdargs.c
+  src/js/gen_backtrace.c
   ${ED25519_LIB_SOURCES}
   )
 

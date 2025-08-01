@@ -115,6 +115,8 @@ else
     chmod +x ../../tools-bin/compile_es6_module_Linux_x86_64
     chmod +x ../../tools-bin/compile_es6_module
     mv libquickjs.a /tmp/libquickjs_Linux_x86_64_Debug.a # this will get killed by make clean
+    cp qjs ../../tools-bin
+    cp qjsc ../../tools-bin
     # cross-compile for Linux arm
     make clean
     make CONFIG_LTO=n CROSS_PREFIX=aarch64-linux-gnu-

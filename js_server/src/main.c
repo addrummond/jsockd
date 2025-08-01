@@ -11,7 +11,6 @@
 #include "utils.h"
 #include "verify_bytecode.h"
 #include "wait_group.h"
-#include "writejsonstring.h"
 #include <assert.h>
 #include <err.h>
 #include <errno.h>
@@ -32,6 +31,11 @@
 #include <sys/un.h>
 #include <time.h>
 #include <unistd.h>
+
+// Code for dealing with backteaces and source maps is written in JS and then
+// compiled to bytecode in the build process.
+extern const uint32_t g_backtrace_module_bytecode_size;
+extern const uint8_t g_backtrace_module_bytecode[];
 
 static const uint8_t *g_module_bytecode;
 static size_t g_module_bytecode_size;
@@ -119,6 +123,7 @@ typedef struct {
   int line_n;
   JSValue compiled_module;
   JSValue compiled_query;
+  JSValue backtrace_module;
   struct timespec last_js_execution_start;
   char current_uuid[MESSAGE_UUID_MAX_BYTES + 1 /*zeroterm*/];
   size_t current_uuid_len;
@@ -413,6 +418,10 @@ static int init_thread_state(ThreadState *ts,
     assert(JS_IsUndefined(ts->compiled_query));
   }
 
+  ts->backtrace_module = load_binary_module(ctx, g_backtrace_module_bytecode,
+                                            g_backtrace_module_bytecode_size);
+  assert(!JS_IsException(ts->backtrace_module));
+
   ts->rt = rt;
   ts->ctx = ctx;
   ts->stream_io_err = 0;
@@ -432,6 +441,8 @@ static int init_thread_state(ThreadState *ts,
 }
 
 static void cleanup_js_runtime(ThreadState *ts) {
+  JS_FreeValue(ts->ctx, ts->backtrace_module);
+  JS_FreeValue(ts->ctx, ts->compiled_query);
   JS_FreeValue(ts->ctx, ts->compiled_module);
 
   // Valgrind seems to correctly have caught a memory leak in quickjs-libc.
@@ -583,8 +594,25 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
                 .length = sizeof(ts->error_msg_buf)};
     JSValue exception = JS_GetException(ts->ctx);
     JS_PrintValue(ts->ctx, write_to_buf, &emb, exception, NULL);
-    write_json_string(ts->streamfd, ts->error_msg_buf, emb.index);
+
+    // Parse the error message and backtrace and encode it as JSON using
+    // the code in src/js/backtrace.mjs. Not super efficient, but we only run
+    // this code in the error case, so it doesn't matter too much.
+    JSValue parseBacktrace =
+        JS_GetPropertyStr(ts->ctx, ts->backtrace_module, "parseBacktrace");
+    JSValue backtrace_str = JS_NewStringLen(ts->ctx, emb.buf, emb.index);
+    JSValue parsed_backtrace_js =
+        JS_Call(ts->ctx, parseBacktrace, JS_UNDEFINED, 1, &backtrace_str);
+    size_t parsed_backtrace_len;
+    const char *parsed_backtrace =
+        JS_ToCStringLen(ts->ctx, &parsed_backtrace_len, parsed_backtrace_js);
+    write_to_stream(ts, parsed_backtrace, parsed_backtrace_len);
     write_const_to_stream(ts, "\n");
+
+    JS_FreeCString(ts->ctx, parsed_backtrace);
+    JS_FreeValue(ts->ctx, parsed_backtrace_js);
+    JS_FreeValue(ts->ctx, backtrace_str);
+    JS_FreeValue(ts->ctx, parseBacktrace);
     JS_FreeValue(ts->ctx, exception);
     JS_FreeValue(ts->ctx, parsed_arg);
     JS_FreeValue(ts->ctx, ret);
