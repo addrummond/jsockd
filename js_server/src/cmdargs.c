@@ -45,6 +45,18 @@ static int parse_cmd_args_helper(int argc, char **argv,
         errlog("Error: -s requires at least one argument (socket file)\n");
         return -1;
       }
+    } else if (0 == strcmp(argv[i], "-sm")) {
+      ++i;
+      if (i >= argc) {
+        errlog("Error: -sm requires an argument (source map file, e.g. "
+               "'foo.js.map')\n");
+        return -1;
+      }
+      if (cmdargs->source_map_file) {
+        errlog("Error: -sm can be specified at most once\n");
+        return -1;
+      }
+      cmdargs->source_map_file = argv[i];
     } else if (0 == strcmp(argv[i], "-b")) {
       if (cmdargs->socket_sep_char_set) {
         errlog("Error: -b can be specified at most once\n");
@@ -86,6 +98,12 @@ static int parse_cmd_args_helper(int argc, char **argv,
 
   if (cmdargs->n_sockets == 0) {
     errlog("No sockets specified.\n");
+    return -1;
+  }
+
+  if (cmdargs->source_map_file && !cmdargs->es6_module_bytecode_file) {
+    errlog("Error: -sm (source map file) can only be used with -m (ES6 module "
+           "bytecode file)\n");
     return -1;
   }
 

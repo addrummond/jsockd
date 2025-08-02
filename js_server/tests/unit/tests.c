@@ -464,6 +464,26 @@ static void TEST_cmdargs_dash_v(void) {
   TEST_ASSERT(r == 0);
 }
 
+static void TEST_cmdargs_dash_sm(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"js_server", "-s",  "/tmp/sock",           "-m",
+                  "foo.qjsbc", "-sm", "my_source_map.js.map"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r == 0);
+  TEST_ASSERT(0 == strcmp(cmdargs.source_map_file, "my_source_map.js.map"));
+}
+
+static void TEST_cmdargs_dash_sm_returns_error_if_dash_m_not_present(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"js_server", "-s", "/tmp/sock", "-sm",
+                  "my_source_map.js.map"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r != 0);
+  TEST_ASSERT(strstr(cmdargs_errlog_buf, "can only be used with -m"));
+}
+
 static void
 TEST_cmdargs_returns_error_if_dash_v_combined_with_other_opts(void) {
   CmdArgs cmdargs = {0};
@@ -504,5 +524,7 @@ TEST_LIST = {T(wait_group_inc_and_wait_basic_use_case),
              T(cmdargs_returns_error_if_no_sockets_specified),
              T(cmdargs_returns_error_if_s_has_no_arg),
              T(cmdargs_dash_v),
+             T(cmdargs_dash_sm),
+             T(cmdargs_dash_sm_returns_error_if_dash_m_not_present),
              T(cmdargs_returns_error_if_dash_v_combined_with_other_opts),
              {NULL, NULL}};

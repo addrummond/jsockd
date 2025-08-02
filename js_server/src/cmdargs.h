@@ -8,6 +8,7 @@
 typedef struct {
   const char *es6_module_bytecode_file;
   const char *socket_path[MAX_THREADS];
+  const char *source_map_file;
   int n_sockets;
   char socket_sep_char;
   bool socket_sep_char_set;

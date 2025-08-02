@@ -83,6 +83,7 @@ set(JS_SERVER_SOURCES
   src/hex.c
   src/verify_bytecode.c
   src/cmdargs.c
+  src/mmap_file.c
   src/js/gen_backtrace.c
   ${ED25519_LIB_SOURCES}
   )

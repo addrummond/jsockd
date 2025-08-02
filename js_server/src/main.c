@@ -6,6 +6,7 @@
 #include "hash_cache.h"
 #include "hex.h"
 #include "line_buf.h"
+#include "mmap_file.h"
 #include "quickjs-libc.h"
 #include "quickjs.h"
 #include "utils.h"
@@ -39,6 +40,9 @@ extern const uint8_t g_backtrace_module_bytecode[];
 
 static const uint8_t *g_module_bytecode;
 static size_t g_module_bytecode_size;
+
+static const uint8_t *g_source_map;
+static size_t g_source_map_size;
 
 // Testing scenarios with collisions is less labor intensive if we use a smaller
 // number of bits in the debug build.
@@ -600,9 +604,15 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
     // this code in the error case, so it doesn't matter too much.
     JSValue parseBacktrace =
         JS_GetPropertyStr(ts->ctx, ts->backtrace_module, "parseBacktrace");
+    JSValue sourcemap_str =
+        g_source_map_size == 0
+            ? JS_UNDEFINED
+            : JS_NewStringLen(ts->ctx, (const char *)g_source_map,
+                              g_source_map_size);
     JSValue backtrace_str = JS_NewStringLen(ts->ctx, emb.buf, emb.index);
-    JSValue parsed_backtrace_js =
-        JS_Call(ts->ctx, parseBacktrace, JS_UNDEFINED, 1, &backtrace_str);
+    JSValue argv[] = {sourcemap_str, backtrace_str};
+    JSValue parsed_backtrace_js = JS_Call(ts->ctx, parseBacktrace, JS_UNDEFINED,
+                                          sizeof(argv) / sizeof(argv[0]), argv);
     size_t parsed_backtrace_len;
     const char *parsed_backtrace =
         JS_ToCStringLen(ts->ctx, &parsed_backtrace_len, parsed_backtrace_js);
@@ -611,6 +621,7 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
 
     JS_FreeCString(ts->ctx, parsed_backtrace);
     JS_FreeValue(ts->ctx, parsed_backtrace_js);
+    JS_FreeValue(ts->ctx, sourcemap_str);
     JS_FreeValue(ts->ctx, backtrace_str);
     JS_FreeValue(ts->ctx, parseBacktrace);
     JS_FreeValue(ts->ctx, exception);
@@ -772,36 +783,13 @@ static atomic_int g_n_threads;
 
 static const uint8_t *load_module_bytecode(const char *filename,
                                            size_t *out_size) {
-  int module_bytecode_fd = open(filename, O_RDONLY);
-  struct stat module_bytecode_stat;
-  if (0 != fstat(module_bytecode_fd, &module_bytecode_stat) ||
-      module_bytecode_stat.st_size == 0) {
-    release_logf(
-        "Error opening or reading bytecode file %s, or file empty: %s\n",
-        filename, strerror(errno));
-    close(module_bytecode_fd);
+  const uint8_t *module_bytecode = mmap_file(filename, out_size);
+  if (!module_bytecode)
     return NULL;
-  }
-  const uint8_t *module_bytecode =
-      (const uint8_t *)mmap(NULL, module_bytecode_stat.st_size, PROT_READ,
-                            MAP_PRIVATE, module_bytecode_fd, 0);
-  if (module_bytecode == MAP_FAILED) {
-    release_logf("Error mapping bytecode file %s: %s\n", filename,
-                 strerror(errno));
-    close(module_bytecode_fd);
-    return NULL;
-  }
-  if (module_bytecode_stat.st_size < ED25519_SIGNATURE_SIZE + 1) {
+  if (*out_size < ED25519_SIGNATURE_SIZE + 1) {
     release_logf("Module bytecode file is only %zu bytes. Too small!",
-                 module_bytecode_stat.st_size);
-    close(module_bytecode_fd);
-    return NULL;
-  }
-  *out_size = module_bytecode_stat.st_size - ED25519_SIGNATURE_SIZE;
-  if (0 != close(module_bytecode_fd)) {
-    release_logf("Error closing bytecode file %s: %s\n", filename,
-                 strerror(errno));
-    munmap((void *)module_bytecode, module_bytecode_stat.st_size);
+                 *out_size);
+    munmap((void *)module_bytecode, *out_size);
     return NULL;
   }
 
@@ -813,6 +801,7 @@ static const uint8_t *load_module_bytecode(const char *filename,
   // uploaded to the GitHub release are Release builds.
   if (CMAKE_BUILD_TYPE_IS_DEBUG &&
       !strcmp(pubkey, "dangerously_allow_invalid_signatures")) {
+    *out_size = *out_size - ED25519_SIGNATURE_SIZE;
     return module_bytecode;
   }
 
@@ -823,16 +812,17 @@ static const uint8_t *load_module_bytecode(const char *filename,
     release_logf("Error decoding public key hex from environment variable "
                  "JSOCKD_BYTECODE_MODULE_PUBLIC_KEY; decoded size=%zu\n",
                  decoded_size);
-    munmap((void *)module_bytecode, module_bytecode_stat.st_size);
+    munmap((void *)module_bytecode, *out_size);
     return NULL;
   }
-  if (!verify_bytecode(module_bytecode, module_bytecode_stat.st_size,
-                       pubkey_bytes)) {
+  if (!verify_bytecode(module_bytecode, *out_size, pubkey_bytes)) {
     release_logf("Error verifying bytecode module %s with public key %s\n",
                  filename, pubkey);
-    munmap((void *)module_bytecode, module_bytecode_stat.st_size);
+    munmap((void *)module_bytecode, *out_size);
     return NULL;
   }
+
+  *out_size = *out_size - ED25519_SIGNATURE_SIZE;
 
   return module_bytecode;
 }
@@ -853,9 +843,13 @@ static void global_cleanup(void) {
   pthread_mutex_destroy(&g_log_mutex);
   wait_group_destroy(&g_thread_ready_wait_group);
 
-  if (g_module_bytecode_size != 0) // if it's zero, we know mem was never mapped
+  // if it's zero, we know mem was never mapped
+  // (because mmap_file errors on empty files)
+  if (g_module_bytecode_size != 0)
     munmap((void *)g_module_bytecode,
            g_module_bytecode_size + ED25519_SIGNATURE_SIZE);
+  if (g_source_map_size != 0)
+    munmap((void *)g_source_map, g_source_map_size);
 }
 
 static void SIGINT_handler(int sig) {
@@ -924,6 +918,13 @@ int main(int argc, char *argv[]) {
       pthread_mutex_destroy(&g_cached_functions_mutex);
       return 1;
     }
+  }
+
+  if (g_cmd_args.source_map_file) {
+    g_source_map = mmap_file(g_cmd_args.source_map_file, &g_source_map_size);
+    if (!g_source_map)
+      release_logf(
+          "Error loading source map file %s; continuing without source map\n");
   }
 
   int n_threads = MIN(g_cmd_args.n_sockets, MAX_THREADS);
