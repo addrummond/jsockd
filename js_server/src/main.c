@@ -608,10 +608,11 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
     JSValue parseBacktrace =
         JS_GetPropertyStr(ts->ctx, ts->backtrace_module, "parseBacktrace");
     if (JS_IsUndefined(ts->sourcemap_str)) {
-      g_source_map_size == 0
-          ? JS_UNDEFINED
-          : JS_NewStringLen(ts->ctx, (const char *)g_source_map,
-                            g_source_map_size);
+      ts->sourcemap_str =
+          g_source_map_size == 0
+              ? JS_UNDEFINED
+              : JS_NewStringLen(ts->ctx, (const char *)g_source_map,
+                                g_source_map_size);
     }
     JSValue backtrace_str = JS_NewStringLen(ts->ctx, emb.buf, emb.index);
     JSValue argv[] = {ts->sourcemap_str, backtrace_str};
