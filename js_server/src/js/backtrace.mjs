@@ -1,3 +1,5 @@
+let parsedSourcemap = null;
+
 export function parseBacktrace(sourcemap, backtrace) {
   const lines = backtrace.split("\n");
   const trace = [];
@@ -21,10 +23,13 @@ export function parseBacktrace(sourcemap, backtrace) {
     }
   }
 
+  if (parsedSourcemap === null)
+    parsedSourcemap = sourcemap ? JSON.parse(sourcemap) : null;
+
   return JSON.stringify({
     errorMessage: errorMessage.trim(),
     trace: sourcemap
-      ? mapBacktraceWithSourceMap(JSON.parse(sourcemap), trace)
+      ? mapBacktraceWithSourceMap(parsedSourcemap, trace)
       : trace,
     raw: backtrace.trim(),
   });

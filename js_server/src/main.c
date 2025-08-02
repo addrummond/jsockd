@@ -136,6 +136,7 @@ typedef struct {
   int64_t last_memory_usage;
   char error_msg_buf[8192];
   bool truncated;
+  JSValue sourcemap_str;
 } ThreadState;
 
 static void js_print_value_debug_write(void *opaque, const char *buf,
@@ -440,6 +441,7 @@ static int init_thread_state(ThreadState *ts,
   ts->memory_check_count = 0;
   ts->memory_increase_count = 0;
   ts->last_memory_usage = 0;
+  ts->sourcemap_str = JS_UNDEFINED;
 
   return 0;
 }
@@ -448,6 +450,7 @@ static void cleanup_js_runtime(ThreadState *ts) {
   JS_FreeValue(ts->ctx, ts->backtrace_module);
   JS_FreeValue(ts->ctx, ts->compiled_query);
   JS_FreeValue(ts->ctx, ts->compiled_module);
+  JS_FreeValue(ts->ctx, ts->sourcemap_str);
 
   // Valgrind seems to correctly have caught a memory leak in quickjs-libc.
   // It's an inconsequential one, as it's an object that's allocated once at
@@ -604,13 +607,14 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
     // this code in the error case, so it doesn't matter too much.
     JSValue parseBacktrace =
         JS_GetPropertyStr(ts->ctx, ts->backtrace_module, "parseBacktrace");
-    JSValue sourcemap_str =
-        g_source_map_size == 0
-            ? JS_UNDEFINED
-            : JS_NewStringLen(ts->ctx, (const char *)g_source_map,
-                              g_source_map_size);
+    if (JS_IsUndefined(ts->sourcemap_str)) {
+      g_source_map_size == 0
+          ? JS_UNDEFINED
+          : JS_NewStringLen(ts->ctx, (const char *)g_source_map,
+                            g_source_map_size);
+    }
     JSValue backtrace_str = JS_NewStringLen(ts->ctx, emb.buf, emb.index);
-    JSValue argv[] = {sourcemap_str, backtrace_str};
+    JSValue argv[] = {ts->sourcemap_str, backtrace_str};
     JSValue parsed_backtrace_js = JS_Call(ts->ctx, parseBacktrace, JS_UNDEFINED,
                                           sizeof(argv) / sizeof(argv[0]), argv);
     if (JS_IsException(parsed_backtrace_js)) {
@@ -627,7 +631,6 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
     }
 
     JS_FreeValue(ts->ctx, parsed_backtrace_js);
-    JS_FreeValue(ts->ctx, sourcemap_str);
     JS_FreeValue(ts->ctx, backtrace_str);
     JS_FreeValue(ts->ctx, parseBacktrace);
     JS_FreeValue(ts->ctx, exception);
