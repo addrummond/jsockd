@@ -142,7 +142,24 @@ When a source map is provided, each entry in the `"trace"` array (see previous s
 
 It is recommended to specify a source map only for development and testing purposes, as the code for computing source mapped back traces is not optimized for performance. As long as you have a source map for your bundle, you always have the option of manually resolving the backtrace entries when looking at errors in production.
 
-## 4. Building from source
+## 4. Bundling example
+
+JSockD can be used with any bundler that can output an ES6 module (or with no bundler at all if your JS code is contained in a single file). The following is an example of how to bundle you code using [esbuild](https://esbuild.github.io/). The `root_module.mjs` module should contain all the code that you want to execute in the JSockD server. It can import other modules as needed.
+
+```
+esbuild root_module.mjs --bundle --outfile=bundle.mjs --sourcemap --format=esm
+```
+
+Example `root_module.mjs` contents:
+
+```javascript
+import { flubBar } from "./library1"
+import { blagFoo } from "./library2"
+
+export { flubBar, blagFoo }
+````
+
+## 5. Building from source
 
 To build JSockD from source, you must first build QuickJS and then the JS server.
 
@@ -152,11 +169,11 @@ Tools necessary for the build can be installed using [mise-en-place](https://mis
 mise install
 ```
 
-### 4.1 Building QuickJS
+### 5.1 Building QuickJS
 
 QuickJS is built by running `./build_quickjs.sh`. This script downloads the QuickJS source code, apples some patches, and then builds the QuickJS library. The QuickJS build is kept separate from the main JSockD build because it needs to be run only once, and the QuickJS build system is a bit finicky to configure for different environments.
 
-### 4.2 Building the JS server
+### 5.2 Building the JS server
 
 The JS server is built using CMake 4. The `mk.sh` wrapper script invokes CMake with the correct arguments for common use cases.
 
@@ -180,9 +197,9 @@ Run unit tests can be as follows:
 ./mk.sh Debug test
 ```
 
-## 5. Releases
+## 6. Releases
 
-### 5.1 Creating a release
+### 6.1 Creating a release
 
 Pre-built binaries are available for download from the [GitHub releases page](https://github.com/addrummond/jsockd/releases). The following platforms are supported:
 
@@ -201,7 +218,7 @@ Each release includes:
 - Platform-specific tar.gz archives containing the `js_server` and `compile_es6_module` binaries
 - SHA256 checksums for verification
 
-### 5.2 New version checklist
+### 6.2 New version checklist
 
 * Update `@jsockd_version` in `clients/elixir/jsockd_client/mix.exs`.
 * Update the example `deps` entry in `clients/elixir/jsockd_client/README.md`.
