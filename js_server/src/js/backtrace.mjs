@@ -1,5 +1,7 @@
 let parsedSourcemap = null;
 
+// Bellard's QuickJS doesn't expose structured backtraces via the public API,
+// so we need to parse the backtrace's string representation.
 export function parseBacktrace(sourcemap, backtrace) {
   const lines = backtrace.split("\n");
   const trace = [];
