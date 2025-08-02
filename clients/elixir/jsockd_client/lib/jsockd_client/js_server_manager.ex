@@ -12,7 +12,8 @@ defmodule JSockDClient.JsServerManager do
           n_threads: n_threads,
           bytecode_module_file: bytecode_module_file,
           bytecode_module_public_key: bytecode_module_public_key,
-          js_server_exec: js_server_exec
+          js_server_exec: js_server_exec,
+          source_map: source_map
         }
       ) do
     n_threads = n_threads || :erlang.system_info(:logical_processors_online)
@@ -36,15 +37,21 @@ defmodule JSockDClient.JsServerManager do
         :in,
         :exit_status,
         line: 80,
-        args: [
-          "-b",
-          "00",
-          "-m",
-          bytecode_module_file,
-          "-s",
-          "--"
-          | unix_socket_paths
-        ],
+        args:
+          if source_map do
+            ["-sm", source_map]
+          else
+            []
+          end ++
+            [
+              "-b",
+              "00",
+              "-m",
+              bytecode_module_file,
+              "-s",
+              "--"
+              | unix_socket_paths
+            ],
         env: [
           {~c"JSOCKD_BYTECODE_MODULE_PUBLIC_KEY", String.to_charlist(bytecode_module_public_key)}
         ]
