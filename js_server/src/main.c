@@ -613,13 +613,19 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
     JSValue argv[] = {sourcemap_str, backtrace_str};
     JSValue parsed_backtrace_js = JS_Call(ts->ctx, parseBacktrace, JS_UNDEFINED,
                                           sizeof(argv) / sizeof(argv[0]), argv);
-    size_t parsed_backtrace_len;
-    const char *parsed_backtrace =
-        JS_ToCStringLen(ts->ctx, &parsed_backtrace_len, parsed_backtrace_js);
-    write_to_stream(ts, parsed_backtrace, parsed_backtrace_len);
-    write_const_to_stream(ts, "\n");
+    if (JS_IsException(parsed_backtrace_js)) {
+      release_log("Error parsing backtrace\n");
+      dump_error(ts->ctx);
+      write_const_to_stream(ts, "{}\n");
+    } else {
+      size_t parsed_backtrace_len;
+      const char *parsed_backtrace =
+          JS_ToCStringLen(ts->ctx, &parsed_backtrace_len, parsed_backtrace_js);
+      write_to_stream(ts, parsed_backtrace, parsed_backtrace_len);
+      write_const_to_stream(ts, "\n");
+      JS_FreeCString(ts->ctx, parsed_backtrace);
+    }
 
-    JS_FreeCString(ts->ctx, parsed_backtrace);
     JS_FreeValue(ts->ctx, parsed_backtrace_js);
     JS_FreeValue(ts->ctx, sourcemap_str);
     JS_FreeValue(ts->ctx, backtrace_str);
