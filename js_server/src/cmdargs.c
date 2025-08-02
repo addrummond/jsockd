@@ -88,7 +88,7 @@ static int parse_cmd_args_helper(int argc, char **argv,
 
   if (cmdargs->version &&
       (cmdargs->n_sockets > 0 || cmdargs->socket_sep_char_set ||
-       cmdargs->es6_module_bytecode_file)) {
+       cmdargs->es6_module_bytecode_file || cmdargs->source_map_file)) {
     errlog("Error: -v (version) cannot be used with other flags.\n");
     return -1;
   }
