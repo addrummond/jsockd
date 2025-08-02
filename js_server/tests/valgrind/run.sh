@@ -16,8 +16,18 @@ openssl genpkey -algorithm ed25519 -out private_signing_key.pem
 openssl pkey -inform pem -pubout -outform der -in private_signing_key.pem | tail -c 32 | xxd -p | tr -d '\n' > public_signing_key
 export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=$(cat public_signing_key)
 
+cat <<END > mod1.mjs
+export const getAValue = () => ({
+  foo: "bar",
+});
+END
+cat <<END > mod2.mjs
+export const myIdentityFunction = (x) => x;
+END
+
+
 # Compile the example module to QuickJS bytecode.
-./tools-bin/compile_es6_module example_module.mjs /tmp/example_module.qjsb private_signing_key.pem
+./tools-bin/compile_es6_module js_server/tests/valgrind/bundle.mjs /tmp/bundle.qjsb private_signing_key.pem
 
 cd js_server
 
@@ -30,7 +40,7 @@ fi
 ./mk.sh Debug
 (
     valgrind --error-exitcode=1 --leak-check=full --track-origins=yes -- \
-        ./build_Debug/js_server $DASH_B_ARG -m /tmp/example_module.qjsb -s /tmp/jsockd_test_sock
+        ./build_Debug/js_server $DASH_B_ARG -m /tmp/bundle.qjsb -s /tmp/jsockd_test_sock -sm tests/valgrind/bundle.mjs.map
     echo $? > /tmp/jsockd_test_valgrind_exit_code
 ) &
 server_pid=$!
