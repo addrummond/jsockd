@@ -3,6 +3,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/mman.h>
 #include <unistd.h>
 
 pthread_mutex_t g_log_mutex;
@@ -54,4 +55,11 @@ int write_all(int fd, const char *buf, size_t len) {
     buf += n;
   }
   return 0;
+}
+
+void munmap_or_warn(const void *addr, size_t length) {
+  if (munmap((void *)addr, length) < 0) {
+    debug_logf("Error unmapping memory at %p of size %zu: %s\n", addr, length,
+               strerror(errno));
+  }
 }

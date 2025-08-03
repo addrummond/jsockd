@@ -3,6 +3,7 @@
 
 #include <pthread.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 extern pthread_mutex_t g_log_mutex;
 
@@ -11,6 +12,7 @@ void mutex_unlock_(pthread_mutex_t *m, const char *file, int line);
 void mutex_init_(pthread_mutex_t *m, const char *file, int line);
 void release_logf(const char *fmt, ...);
 void release_log(const char *s);
+void munmap_or_warn(const void *addr, size_t length);
 
 #define mutex_lock(m) mutex_lock_((m), __FILE__, __LINE__)
 #define mutex_unlock(m) mutex_unlock_((m), __FILE__, __LINE__)

@@ -41,8 +41,12 @@ extern const uint8_t g_backtrace_module_bytecode[];
 static const uint8_t *g_module_bytecode;
 static size_t g_module_bytecode_size;
 
+static atomic_int g_n_threads;
+
 static const uint8_t *g_source_map;
 static size_t g_source_map_size;
+static atomic_int g_source_map_load_count; // once all threads have loaded the
+                                           // source map, we can munmap the file
 
 // Testing scenarios with collisions is less labor intensive if we use a smaller
 // number of bits in the debug build.
@@ -613,6 +617,12 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
               ? JS_UNDEFINED
               : JS_NewStringLen(ts->ctx, (const char *)g_source_map,
                                 g_source_map_size);
+      int c = atomic_fetch_add(&g_source_map_load_count, 1);
+      if (c + 1 == g_n_threads) {
+        debug_log("All threads have loaded the sourcemap, calling munmap...\n");
+        munmap_or_warn((void *)g_source_map, g_source_map_size);
+        g_source_map = NULL;
+      }
     }
     JSValue backtrace_str = JS_NewStringLen(ts->ctx, emb.buf, emb.index);
     JSValue argv[] = {ts->sourcemap_str, backtrace_str};
@@ -789,7 +799,6 @@ static void *listen_thread_func(void *data) {
 
 static pthread_t g_threads[MAX_THREADS];
 static ThreadState g_thread_states[MAX_THREADS];
-static atomic_int g_n_threads;
 
 static const uint8_t *load_module_bytecode(const char *filename,
                                            size_t *out_size) {
@@ -799,7 +808,7 @@ static const uint8_t *load_module_bytecode(const char *filename,
   if (*out_size < ED25519_SIGNATURE_SIZE + 1) {
     release_logf("Module bytecode file is only %zu bytes. Too small!",
                  *out_size);
-    munmap((void *)module_bytecode, *out_size);
+    munmap_or_warn((void *)module_bytecode, *out_size);
     return NULL;
   }
 
@@ -822,13 +831,13 @@ static const uint8_t *load_module_bytecode(const char *filename,
     release_logf("Error decoding public key hex from environment variable "
                  "JSOCKD_BYTECODE_MODULE_PUBLIC_KEY; decoded size=%zu\n",
                  decoded_size);
-    munmap((void *)module_bytecode, *out_size);
+    munmap_or_warn((void *)module_bytecode, *out_size);
     return NULL;
   }
   if (!verify_bytecode(module_bytecode, *out_size, pubkey_bytes)) {
     release_logf("Error verifying bytecode module %s with public key %s\n",
                  filename, pubkey);
-    munmap((void *)module_bytecode, *out_size);
+    munmap_or_warn((void *)module_bytecode, *out_size);
     return NULL;
   }
 
@@ -856,10 +865,10 @@ static void global_cleanup(void) {
   // if it's zero, we know mem was never mapped
   // (because mmap_file errors on empty files)
   if (g_module_bytecode_size != 0)
-    munmap((void *)g_module_bytecode,
-           g_module_bytecode_size + ED25519_SIGNATURE_SIZE);
-  if (g_source_map_size != 0)
-    munmap((void *)g_source_map, g_source_map_size);
+    munmap_or_warn((void *)g_module_bytecode,
+                   g_module_bytecode_size + ED25519_SIGNATURE_SIZE);
+  if (g_source_map_size != 0 && g_source_map)
+    munmap_or_warn((void *)g_source_map, g_source_map_size);
 }
 
 static void SIGINT_handler(int sig) {
@@ -943,8 +952,8 @@ int main(int argc, char *argv[]) {
   if (0 != wait_group_init(&g_thread_ready_wait_group, n_threads)) {
     release_logf("Error initializing wait group: %s", strerror(errno));
     if (g_module_bytecode)
-      munmap((void *)g_module_bytecode,
-             g_module_bytecode_size + ED25519_SIGNATURE_SIZE);
+      munmap_or_warn((void *)g_module_bytecode,
+                     g_module_bytecode_size + ED25519_SIGNATURE_SIZE);
     pthread_mutex_destroy(&g_log_mutex);
     pthread_mutex_destroy(&g_cached_functions_mutex);
     return 1;
@@ -957,7 +966,7 @@ int main(int argc, char *argv[]) {
         init_thread_state(&g_thread_states[n], g_cmd_args.socket_path[n])) {
       release_logf("Error initializing thread %i", n);
       if (g_module_bytecode)
-        munmap((void *)g_module_bytecode, g_module_bytecode_size);
+        munmap_or_warn((void *)g_module_bytecode, g_module_bytecode_size);
       pthread_mutex_destroy(&g_log_mutex);
       pthread_mutex_destroy(&g_cached_functions_mutex);
       for (int i = n - 1; i >= 0; --i)
