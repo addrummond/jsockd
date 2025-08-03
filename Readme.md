@@ -171,7 +171,7 @@ mise install
 
 ### 5.1 Building QuickJS
 
-QuickJS is built by running `./build_quickjs.sh`. This script downloads the QuickJS source code, apples some patches, and then builds the QuickJS library. The QuickJS build is kept separate from the main JSockD build because it needs to be run only once, and the QuickJS build system is a bit finicky to configure for different environments.
+QuickJS is built by running `./build_quickjs.sh`. This script downloads and builds the QuickJS library. The QuickJS build is kept separate from the main JSockD build because it needs to be run only once, and the QuickJS build system is a bit finicky to configure for different environments.
 
 ### 5.2 Building the JS server
 
