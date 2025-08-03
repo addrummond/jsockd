@@ -76,6 +76,9 @@ while [ $retries -lt 5 ]; do
     sleep 10
 done
 
+DEBUG_CFLAGS="-DDUMP_LEAKS"
+RELEASE_CFLAGS=""
+
 if [ -z $JSOCKD_IN_CI ]; then
     # We're not in CI, so just do Debug and Release builds for the current
     # architecture.
@@ -86,8 +89,7 @@ if [ -z $JSOCKD_IN_CI ]; then
         ARCH=arm64
     fi
     # Debug build for quickjs library
-    git apply ../../quickjs-debug-build-patch.patch
-    make CONFIG_LTO=n
+    CFLAGS="$DEBUG_CFLAGS" make CONFIG_LTO=n
     cp qjs ../../tools-bin
     cp qjsc ../../tools-bin
     generate_qjsc_wrapper qjsc > ../../tools-bin/compile_es6_module
@@ -96,9 +98,7 @@ if [ -z $JSOCKD_IN_CI ]; then
 
     # Release build for quickjs library
     make clean
-    git apply -R ../../quickjs-debug-build-patch.patch
-    git apply ../../quickjs-release-build-patch.patch
-    make CONFIG_LTO=y
+    CFLAGS="$RELEASE_CFLAGS" make CONFIG_LTO=y
     mv libquickjs.a /tmp/libquickjs_${OS}_${ARCH}_Release.a
 
     mv /tmp/libquickjs_${OS}_${ARCH}_Debug.a .
@@ -108,8 +108,7 @@ else
     # architecture and also cross-compile for arm64 Linux and Mac.
 
     # Debug build for quickjs library
-    git apply ../../quickjs-debug-build-patch.patch
-    make CONFIG_LTO=n
+    CFLAGS="$DEBUG_CFLAGS" make CONFIG_LTO=n
     generate_qjsc_wrapper qjsc > ../../tools-bin/compile_es6_module_Linux_x86_64
     cp ../../tools-bin/compile_es6_module_Linux_x86_64 ../../tools-bin/compile_es6_module
     chmod +x ../../tools-bin/compile_es6_module_Linux_x86_64
@@ -119,30 +118,28 @@ else
     cp qjsc ../../tools-bin
     # cross-compile for Linux arm
     make clean
-    make CONFIG_LTO=n CROSS_PREFIX=aarch64-linux-gnu-
+    CFLAGS="$DEBUG_CFLAGS" make CONFIG_LTO=n CROSS_PREFIX=aarch64-linux-gnu-
     generate_qjsc_wrapper qjsc > ../../tools-bin/compile_es6_module_Linux_arm64
     chmod +x ../../tools-bin/compile_es6_module_Linux_arm64
     mv libquickjs.a /tmp/libquickjs_Linux_arm64_Debug.a
     # cross-compile for Mac (aarch64)
     make clean
-    make CONFIG_DEFAULT_AR=y CONFIG_CLANG=y CROSS_PREFIX=aarch64-apple-darwin24.5-
+    CFLAGS="$DEBUG_CFLAGS" make CONFIG_DEFAULT_AR=y CONFIG_CLANG=y CROSS_PREFIX=aarch64-apple-darwin24.5-
     generate_qjsc_wrapper qjsc > ../../tools-bin/compile_es6_module_Darwin_arm64
     chmod +x ../../tools-bin/compile_es6_module_Darwin_arm64
     mv libquickjs.a /tmp/libquickjs_Darwin_arm64_Debug.a
 
     # Release build for quickjs library
     make clean
-    git apply -R ../../quickjs-debug-build-patch.patch
-    git apply ../../quickjs-release-build-patch.patch
-    make CONFIG_LTO=y
+    CFLAGS="$RELEASE_CFLAGS" make CONFIG_LTO=y
     mv libquickjs.a /tmp/libquickjs_Linux_x86_64_Release.a
     # cross-compile for arm
     make clean
-    make CONFIG_LTO=y CROSS_PREFIX=aarch64-linux-gnu-
+    CFLAGS="$RELEASE_CFLAGS" make CONFIG_LTO=y CROSS_PREFIX=aarch64-linux-gnu-
     mv libquickjs.a /tmp/libquickjs_Linux_arm64_Release.a
     # cross-compile for Mac (aarch64)
     make clean
-    make CONFIG_DEFAULT_AR=y CONFIG_CLANG=y CROSS_PREFIX=aarch64-apple-darwin24.5-
+    CFLAGS="$RELEASE_CFLAGS" make CONFIG_DEFAULT_AR=y CONFIG_CLANG=y CROSS_PREFIX=aarch64-apple-darwin24.5-
     mv libquickjs.a /tmp/libquickjs_Darwin_arm64_Release.a
 
     mv /tmp/libquickjs_Linux_x86_64_Debug.a .
