@@ -72,7 +72,19 @@ The `-m` argument is the path to a precompiled ES6 module bytecode file. This mo
 
 When the server is ready to start accepting commands on the specified UNIX domain sockets, it prints `READY <N>` to the standard output followed by `\n`. The integer N specifies the number of threads that the server is using to process commands. This may be less than the number of sockets specified, in which case only the first N sockets will be used for command processing.
 
-### 3.2 The socket protocol
+### 3.2 Command line options
+
+| Option      | Argument(s)                | Description                                                                                   | Repeatable | Required |
+|-------------|----------------------------|-----------------------------------------------------------------------------------------------|------------|----------|
+| `-v`        | *(none)*                   | Print version and exit. Cannot be used with other flags.                                      | No         | No       |
+| `-m`        | `<module_bytecode_file>`   | Path to ES6 module bytecode file.                                                             | No         | No       |
+| `-sm`       | `<source_map_file>`        | Path to source map file (e.g. `foo.js.map`). Can only be used with `-m`.                      | No         | No       |
+| `-t`        | `<microseconds>`           | Maximum command runtime in microseconds (must be integer > 0).                                | No         | No       |
+| `-b`        | `<XX>`                     | Separator byte as two hex digits (e.g. `0A`).                                                 | No         | No       |
+| `-s`        | `<socket1> [socket2 ...]`  | One or more socket file paths.                                                                | Yes        | Yes      |
+| `--`        | *(none)*                   | Indicates end of options for `-s` (allows socket paths starting with `-`).                    | N/A        | No       |
+
+### 3.3 The socket protocol
 
 The server listens for commands on the specified UNIX domain sockets. Each command consists of three fields separated
 by a separator byte:
@@ -115,7 +127,7 @@ The `?reset` command resets the server's command parser to its initial state (so
 
 The `?quit` command causes the server to exit immediately (closing all sockets, not just the socket on which the command was sent).
 
-### 3.3 Error message and backtrace format
+### 3.4 Error message and backtrace format
 
 ```jsonb
 {
@@ -133,7 +145,7 @@ The `?quit` command causes the server to exit immediately (closing all sockets, 
 }
 ```
 
-### 3.4 Source maps
+### 3.5 Source maps
 
 JSockD supports source maps for error backtrace reporting. Use the `-sm <source_map.js.map>`
 command line option to specify the path to a source map file for the bundle.

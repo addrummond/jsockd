@@ -3,6 +3,7 @@
 
 #include "config.h"
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 
 typedef struct {
@@ -13,6 +14,7 @@ typedef struct {
   char socket_sep_char;
   bool socket_sep_char_set;
   bool version;
+  uint64_t max_command_runtime_us;
 } CmdArgs;
 
 int parse_cmd_args(int argc, char **argv, void (*errlog)(const char *fmt, ...),

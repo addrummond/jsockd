@@ -1,5 +1,7 @@
 #include "cmdargs.h"
+#include "config.h"
 #include "hex.h"
+#include <errno.h>
 #include <libgen.h>
 #include <string.h>
 
@@ -24,6 +26,24 @@ static int parse_cmd_args_helper(int argc, char **argv,
         return -1;
       }
       cmdargs->es6_module_bytecode_file = argv[i];
+    } else if (0 == strcmp(argv[i], "-t")) {
+      ++i;
+      if (i >= argc) {
+        errlog("Error: -t requires an argument (max command runtime in "
+               "microseconds)\n");
+        return -1;
+      }
+      if (cmdargs->max_command_runtime_us != 0) {
+        errlog("Error: -t can be specified at most once\n");
+        return -1;
+      }
+      errno = 0;
+      long long int v = strtoll(argv[i], NULL, 10);
+      if (errno != 0 || v <= 0) {
+        errlog("Error: -t requires a valid integer argument > 0\n");
+        return -1;
+      }
+      cmdargs->max_command_runtime_us = (uint64_t)v;
     } else if (0 == strcmp(argv[i], "-s")) {
       ++i;
       bool after_double_dash = false;
@@ -106,6 +126,9 @@ static int parse_cmd_args_helper(int argc, char **argv,
            "bytecode file)\n");
     return -1;
   }
+
+  if (cmdargs->max_command_runtime_us == 0)
+    cmdargs->max_command_runtime_us = DEFAULT_MAX_COMMAND_RUNTIME_US;
 
   return 0;
 }

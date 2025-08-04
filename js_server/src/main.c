@@ -46,7 +46,7 @@ static atomic_int g_n_threads;
 static const uint8_t *g_source_map;
 static size_t g_source_map_size;
 static atomic_int g_source_map_load_count; // once all threads have loaded the
-                                           // source map, we can munmap the file
+// source map, we can munmap the file
 
 // Testing scenarios with collisions is less labor intensive if we use a smaller
 // number of bits in the debug build.
@@ -376,7 +376,7 @@ static int interrupt_handler(JSRuntime *rt, void *opaque) {
     clock_gettime(CLOCK_MONOTONIC_RAW, &now);
     uint64_t delta_us = (uint64_t)(now.tv_sec - start->tv_sec) * 1000000ULL +
                         (uint64_t)(now.tv_nsec - start->tv_nsec) / 1000ULL;
-    return delta_us > MAX_COMMAND_RUNTIME_US;
+    return delta_us > g_cmd_args.max_command_runtime_us;
   }
   return (int)atomic_load(&g_interrupted_or_error);
 }

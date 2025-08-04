@@ -493,6 +493,56 @@ TEST_cmdargs_returns_error_if_dash_v_combined_with_other_opts(void) {
   TEST_ASSERT(r != 0);
 }
 
+static void TEST_cmdargs_dash_t(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"js_server", "-s", "/tmp/sock", "-m",
+                  "foo.qjsbc", "-t", "500"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r == 0);
+  printf("E: %s\n", cmdargs_errlog_buf);
+  TEST_ASSERT(cmdargs.max_command_runtime_us == 500);
+}
+
+static void TEST_cmdargs_dash_t_error_on_0(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"js_server", "-s", "/tmp/sock", "-m", "foo.qjsbc", "-t", "0"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r != 0);
+  TEST_ASSERT(strstr(cmdargs_errlog_buf, "-t "));
+}
+
+static void TEST_cmdargs_dash_t_error_on_negative(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"js_server", "-s", "/tmp/sock", "-m",
+                  "foo.qjsbc", "-t", "-1"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r != 0);
+  TEST_ASSERT(strstr(cmdargs_errlog_buf, "-t "));
+}
+
+static void TEST_cmdargs_dash_t_error_on_non_numeric(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"js_server", "-s", "/tmp/sock", "-m",
+                  "foo.qjsbc", "-t", "sfdsff"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r != 0);
+  TEST_ASSERT(strstr(cmdargs_errlog_buf, "-t "));
+}
+
+static void TEST_cmdargs_dash_t_error_on_double_flag(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"js_server", "-t",        "500", "-s", "/tmp/sock",
+                  "-m",        "foo.qjsbc", "-t",  "50"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r != 0);
+  TEST_ASSERT(strstr(cmdargs_errlog_buf, "-t "));
+}
+
 /******************************************************************************
     Add all tests to the list below.
 ******************************************************************************/
@@ -527,4 +577,9 @@ TEST_LIST = {T(wait_group_inc_and_wait_basic_use_case),
              T(cmdargs_dash_sm),
              T(cmdargs_dash_sm_returns_error_if_dash_m_not_present),
              T(cmdargs_returns_error_if_dash_v_combined_with_other_opts),
+             T(cmdargs_dash_t),
+             T(cmdargs_dash_t_error_on_0),
+             T(cmdargs_dash_t_error_on_negative),
+             T(cmdargs_dash_t_error_on_non_numeric),
+             T(cmdargs_dash_t_error_on_double_flag),
              {NULL, NULL}};

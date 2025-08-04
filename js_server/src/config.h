@@ -3,7 +3,7 @@
 
 #define MAX_THREADS 8
 #define MESSAGE_UUID_MAX_BYTES 32
-#define MAX_COMMAND_RUNTIME_US 250000
+#define DEFAULT_MAX_COMMAND_RUNTIME_US 250000
 #define TRUNCATION_APPEND "!;"
 
 // This is the interval at which threads pause IO on the UNIX socket to check
