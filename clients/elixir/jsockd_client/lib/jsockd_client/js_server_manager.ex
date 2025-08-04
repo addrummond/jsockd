@@ -13,7 +13,8 @@ defmodule JSockDClient.JsServerManager do
           bytecode_module_file: bytecode_module_file,
           bytecode_module_public_key: bytecode_module_public_key,
           js_server_exec: js_server_exec,
-          source_map: source_map
+          source_map: source_map,
+          max_command_runtime_us: max_command_runtime_us
         }
       ) do
     n_threads = n_threads || :erlang.system_info(:logical_processors_online)
@@ -43,6 +44,11 @@ defmodule JSockDClient.JsServerManager do
           else
             []
           end ++
+            if max_command_runtime_us do
+              ["-t", "#{max_command_runtime_us}"]
+            else
+              []
+            end ++
             [
               "-b",
               "00",
