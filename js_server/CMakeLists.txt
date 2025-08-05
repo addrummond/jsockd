@@ -56,7 +56,7 @@ if(CMAKE_C_COMPILER_ID MATCHES "GNU")
 endif()
 
 if(CMAKE_C_COMPILER MATCHES "filc")
-    define(FILC "_filc")
+    set(FILC "_filc")
 endif()
 
 add_custom_command(
