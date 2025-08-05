@@ -456,6 +456,18 @@ static void TEST_cmdargs_returns_error_if_s_has_no_arg(void) {
   TEST_ASSERT(strstr(cmdargs_errlog_buf, "-s requires at least"));
 }
 
+static void TEST_cmdargs_handles_more_sockets_than_MAX_THREADS(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[MAX_THREADS + 2 + 10];
+  argv[0] = "js_server";
+  argv[1] = "-s";
+  for (int i = 2; i < (int)(sizeof(argv) / sizeof(argv[0])); ++i)
+    argv[i] = "mysocket";
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r == 0);
+}
+
 static void TEST_cmdargs_dash_v(void) {
   CmdArgs cmdargs = {0};
   char *argv[] = {"js_server", "-v"};
@@ -493,6 +505,14 @@ TEST_cmdargs_returns_error_if_dash_v_combined_with_other_opts(void) {
   TEST_ASSERT(r != 0);
 }
 
+static void TEST_cmdargs_returns_error_if_dash_v_has_arg(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"js_server", "-v", "spurious_arg"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r != 0);
+}
+
 static void TEST_cmdargs_dash_t(void) {
   CmdArgs cmdargs = {0};
   char *argv[] = {"js_server", "-s", "/tmp/sock", "-m",
@@ -500,7 +520,6 @@ static void TEST_cmdargs_dash_t(void) {
   int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
                          &cmdargs);
   TEST_ASSERT(r == 0);
-  printf("E: %s\n", cmdargs_errlog_buf);
   TEST_ASSERT(cmdargs.max_command_runtime_us == 500);
 }
 
@@ -573,10 +592,12 @@ TEST_LIST = {T(wait_group_inc_and_wait_basic_use_case),
              T(cmdargs_returns_error_for_multiple_dash_m),
              T(cmdargs_returns_error_if_no_sockets_specified),
              T(cmdargs_returns_error_if_s_has_no_arg),
+             T(cmdargs_handles_more_sockets_than_MAX_THREADS),
              T(cmdargs_dash_v),
              T(cmdargs_dash_sm),
              T(cmdargs_dash_sm_returns_error_if_dash_m_not_present),
              T(cmdargs_returns_error_if_dash_v_combined_with_other_opts),
+             T(cmdargs_returns_error_if_dash_v_has_arg),
              T(cmdargs_dash_t),
              T(cmdargs_dash_t_error_on_0),
              T(cmdargs_dash_t_error_on_negative),
