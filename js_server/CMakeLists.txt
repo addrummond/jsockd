@@ -56,7 +56,7 @@ if(CMAKE_C_COMPILER_ID MATCHES "GNU")
 endif()
 
 if(CMAKE_C_COMPILER STREQUAL "fil-c-clang")
-    define(FILC  "_filc")
+    define(FILC "_filc")
 endif()
 
 add_custom_command(
@@ -109,7 +109,7 @@ endif()
 add_library(qjs STATIC IMPORTED)
 set_target_properties(qjs PROPERTIES
   IMPORTED_LOCATION
-    ${CMAKE_SOURCE_DIR}/../.scratch/quickjs/libquickjs_${CMAKE_SYSTEM_NAME}_${QUICKJS_LIB_ARCH}_${CMAKE_BUILD_TYPE}${FILC}.a
+    ${CMAKE_SOURCE_DIR}/../.scratch/quickjs/libquickjs_${CMAKE_SYSTEM_NAME}_${QUICKJS_LIB_ARCH}${FILC}_${CMAKE_BUILD_TYPE}.a
   INTERFACE_INCLUDE_DIRECTORIES
     "${CMAKE_SOURCE_DIR}/../.scratch/quickjs;${CMAKE_SOURCE_DIR}/src/lib")
 target_link_libraries(js_server qjs m)

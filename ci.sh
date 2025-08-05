@@ -114,6 +114,16 @@ case $1 in
         )
         ;;
 
+    build_js_server_linux_x86_64_filc)
+        (
+            set -e
+            export TOOLCHAIN_FILE=TC-filc.cmake
+            cd js_server
+            ./mk.sh Debug
+            ./mk.sh Release
+        )
+        ;;
+
     run_js_server_valgrind_tests)
         ./js_server/tests/valgrind/run.sh
         ;;
