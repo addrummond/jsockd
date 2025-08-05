@@ -9,7 +9,7 @@ fi
 case $1 in
     setup)
         sudo apt-get update
-        sudo apt-get install -y unzip libncurses-dev valgrind gcc-aarch64-linux-gnu
+        sudo apt-get install -y unzip libncurses-dev valgrind gcc-aarch64-linux-gnu patchelf
         curl -L https://github.com/jdx/mise/releases/download/v2025.5.17/mise-v2025.5.17-linux-x64 --output - | sudo tee -a /usr/local/bin/mise > /dev/null
         sudo chmod +x /usr/local/bin/mise
         # mise takes ages to install CMake, so use a binary distribution
@@ -27,6 +27,14 @@ case $1 in
         echo "$HOME/bin" >> $GITHUB_PATH
         cat /tmp/ghp >> $GITHUB_PATH
         mise install node
+        curl -L https://github.com/pizlonator/llvm-project-deluge/releases/download/v0.668.8/filc-0.668.8-linux-x86_64.tar.xz -o ~/filc-0.668.8-linux-x86_64.tar.xz
+        if [ $(sha256sum ~/filc-0.668.8-linux-x86_64.tar.xz | awk '{ print $0 }') != "562e00b64634fc8c21804616d03a4210cec26751733104f9f49627f2363a3859" ]; then
+            echo "SHA256 checksum of filc-0.668.8-linux-x86_64.tar.xz does not match expected value."
+            exit 1
+        fi
+        tar -xf ~/filc-0.668.8-linux-x86_64.tar.xz
+        cp ~/filc-0.668.8-linux-x86_64/build/bin/clang ~/filc-0.668.8-linux-x86_64/build/bin/fil-c-clang
+        echo "$HOME/filc-0.668.8-linux-x86_64/build/bin/clang" >> $GITHUB_PATH
         ;;
 
     log_versions)

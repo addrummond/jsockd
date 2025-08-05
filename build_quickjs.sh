@@ -127,6 +127,13 @@ else
     generate_qjsc_wrapper qjsc > ../../tools-bin/compile_es6_module_Darwin_arm64
     chmod +x ../../tools-bin/compile_es6_module_Darwin_arm64
     mv libquickjs.a /tmp/libquickjs_Darwin_arm64_Debug.a
+    # compile for Fil-C x86_64
+    make clean
+    # See https://github.com/pizlonator/pizlonated-quickjs/commit/258a4a291fd0f080614e5b345528478c31e51705#diff-45f1ae674139f993bf8a99c382c1ba4863272a6fec2f492d76d7ff1b2cfcfbe2R56-R5187 for diff the patch is based on
+    git apply ../../fil-c-quickjs.patch
+    CFLAGS="$DEBUG_CFLAGS" make CC=fil-c-clang CONFIG_LTO= CONFIG_CLANG=y
+    git apply -R ../../fil-c-quickjs.patch
+    mv libquickjs.a /tmp/libquickjs_Linux_x86_64_filc_Debug.a
 
     # Release build for quickjs library
     make clean
@@ -140,6 +147,12 @@ else
     make clean
     CFLAGS="$RELEASE_CFLAGS" make CONFIG_DEFAULT_AR=y CONFIG_CLANG=y CROSS_PREFIX=aarch64-apple-darwin24.5-
     mv libquickjs.a /tmp/libquickjs_Darwin_arm64_Release.a
+    # compile for Fil-C x86_64
+    make clean
+    git apply ../../fil-c-quickjs.patch
+    CFLAGS="$RELEASE_CFLAGS" make CC=fil-c-clang CONFIG_LTO= CONFIG_CLANG=y
+    mv libquickjs.a /tmp/libquickjs_Linux_x86_64_filc_Release.a
+    git apply -R ../../fil-c-quickjs.patch
 
     mv /tmp/libquickjs_Linux_x86_64_Debug.a .
     mv /tmp/libquickjs_Linux_arm64_Debug.a .
@@ -147,4 +160,6 @@ else
     mv /tmp/libquickjs_Linux_arm64_Release.a .
     mv /tmp/libquickjs_Darwin_arm64_Debug.a .
     mv /tmp/libquickjs_Darwin_arm64_Release.a .
+    mv /tmp/libquickjs_Linux_x86_64_filc_Debug.a .
+    mv /tmp/libquickjs_Linux_x86_64_filc_Release.a .
 fi
