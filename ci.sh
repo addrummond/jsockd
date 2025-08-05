@@ -32,8 +32,7 @@ case $1 in
             echo "SHA256 checksum of filc-0.668.8-linux-x86_64.tar.xz does not match expected value."
             exit 1
         fi
-        ( cd ~ && tar -xf ~/filc-0.668.8-linux-x86_64.tar.xz )
-        cp ~/filc-0.668.8-linux-x86_64/build/bin/clang ~/bin/fil-c-clang
+        ( cd ~ && tar -xf ~/filc-0.668.8-linux-x86_64.tar.xz && cd filc-0.668.8-linux-x86_64 && ./setup.sh )
         ;;
 
     log_versions)
