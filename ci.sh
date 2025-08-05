@@ -28,7 +28,7 @@ case $1 in
         cat /tmp/ghp >> $GITHUB_PATH
         mise install node
         curl -L https://github.com/pizlonator/llvm-project-deluge/releases/download/v0.668.8/filc-0.668.8-linux-x86_64.tar.xz -o ~/filc-0.668.8-linux-x86_64.tar.xz
-        if [ $(sha256sum ~/filc-0.668.8-linux-x86_64.tar.xz | awk '{ print $0 }') != "562e00b64634fc8c21804616d03a4210cec26751733104f9f49627f2363a3859" ]; then
+        if [ $(sha256sum ~/filc-0.668.8-linux-x86_64.tar.xz | awk '{ print $1 }') != "562e00b64634fc8c21804616d03a4210cec26751733104f9f49627f2363a3859" ]; then
             echo "SHA256 checksum of filc-0.668.8-linux-x86_64.tar.xz does not match expected value."
             exit 1
         fi
