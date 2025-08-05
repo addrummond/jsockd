@@ -55,7 +55,7 @@ if(CMAKE_C_COMPILER_ID MATCHES "GNU")
     add_link_options(-lm)
 endif()
 
-if(CMAKE_C_COMPILER STREQUAL "fil-c-clang")
+if(CMAKE_C_COMPILER MATCHES "filc")
     define(FILC "_filc")
 endif()
 
