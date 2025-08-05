@@ -117,7 +117,7 @@ case $1 in
     build_js_server_linux_x86_64_filc)
         (
             set -e
-            export TOOLCHAIN_FILE=TC-filc.cmake
+            export TOOLCHAIN_FILE=TC-fil-c.cmake
             cd js_server
             ./mk.sh Debug
             ./mk.sh Release
