@@ -154,7 +154,7 @@ else
     # compile for Fil-C x86_64
     make clean
     git apply ../../fil-c-quickjs.patch
-    CFLAGS="$RELEASE_CFLAGS" make CROSS_PREFIX=~/filc-0.668.8-linux-x86_64/build/bin/ CONFIG_LTO= CONFIG_CLANG=y
+    CFLAGS="$RELEASE_CFLAGS" make CC=~/filc-0.668.8-linux-x86_64/build/bin/clang CONFIG_LTO= CONFIG_CLANG=y
     mv libquickjs.a /tmp/libquickjs_Linux_x86_64_filc_Release.a
     git apply -R ../../fil-c-quickjs.patch
 
