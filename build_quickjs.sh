@@ -76,7 +76,7 @@ while [ $retries -lt 5 ]; do
 done
 
 DEBUG_CFLAGS="-DDUMP_LEAKS"
-RELEASE_CFLAGS=""
+RELEASE_CFLAGS="-O2"
 
 if [ -z $JSOCKD_IN_CI ]; then
     # We're not in CI, so just do Debug and Release builds for the current
