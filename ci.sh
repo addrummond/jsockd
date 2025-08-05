@@ -163,6 +163,15 @@ case $1 in
             openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out release-artifacts/jsockd-linux-x86_64/compile_es6_module_signature.bin -rawin -in release-artifacts/jsockd-linux-x86_64/compile_es6_module
             tar -czf release-artifacts/jsockd-linux-x86_64.tar.gz release-artifacts/jsockd-linux-x86_64
 
+            # Package Linux x86_64 Fil-C
+            mkdir release-artifacts/jsockd-linux-x86_64_filc
+            echo "File for Linux x86_64 Fil-C: $(file build_Release_TC-fil-c.cmake/js_server)"
+            cp build_Release_TC-fil-c.cmake/js_server release-artifacts/jsockd-linux-x86_64_filc
+            cp ../tools-bin/compile_es6_module_Linux_x86_64_filc release-artifacts/jsockd-linux-x86_64_filc/compile_es6_module
+            openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out release-artifacts/jsockd-linux-x86_64_filc/js_server_signature.bin -rawin -in release-artifacts/jsockd-linux-x86_64_filc/js_server
+            openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out release-artifacts/jsockd-linux-x86_64_filc/compile_es6_module_signature.bin -rawin -in release-artifacts/jsockd-linux-x86_64_filc/compile_es6_module
+            tar -czf release-artifacts/jsockd-linux-x86_64_filc.tar.gz release-artifacts/jsockd-linux-x86_64_filc
+
             # Package Linux ARM64
             mkdir release-artifacts/jsockd-linux-arm64
             echo "File for Linux arm64: $(file build_Release_TC-gcc-arm64.cmake/js_server)"
