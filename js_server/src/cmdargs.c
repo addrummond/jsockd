@@ -56,7 +56,7 @@ static int parse_cmd_args_helper(int argc, char **argv,
         if (!after_double_dash && argv[i][0] == '-') {
           break;
         }
-        // If they specificy more sockets than MAX_THREADS that's fine, as the
+        // If they specify more sockets than MAX_THREADS that's fine, as the
         // `READ n` output of the server will inform the client how many of the
         // sockets are actually in use.
         if (cmdargs->n_sockets < (int)(sizeof(cmdargs->socket_path) /
