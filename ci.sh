@@ -33,8 +33,7 @@ case $1 in
             exit 1
         fi
         ( cd ~ && tar -xf ~/filc-0.668.8-linux-x86_64.tar.xz )
-        cp ~/filc-0.668.8-linux-x86_64/build/bin/clang ~/filc-0.668.8-linux-x86_64/build/bin/fil-c-clang
-        echo "$HOME/filc-0.668.8-linux-x86_64/build/bin/clang" >> $GITHUB_PATH
+        cp ~/filc-0.668.8-linux-x86_64/build/bin/clang ~/bin/fil-c-clang
         ;;
 
     log_versions)
