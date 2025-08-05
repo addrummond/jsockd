@@ -1,5 +1,5 @@
 diff --git a/Makefile b/Makefile
-index 3b1c745..983be2f 100644
+index 3b1c745..e0e3bbd 100644
 --- a/Makefile
 +++ b/Makefile
 @@ -97,7 +97,7 @@ endif
@@ -11,8 +11,27 @@ index 3b1c745..983be2f 100644
    CFLAGS += -Wextra
    CFLAGS += -Wno-sign-compare
    CFLAGS += -Wno-missing-field-initializers
+@@ -222,15 +222,15 @@ ifeq ($(CROSS_PREFIX),)
+ ifndef CONFIG_ASAN
+ ifndef CONFIG_MSAN
+ ifndef CONFIG_UBSAN
+-PROGS+=examples/hello examples/test_fib
++#PROGS+=examples/hello examples/test_fib
+ # no -m32 option in qjsc
+ ifndef CONFIG_M32
+ ifndef CONFIG_WIN32
+-PROGS+=examples/hello_module
++#PROGS+=examples/hello_module
+ endif
+ endif
+ ifdef CONFIG_SHARED_LIBS
+-PROGS+=examples/fib.so examples/point.so
++#PROGS+=examples/fib.so examples/point.so
+ endif
+ endif
+ endif
 diff --git a/quickjs.c b/quickjs.c
-index caad931..d9d9ea2 100644
+index caad931..c57d56c 100644
 --- a/quickjs.c
 +++ b/quickjs.c
 @@ -54,6 +54,8 @@
