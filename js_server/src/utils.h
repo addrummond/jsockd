@@ -1,6 +1,10 @@
 #ifndef UTILS_H_
 #define UTILS_H_
 
+#ifndef _REENTRANT
+#define _REENTRANT
+#endif
+
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>

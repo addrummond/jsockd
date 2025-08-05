@@ -1,0 +1,94 @@
+diff --git a/Makefile b/Makefile
+index 3b1c745..e0e3bbd 100644
+--- a/Makefile
++++ b/Makefile
+@@ -97,7 +97,7 @@ endif
+ ifdef CONFIG_CLANG
+   HOST_CC=clang
+   CC=$(CROSS_PREFIX)clang
+-  CFLAGS+=-g -Wall -MMD -MF $(OBJDIR)/$(@F).d
++  CFLAGS+=-Wall -Oz -MMD -MF $(OBJDIR)/$(@F).d
+   CFLAGS += -Wextra
+   CFLAGS += -Wno-sign-compare
+   CFLAGS += -Wno-missing-field-initializers
+@@ -222,15 +222,15 @@ ifeq ($(CROSS_PREFIX),)
+ ifndef CONFIG_ASAN
+ ifndef CONFIG_MSAN
+ ifndef CONFIG_UBSAN
+-PROGS+=examples/hello examples/test_fib
++#PROGS+=examples/hello examples/test_fib
+ # no -m32 option in qjsc
+ ifndef CONFIG_M32
+ ifndef CONFIG_WIN32
+-PROGS+=examples/hello_module
++#PROGS+=examples/hello_module
+ endif
+ endif
+ ifdef CONFIG_SHARED_LIBS
+-PROGS+=examples/fib.so examples/point.so
++#PROGS+=examples/fib.so examples/point.so
+ endif
+ endif
+ endif
+diff --git a/quickjs.c b/quickjs.c
+index caad931..c57d56c 100644
+--- a/quickjs.c
++++ b/quickjs.c
+@@ -54,6 +54,8 @@
+ #else
+ #define DIRECT_DISPATCH  1
+ #endif
++#undef DIRECT_DISPATCH
++#define DIRECT_DISPATCH 0
+ 
+ #if defined(__APPLE__)
+ #define MALLOC_OVERHEAD  0
+@@ -69,7 +71,7 @@
+ /* define to include Atomics.* operations which depend on the OS
+    threads */
+ #if !defined(EMSCRIPTEN)
+-#define CONFIG_ATOMICS
++#undef CONFIG_ATOMICS // Alex D - keep size down (don't need this)
+ #endif
+ 
+ #if !defined(EMSCRIPTEN)
+@@ -875,7 +877,7 @@ typedef struct JSProperty {
+         struct {            /* JS_PROP_AUTOINIT */
+             /* in order to use only 2 pointers, we compress the realm
+                and the init function pointer */
+-            uintptr_t realm_and_id; /* realm and init_id (JS_AUTOINIT_ID_x)
++            void *realm_and_id; /* realm and init_id (JS_AUTOINIT_ID_x)
+                                        in the 2 low bits */
+             void *opaque;
+         } init;
+@@ -5475,12 +5477,13 @@ JSValue JS_NewCFunctionData(JSContext *ctx, JSCFunctionData *func,
+ 
+ static JSContext *js_autoinit_get_realm(JSProperty *pr)
+ {
+-    return (JSContext *)(pr->u.init.realm_and_id & ~3);
++    return (JSContext *)((uintptr_t)pr->u.init.realm_and_id & ~3);
+ }
+ 
+ static JSAutoInitIDEnum js_autoinit_get_id(JSProperty *pr)
+ {
+-    return pr->u.init.realm_and_id & 3;
++
++    return (uintptr_t)pr->u.init.realm_and_id & 3;
+ }
+ 
+ static void js_autoinit_free(JSRuntime *rt, JSProperty *pr)
+@@ -9819,10 +9822,10 @@ static int JS_DefineAutoInitProperty(JSContext *ctx, JSValueConst this_obj,
+     pr = add_property(ctx, p, prop, (flags & JS_PROP_C_W_E) | JS_PROP_AUTOINIT);
+     if (unlikely(!pr))
+         return -1;
+-    pr->u.init.realm_and_id = (uintptr_t)JS_DupContext(ctx);
+-    assert((pr->u.init.realm_and_id & 3) == 0);
++    pr->u.init.realm_and_id = JS_DupContext(ctx);
++    assert(((uintptr_t)pr->u.init.realm_and_id & 3) == 0);
+     assert(id <= 3);
+-    pr->u.init.realm_and_id |= id;
++    pr->u.init.realm_and_id = (void*)((uintptr_t)pr->u.init.realm_and_id | id);
+     pr->u.init.opaque = opaque;
+     return TRUE;
+ }
+ 

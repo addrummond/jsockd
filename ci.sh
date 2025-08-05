@@ -9,7 +9,7 @@ fi
 case $1 in
     setup)
         sudo apt-get update
-        sudo apt-get install -y unzip libncurses-dev valgrind gcc-aarch64-linux-gnu
+        sudo apt-get install -y unzip libncurses-dev valgrind gcc-aarch64-linux-gnu patchelf
         curl -L https://github.com/jdx/mise/releases/download/v2025.5.17/mise-v2025.5.17-linux-x64 --output - | sudo tee -a /usr/local/bin/mise > /dev/null
         sudo chmod +x /usr/local/bin/mise
         # mise takes ages to install CMake, so use a binary distribution
@@ -27,6 +27,12 @@ case $1 in
         echo "$HOME/bin" >> $GITHUB_PATH
         cat /tmp/ghp >> $GITHUB_PATH
         mise install node
+        curl -L https://github.com/pizlonator/llvm-project-deluge/releases/download/v0.668.8/filc-0.668.8-linux-x86_64.tar.xz -o ~/filc-0.668.8-linux-x86_64.tar.xz
+        if [ $(sha256sum ~/filc-0.668.8-linux-x86_64.tar.xz | awk '{ print $1 }') != "562e00b64634fc8c21804616d03a4210cec26751733104f9f49627f2363a3859" ]; then
+            echo "SHA256 checksum of filc-0.668.8-linux-x86_64.tar.xz does not match expected value."
+            exit 1
+        fi
+        ( cd ~ && tar -xf ~/filc-0.668.8-linux-x86_64.tar.xz && cd filc-0.668.8-linux-x86_64 && ./setup.sh )
         ;;
 
     log_versions)
@@ -108,6 +114,16 @@ case $1 in
         )
         ;;
 
+    build_js_server_linux_x86_64_filc)
+        (
+            set -e
+            export TOOLCHAIN_FILE=TC-fil-c.cmake
+            cd js_server
+            ./mk.sh Debug
+            ./mk.sh Release
+        )
+        ;;
+
     run_js_server_valgrind_tests)
         ./js_server/tests/valgrind/run.sh
         ;;
@@ -146,6 +162,15 @@ case $1 in
             openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out release-artifacts/jsockd-linux-x86_64/js_server_signature.bin -rawin -in release-artifacts/jsockd-linux-x86_64/js_server
             openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out release-artifacts/jsockd-linux-x86_64/compile_es6_module_signature.bin -rawin -in release-artifacts/jsockd-linux-x86_64/compile_es6_module
             tar -czf release-artifacts/jsockd-linux-x86_64.tar.gz release-artifacts/jsockd-linux-x86_64
+
+            # Package Linux x86_64 Fil-C
+            mkdir release-artifacts/jsockd-linux-x86_64_filc
+            echo "File for Linux x86_64 Fil-C: $(file build_Release_TC-fil-c.cmake/js_server)"
+            cp build_Release_TC-fil-c.cmake/js_server release-artifacts/jsockd-linux-x86_64_filc
+            cp ../tools-bin/compile_es6_module_Linux_x86_64_filc release-artifacts/jsockd-linux-x86_64_filc/compile_es6_module
+            openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out release-artifacts/jsockd-linux-x86_64_filc/js_server_signature.bin -rawin -in release-artifacts/jsockd-linux-x86_64_filc/js_server
+            openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out release-artifacts/jsockd-linux-x86_64_filc/compile_es6_module_signature.bin -rawin -in release-artifacts/jsockd-linux-x86_64_filc/compile_es6_module
+            tar -czf release-artifacts/jsockd-linux-x86_64_filc.tar.gz release-artifacts/jsockd-linux-x86_64_filc
 
             # Package Linux ARM64
             mkdir release-artifacts/jsockd-linux-arm64

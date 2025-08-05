@@ -1,6 +1,10 @@
 #ifndef WAIT_GROUP_H_
 #define WAIT_GROUP_H_
 
+#ifndef _REENTRANT
+#define _REENTRANT
+#endif
+
 #include <pthread.h>
 #include <stdatomic.h>
 #include <stdbool.h>
