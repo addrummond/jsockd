@@ -144,7 +144,7 @@ int parse_cmd_args(int argc, char **argv, void (*errlog)(const char *fmt, ...),
                    CmdArgs *cmdargs) {
   if (parse_cmd_args_helper(argc, argv, errlog, cmdargs) < 0) {
     errlog("Usage: %s [-m <module_bytecode_file>] [-sm <source_map_file>] [-b "
-           "XX] -s <socket1_path> "
+           "XX] [-t <max_command_runtime_us>] -s <socket1_path> "
            "[<socket2_path> ...] \n",
            argc > 0 ? basename(argv[0]) : "js_server");
     return -1;
