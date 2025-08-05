@@ -8,7 +8,7 @@ The server receives commands over one or more UNIX domain sockets. The motivatin
 - Caches command bytecode
 - Low memory usage
 - Valgrind tests, fuzz tests
-- Memory-safe [Fil-C])(https://github.com/pizlonator/llvm-project-deluge/) build available on Linux/x86_64 for the safety conscious.
+- Memory-safe [Fil-C](https://github.com/pizlonator/llvm-project-deluge/) build available on Linux/x86_64 for the safety conscious.
 
 ## 1. Using JSockD
 
