@@ -216,6 +216,7 @@ Run unit tests can be as follows:
 
 * `JSOCKD_FILC=1 ./build_quickjs.sh`
 * [In `js_server`] `TOOLCHAIN_FILE=TC-fil-c.cmake ./mk.sh Debug`
+* `( cd ../.scratch/quickjs && make clean && CFLAGS="$DEBUG_CFLAGS" make CC=~/filc-0.668.8-linux-x86_64/build/bin/clang CONFIG_LTO= CONFIG_CLANG=y && mv libquickjs.a /tmp/libquickjs_Linux_x86_64_filc_Debug.a )`
 
 ## 6. Releases
 

@@ -21,6 +21,10 @@ JSValue load_binary_module(JSContext *ctx, const uint8_t *buf, size_t buf_len) {
   obj = JS_ReadObject(ctx, buf, buf_len, JS_READ_OBJ_BYTECODE);
   if (JS_IsException(obj))
     return obj;
+  if (JS_VALUE_GET_TAG(obj) != JS_TAG_MODULE) {
+    JS_FreeValue(ctx, obj);
+    return JS_EXCEPTION;
+  }
   assert(JS_VALUE_GET_TAG(obj) == JS_TAG_MODULE);
 
   if (JS_ResolveModule(ctx, obj) < 0) {

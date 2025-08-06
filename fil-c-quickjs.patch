@@ -22,7 +22,7 @@ index 3b1c745..2be9da3 100644
  endif
  endif
 diff --git a/quickjs.c b/quickjs.c
-index caad931..c57d56c 100644
+index caad931..0ca1753 100644
 --- a/quickjs.c
 +++ b/quickjs.c
 @@ -54,6 +54,8 @@
@@ -82,4 +82,24 @@ index caad931..c57d56c 100644
      pr->u.init.opaque = opaque;
      return TRUE;
  }
- 
+@@ -29055,7 +29058,10 @@ static JSValue js_build_module_ns(JSContext *ctx, JSModuleDef *m)
+         ExportedNameEntry *en = &s->exported_names[i];
+         switch(en->export_type) {
+         case EXPORTED_NAME_NORMAL:
+-            {
++	    // Something about this code spooks Fil-C. Could even be a genuine bug?
++	    // For now we can just resolve all references lazily for Fil-C builds,
++	    // which seems like not the worst thing.
++            /*{
+                 JSVarRef *var_ref = en->u.var_ref;
+                 pr = add_property(ctx, p, en->export_name,
+                                   JS_PROP_ENUMERABLE | JS_PROP_WRITABLE |
+@@ -29065,7 +29071,7 @@ static JSValue js_build_module_ns(JSContext *ctx, JSModuleDef *m)
+                 var_ref->header.ref_count++;
+                 pr->u.var_ref = var_ref;
+             }
+-            break;
++            break;*/
+         case EXPORTED_NAME_DELAYED:
+             /* the exported namespace or reference may depend on
+                circular references, so we resolve it lazily */
