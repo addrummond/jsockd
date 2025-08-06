@@ -163,12 +163,16 @@ case $1 in
             openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out release-artifacts/jsockd-linux-x86_64/compile_es6_module_signature.bin -rawin -in release-artifacts/jsockd-linux-x86_64/compile_es6_module
             tar -czf release-artifacts/jsockd-linux-x86_64.tar.gz release-artifacts/jsockd-linux-x86_64
 
-            # Package Linux x86_64 Fil-C
-            mkdir release-artifacts/jsockd-linux-x86_64_filc
+            # Package Linux x86_64 Fil-C. For now we include the regular x86_64 build of compile_es6_module.
+            mkdir -p release-artifacts/jsockd-linux-x86_64_filc/js_server
+            patchelf --set-rpath '$ORIGIN' build_Release_TC-fil-c.cmake/js_server
+            patchelf --set-interpreter ld-yolo-x86_64.so build_Release_TC-fil-c.cmake/js_server
             echo "File for Linux x86_64 Fil-C: $(file build_Release_TC-fil-c.cmake/js_server)"
-            cp build_Release_TC-fil-c.cmake/js_server release-artifacts/jsockd-linux-x86_64_filc
-            cp ../tools-bin/compile_es6_module_Linux_x86_64_filc release-artifacts/jsockd-linux-x86_64_filc/compile_es6_module
-            openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out release-artifacts/jsockd-linux-x86_64_filc/js_server_signature.bin -rawin -in release-artifacts/jsockd-linux-x86_64_filc/js_server
+            cp build_Release_TC-fil-c.cmake/js_server release-artifacts/jsockd-linux-x86_64_filc/js_server/
+            cp /home/runner/filc-0.668.8-linux-x86_64/pizfix/lib/ld-yolo-x86_64.so release-artifacts/jsockd-linux-x86_64_filc/js_server/ld-yolo-x86_64.so
+            cp ../tools-bin/compile_es6_module_Linux_x86_64 release-artifacts/jsockd-linux-x86_64_filc/compile_es6_module
+            openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out release-artifacts/jsockd-linux-x86_64_filc/js_server_signature.bin -rawin -in release-artifacts/jsockd-linux-x86_64_filc/js_server/js_server
+            openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out release-artifacts/jsockd-linux-x86_64_filc/ld-yolo-x86_64.so_signature.bin -rawin -in release-artifacts/jsockd-linux-x86_64_filc/js_server/ld-yolo-x86_64.so
             openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out release-artifacts/jsockd-linux-x86_64_filc/compile_es6_module_signature.bin -rawin -in release-artifacts/jsockd-linux-x86_64_filc/compile_es6_module
             tar -czf release-artifacts/jsockd-linux-x86_64_filc.tar.gz release-artifacts/jsockd-linux-x86_64_filc
 
