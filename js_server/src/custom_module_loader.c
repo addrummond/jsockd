@@ -5,6 +5,7 @@
 #include "custom_module_loader.h"
 #include "quickjs-libc.h"
 #include "quickjs.h"
+#include "utils.h"
 #include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -12,6 +13,8 @@
 #include <string.h>
 
 // Adapted from 'js_module_loader' and 'js_std_eval_binary' in quickjs-libc.c
+// See also
+// https://github.com/chqrlie/quickjs-ng/blob/78910046ada3f3b58d9b690ee233ac8280965246/qjs.c#L75
 JSValue load_binary_module(JSContext *ctx, const uint8_t *buf, size_t buf_len) {
   JSValue obj, val;
 
@@ -21,23 +24,34 @@ JSValue load_binary_module(JSContext *ctx, const uint8_t *buf, size_t buf_len) {
   assert(JS_VALUE_GET_TAG(obj) == JS_TAG_MODULE);
 
   if (JS_ResolveModule(ctx, obj) < 0) {
+    if (CMAKE_BUILD_TYPE_IS_DEBUG)
+      js_std_dump_error(ctx);
     JS_FreeValue(ctx, obj);
     return JS_EXCEPTION;
   }
 
-  js_module_set_import_meta(ctx, obj, 0, 0);
+  if (js_module_set_import_meta(ctx, obj, 0, 1) < 0) {
+    if (CMAKE_BUILD_TYPE_IS_DEBUG)
+      js_std_dump_error(ctx);
+    JS_FreeValue(ctx, obj);
+    return JS_EXCEPTION;
+  }
 
   val = JS_EvalFunction(ctx, obj);
-
-  if (JS_IsException(val))
-    return val;
-
   val = js_std_await(ctx, val);
-  if (JS_IsException(val))
+
+  if (JS_IsException(val)) {
+    if (CMAKE_BUILD_TYPE_IS_DEBUG)
+      js_std_dump_error(ctx);
     return val;
+  }
 
   JS_FreeValue(ctx, val);
-  return JS_GetModuleNamespace(ctx, JS_VALUE_GET_PTR(obj));
+
+  JSModuleDef *m = JS_VALUE_GET_PTR(obj);
+  JSValue n = JS_GetModuleNamespace(ctx, m);
+  JS_FreeValue(ctx, obj);
+  return n;
 }
 
 JSModuleDef *jsockd_js_module_loader(JSContext *ctx, const char *module_name,
