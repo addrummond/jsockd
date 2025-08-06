@@ -131,7 +131,7 @@ else
     make clean
     # See https://github.com/pizlonator/pizlonated-quickjs/commit/258a4a291fd0f080614e5b345528478c31e51705#diff-45f1ae674139f993bf8a99c382c1ba4863272a6fec2f492d76d7ff1b2cfcfbe2R56-R5187 for diff the patch is based on
     git apply ../../fil-c-quickjs.patch
-    LDFLAGS="-static -L$HOME/filc-0.668.8-linux-x86_64/pizfix/lib" CFLAGS="$DEBUG_CFLAGS" make CC=~/filc-0.668.8-linux-x86_64/build/bin/clang CONFIG_LTO= CONFIG_CLANG=y
+    CFLAGS="$DEBUG_CFLAGS" make CC=~/filc-0.668.8-linux-x86_64/build/bin/clang CONFIG_LTO= CONFIG_CLANG=y
     generate_qjsc_wrapper qjsc > ../../tools-bin/compile_es6_module_Linux_x86_64_filc
     git apply -R ../../fil-c-quickjs.patch
     mv libquickjs.a /tmp/libquickjs_Linux_x86_64_filc_Debug.a
@@ -151,7 +151,7 @@ else
     # compile for Fil-C x86_64
     make clean
     git apply ../../fil-c-quickjs.patch
-    LDFLAGS="-static -L$HOME/filc-0.668.8-linux-x86_64/pizfix/lib" CFLAGS="$RELEASE_CFLAGS" make CC=~/filc-0.668.8-linux-x86_64/build/bin/clang CONFIG_LTO= CONFIG_CLANG=y
+    CFLAGS="$RELEASE_CFLAGS" make CC=~/filc-0.668.8-linux-x86_64/build/bin/clang CONFIG_LTO= CONFIG_CLANG=y
     mv libquickjs.a /tmp/libquickjs_Linux_x86_64_filc_Release.a
     git apply -R ../../fil-c-quickjs.patch
 
