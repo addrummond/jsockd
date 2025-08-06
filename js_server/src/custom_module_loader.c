@@ -13,7 +13,6 @@
 
 // Adapted from 'js_module_loader' and 'js_std_eval_binary' in quickjs-libc.c
 JSValue load_binary_module(JSContext *ctx, const uint8_t *buf, size_t buf_len) {
-  JSModuleDef *m;
   JSValue obj, val;
 
   obj = JS_ReadObject(ctx, buf, buf_len, JS_READ_OBJ_BYTECODE);
@@ -21,14 +20,12 @@ JSValue load_binary_module(JSContext *ctx, const uint8_t *buf, size_t buf_len) {
     return obj;
   assert(JS_VALUE_GET_TAG(obj) == JS_TAG_MODULE);
 
-  m = JS_VALUE_GET_PTR(obj);
-
   if (JS_ResolveModule(ctx, obj) < 0) {
     JS_FreeValue(ctx, obj);
     return JS_EXCEPTION;
   }
 
-  js_module_set_import_meta(ctx, obj, 0, 1);
+  js_module_set_import_meta(ctx, obj, 0, 0);
 
   val = JS_EvalFunction(ctx, obj);
 
@@ -40,7 +37,7 @@ JSValue load_binary_module(JSContext *ctx, const uint8_t *buf, size_t buf_len) {
     return val;
 
   JS_FreeValue(ctx, val);
-  return JS_GetModuleNamespace(ctx, m);
+  return JS_GetModuleNamespace(ctx, JS_VALUE_GET_PTR(obj));
 }
 
 JSModuleDef *jsockd_js_module_loader(JSContext *ctx, const char *module_name,
