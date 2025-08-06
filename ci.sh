@@ -117,7 +117,7 @@ case $1 in
     build_js_server_linux_x86_64_filc)
         (
             set -e
-            export TOOLCHAIN_FILE=TC-fil-c.cmake
+            export TOOLCHAIN_FILE=TC-fil-c-CI.cmake
             cd js_server
             ./mk.sh Debug
             ./mk.sh Release
@@ -164,9 +164,9 @@ case $1 in
 
             # Package Linux x86_64 Fil-C. For now we include the regular x86_64 build of compile_es6_module.
             mkdir -p release-artifacts/jsockd-linux-x86_64_filc/js_server
-            patchelf --set-rpath '$ORIGIN' build_Release_TC-fil-c.cmake/js_server
-            patchelf --set-interpreter ld-yolo-x86_64.so build_Release_TC-fil-c.cmake/js_server
-            cp build_Release_TC-fil-c.cmake/js_server release-artifacts/jsockd-linux-x86_64_filc/js_server/
+            patchelf --set-rpath '$ORIGIN' build_Release_TC-fil-c-CI.cmake/js_server
+            patchelf --set-interpreter ld-yolo-x86_64.so build_Release_TC-fil-c-CI.cmake/js_server
+            cp build_Release_TC-fil-c-CI.cmake/js_server release-artifacts/jsockd-linux-x86_64_filc/js_server/
             cp -L /home/runner/filc-0.668.8-linux-x86_64/pizfix/lib/ld-yolo-x86_64.so release-artifacts/jsockd-linux-x86_64_filc/js_server/ld-yolo-x86_64.so
             cp -L /home/runner/filc-0.668.8-linux-x86_64/pizfix/lib/libc.so release-artifacts/jsockd-linux-x86_64_filc/js_server/libc.so
             cp -L /home/runner/filc-0.668.8-linux-x86_64/pizfix/lib/libpizlo.so release-artifacts/jsockd-linux-x86_64_filc/js_server/libpizlo.so

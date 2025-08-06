@@ -210,6 +210,13 @@ Run unit tests can be as follows:
 ./mk.sh Debug test
 ```
 
+### 5.3 Developing with Fil-C
+
+**TODO: rough notes**
+
+* `JSOCKD_FILC=1 ./build_quickjs.sh`
+* [In `js_server`] `TOOLCHAIN_FILE=TC-fil-c.cmake ./mk.sh Debug`
+
 ## 6. Releases
 
 ### 6.1 Creating a release

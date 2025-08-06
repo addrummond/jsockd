@@ -78,30 +78,55 @@ done
 DEBUG_CFLAGS="-DDUMP_LEAKS"
 RELEASE_CFLAGS="-O2"
 
-if [ -z $JSOCKD_IN_CI ]; then
-    # We're not in CI, so just do Debug and Release builds for the current
-    # architecture.
+filc_debug_build() {
+    # See https://github.com/pizlonator/pizlonated-quickjs/commit/258a4a291fd0f080614e5b345528478c31e51705#diff-45f1ae674139f993bf8a99c382c1ba4863272a6fec2f492d76d7ff1b2cfcfbe2R56-R5187 for diff the patch is based on
+    git apply ../../fil-c-quickjs.patch
+    CFLAGS="$DEBUG_CFLAGS" make CC=~/filc-0.668.8-linux-x86_64/build/bin/clang CONFIG_LTO= CONFIG_CLANG=y
+    generate_qjsc_wrapper qjsc > ../../tools-bin/compile_es6_module_Linux_x86_64_filc
+    git apply -R ../../fil-c-quickjs.patch
+    mv libquickjs.a /tmp/libquickjs_Linux_x86_64_filc_Debug.a
+}
 
-    OS=$(uname)
-    ARCH=$(uname -m)
-    if [ "$ARCH" = aarch64 ]; then
-        ARCH=arm64
+filc_release_build() {
+    git apply ../../fil-c-quickjs.patch
+    CFLAGS="$RELEASE_CFLAGS" make CC=~/filc-0.668.8-linux-x86_64/build/bin/clang CONFIG_LTO= CONFIG_CLANG=y
+    git apply -R ../../fil-c-quickjs.patch
+    mv libquickjs.a /tmp/libquickjs_Linux_x86_64_filc_Release.a
+}
+
+if [ -z "$JSOCKD_IN_CI" ]; then
+    if [ -z "$JSOCKD_FILC" ]; then
+        # We're not in CI, so just do Debug and Release builds for the current
+        # architecture.
+
+        OS=$(uname)
+        ARCH=$(uname -m)
+        if [ "$ARCH" = aarch64 ]; then
+            ARCH=arm64
+        fi
+        # Debug build for quickjs library
+        CFLAGS="$DEBUG_CFLAGS" make CONFIG_LTO=n
+        cp qjs ../../tools-bin
+        cp qjsc ../../tools-bin
+        generate_qjsc_wrapper qjsc > ../../tools-bin/compile_es6_module
+        chmod +x ../../tools-bin/compile_es6_module
+        mv libquickjs.a /tmp/libquickjs_${OS}_${ARCH}_Debug.a # this will get killed by make clean
+
+        # Release build for quickjs library
+        make clean
+        CFLAGS="$RELEASE_CFLAGS" make CONFIG_LTO=y
+        mv libquickjs.a /tmp/libquickjs_${OS}_${ARCH}_Release.a
+
+        mv /tmp/libquickjs_${OS}_${ARCH}_Debug.a .
+        mv /tmp/libquickjs_${OS}_${ARCH}_Release.a .
+    else
+        filc_debug_build
+        make clean
+        filc_release_build
+
+        mv /tmp/libquickjs_Linux_x86_64_filc_Debug.a .
+        mv /tmp/libquickjs_Linux_x86_64_filc_Release.a .
     fi
-    # Debug build for quickjs library
-    CFLAGS="$DEBUG_CFLAGS" make CONFIG_LTO=n
-    cp qjs ../../tools-bin
-    cp qjsc ../../tools-bin
-    generate_qjsc_wrapper qjsc > ../../tools-bin/compile_es6_module
-    chmod +x ../../tools-bin/compile_es6_module
-    mv libquickjs.a /tmp/libquickjs_${OS}_${ARCH}_Debug.a # this will get killed by make clean
-
-    # Release build for quickjs library
-    make clean
-    CFLAGS="$RELEASE_CFLAGS" make CONFIG_LTO=y
-    mv libquickjs.a /tmp/libquickjs_${OS}_${ARCH}_Release.a
-
-    mv /tmp/libquickjs_${OS}_${ARCH}_Debug.a .
-    mv /tmp/libquickjs_${OS}_${ARCH}_Release.a .
 else
     # We're in CI, so do Debug and Release builds for the host x86_64
     # architecture and also cross-compile for arm64 Linux and Mac.
@@ -129,12 +154,7 @@ else
     mv libquickjs.a /tmp/libquickjs_Darwin_arm64_Debug.a
     # compile for Fil-C x86_64
     make clean
-    # See https://github.com/pizlonator/pizlonated-quickjs/commit/258a4a291fd0f080614e5b345528478c31e51705#diff-45f1ae674139f993bf8a99c382c1ba4863272a6fec2f492d76d7ff1b2cfcfbe2R56-R5187 for diff the patch is based on
-    git apply ../../fil-c-quickjs.patch
-    CFLAGS="$DEBUG_CFLAGS" make CC=~/filc-0.668.8-linux-x86_64/build/bin/clang CONFIG_LTO= CONFIG_CLANG=y
-    generate_qjsc_wrapper qjsc > ../../tools-bin/compile_es6_module_Linux_x86_64_filc
-    git apply -R ../../fil-c-quickjs.patch
-    mv libquickjs.a /tmp/libquickjs_Linux_x86_64_filc_Debug.a
+    filc_debug_build
 
     # Release build for quickjs library
     make clean
@@ -150,10 +170,7 @@ else
     mv libquickjs.a /tmp/libquickjs_Darwin_arm64_Release.a
     # compile for Fil-C x86_64
     make clean
-    git apply ../../fil-c-quickjs.patch
-    CFLAGS="$RELEASE_CFLAGS" make CC=~/filc-0.668.8-linux-x86_64/build/bin/clang CONFIG_LTO= CONFIG_CLANG=y
-    mv libquickjs.a /tmp/libquickjs_Linux_x86_64_filc_Release.a
-    git apply -R ../../fil-c-quickjs.patch
+    filc_release_build
 
     mv /tmp/libquickjs_Linux_x86_64_Debug.a .
     mv /tmp/libquickjs_Linux_arm64_Debug.a .

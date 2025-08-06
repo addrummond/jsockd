@@ -24,8 +24,8 @@ cmake --build $BUILD_DIR $BUILD_OPTS
 
 if [ "$2" = "run" ]; then
   shift ; shift
-  exec build_$BUILD_TYPE/js_server $@
+  exec $BUILD_DIR/js_server $@
 elif [ "$2" = "test" ]; then
   shift ; shift
-  exec build_$BUILD_TYPE/js_server_tests $@
+  exec $BUILD_DIR/js_server_tests $@
 fi
