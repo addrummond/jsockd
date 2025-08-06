@@ -156,7 +156,6 @@ case $1 in
 
             # Package Linux x86_64
             mkdir release-artifacts/jsockd-linux-x86_64
-            echo "File for Linux x86_64: $(file build_Release/js_server)"
             cp build_Release/js_server release-artifacts/jsockd-linux-x86_64
             cp ../tools-bin/compile_es6_module_Linux_x86_64 release-artifacts/jsockd-linux-x86_64/compile_es6_module
             openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out release-artifacts/jsockd-linux-x86_64/js_server_signature.bin -rawin -in release-artifacts/jsockd-linux-x86_64/js_server
@@ -167,7 +166,6 @@ case $1 in
             mkdir -p release-artifacts/jsockd-linux-x86_64_filc/js_server
             patchelf --set-rpath '$ORIGIN' build_Release_TC-fil-c.cmake/js_server
             patchelf --set-interpreter ld-yolo-x86_64.so build_Release_TC-fil-c.cmake/js_server
-            echo "File for Linux x86_64 Fil-C: $(file build_Release_TC-fil-c.cmake/js_server)"
             cp build_Release_TC-fil-c.cmake/js_server release-artifacts/jsockd-linux-x86_64_filc/js_server/
             cp -L /home/runner/filc-0.668.8-linux-x86_64/pizfix/lib/ld-yolo-x86_64.so release-artifacts/jsockd-linux-x86_64_filc/js_server/ld-yolo-x86_64.so
             cp -L /home/runner/filc-0.668.8-linux-x86_64/pizfix/lib/libc.so release-artifacts/jsockd-linux-x86_64_filc/js_server/libc.so
@@ -180,7 +178,6 @@ case $1 in
 
             # Package Linux ARM64
             mkdir release-artifacts/jsockd-linux-arm64
-            echo "File for Linux arm64: $(file build_Release_TC-gcc-arm64.cmake/js_server)"
             cp build_Release_TC-gcc-arm64.cmake/js_server release-artifacts/jsockd-linux-arm64
             cp ../tools-bin/compile_es6_module_Linux_arm64 release-artifacts/jsockd-linux-arm64/compile_es6_module
             openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out release-artifacts/jsockd-linux-arm64/js_server_signature.bin -rawin -in release-artifacts/jsockd-linux-arm64/js_server
@@ -189,7 +186,6 @@ case $1 in
 
             # Package MacOS ARM64
             mkdir release-artifacts/jsockd-macos-arm64
-            echo "File for MacOS arm64: $(file build_Release_TC-oa64.cmake/js_server)"
             cp build_Release_TC-oa64.cmake/js_server release-artifacts/jsockd-macos-arm64
             cp ../tools-bin/compile_es6_module_Darwin_arm64 release-artifacts/jsockd-macos-arm64/compile_es6_module
             openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out release-artifacts/jsockd-macos-arm64/js_server_signature.bin -rawin -in release-artifacts/jsockd-macos-arm64/js_server
