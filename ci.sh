@@ -170,6 +170,8 @@ case $1 in
             echo "File for Linux x86_64 Fil-C: $(file build_Release_TC-fil-c.cmake/js_server)"
             cp build_Release_TC-fil-c.cmake/js_server release-artifacts/jsockd-linux-x86_64_filc/js_server/
             cp -L /home/runner/filc-0.668.8-linux-x86_64/pizfix/lib/ld-yolo-x86_64.so release-artifacts/jsockd-linux-x86_64_filc/js_server/ld-yolo-x86_64.so
+            cp -L /home/runner/filc-0.668.8-linux-x86_64/pizfix/lib/libc.so release-artifacts/jsockd-linux-x86_64_filc/js_server/libc.so
+            cp -L /home/runner/filc-0.668.8-linux-x86_64/pizfix/lib/libpizlo.so release-artifacts/jsockd-linux-x86_64_filc/js_server/libpizlo.so
             cp ../tools-bin/compile_es6_module_Linux_x86_64 release-artifacts/jsockd-linux-x86_64_filc/compile_es6_module
             openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out release-artifacts/jsockd-linux-x86_64_filc/js_server_signature.bin -rawin -in release-artifacts/jsockd-linux-x86_64_filc/js_server/js_server
             openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out release-artifacts/jsockd-linux-x86_64_filc/ld-yolo-x86_64.so_signature.bin -rawin -in release-artifacts/jsockd-linux-x86_64_filc/js_server/ld-yolo-x86_64.so
