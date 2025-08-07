@@ -53,9 +53,7 @@ JSValue load_binary_module(JSContext *ctx, const uint8_t *buf, size_t buf_len) {
   JS_FreeValue(ctx, val);
 
   JSModuleDef *m = JS_VALUE_GET_PTR(obj);
-  JSValue n = JS_GetModuleNamespace(ctx, m);
-  JS_FreeValue(ctx, obj);
-  return n;
+  return JS_GetModuleNamespace(ctx, m);
 }
 
 JSModuleDef *jsockd_js_module_loader(JSContext *ctx, const char *module_name,

@@ -605,7 +605,8 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
     write_const_to_stream(ts, " exception ");
     WBuf emb = {.buf = ts->error_msg_buf,
                 .index = 0,
-                .length = sizeof(ts->error_msg_buf)};
+                .length =
+                    sizeof(ts->error_msg_buf) / sizeof(ts->error_msg_buf[0])};
     JSValue exception = JS_GetException(ts->ctx);
     JS_PrintValue(ts->ctx, write_to_buf, &emb, exception, NULL);
 
