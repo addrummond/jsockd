@@ -622,7 +622,7 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
               : JS_NewStringLen(ts->ctx, (const char *)g_source_map,
                                 g_source_map_size);
       int c = atomic_fetch_add(&g_source_map_load_count, 1);
-      if (c + 1 == g_n_threads) {
+      if (c + 1 == g_n_threads && g_source_map_size != 0 && g_source_map) {
         debug_log("All threads have loaded the sourcemap, calling munmap...\n");
         munmap_or_warn((void *)g_source_map, g_source_map_size);
         g_source_map = NULL;
@@ -955,7 +955,7 @@ int main(int argc, char *argv[]) {
 
   if (0 != wait_group_init(&g_thread_ready_wait_group, n_threads)) {
     release_logf("Error initializing wait group: %s", strerror(errno));
-    if (g_module_bytecode)
+    if (g_module_bytecode_size != 0 && g_module_bytecode)
       munmap_or_warn((void *)g_module_bytecode,
                      g_module_bytecode_size + ED25519_SIGNATURE_SIZE);
     pthread_mutex_destroy(&g_log_mutex);
@@ -969,7 +969,7 @@ int main(int argc, char *argv[]) {
     if (0 !=
         init_thread_state(&g_thread_states[n], g_cmd_args.socket_path[n])) {
       release_logf("Error initializing thread %i", n);
-      if (g_module_bytecode)
+      if (g_module_bytecode_size != 0 && g_module_bytecode)
         munmap_or_warn((void *)g_module_bytecode, g_module_bytecode_size);
       pthread_mutex_destroy(&g_log_mutex);
       pthread_mutex_destroy(&g_cached_functions_mutex);
