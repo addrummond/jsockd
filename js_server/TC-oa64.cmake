@@ -9,7 +9,6 @@ set(CMAKE_SYSTEM_PROCESSOR aarch64)
 set(CMAKE_C_COMPILER oa64-clang)
 set(CMAKE_INSTALL_NAME_TOOL aarch64-apple-darwin24.5-install_name_tool)
 set(CMAKE_OTOOL aarch64-apple-darwin24.5-otool)
-set(CMAKE_LD aarch64-apple-darwin24.5-ld)
 set(CMAKE_AR aarch64-apple-darwin24.5-ar)
 
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
