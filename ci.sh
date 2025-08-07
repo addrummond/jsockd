@@ -40,6 +40,7 @@ case $1 in
         cmake --version
         node --version
         clang-format --version
+        ls -l $(dirname $(which aarch64-apple-darwin24.5-ar))
         ;;
 
     build_quickjs)
