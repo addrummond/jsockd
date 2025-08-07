@@ -29,8 +29,7 @@ HashCacheBucket *add_to_hash_cache(HashCacheBucket buckets[], int n_bits,
 
   size_t n_buckets = HASH_CACHE_BUCKET_ARRAY_SIZE_FROM_HASH_BITS(n_bits);
   const size_t bucket_look_forward = get_bucket_look_forward(n_bits);
-  size_t i;
-  for (i = bucket_i; i < bucket_i + bucket_look_forward; ++i) {
+  for (size_t i = bucket_i; i < bucket_i + bucket_look_forward; ++i) {
     size_t j = i % n_buckets; // wrap around if we reach the end
     if (buckets[j].uid == 0) {
       bucket_i = j;
@@ -49,8 +48,7 @@ HashCacheBucket *get_hash_cache_entry(HashCacheBucket buckets[], int n_bits,
 
   size_t n_buckets = HASH_CACHE_BUCKET_ARRAY_SIZE_FROM_HASH_BITS(n_bits);
   const size_t bucket_look_forward = get_bucket_look_forward(n_bits);
-  size_t i;
-  for (i = bucket; i < bucket + bucket_look_forward; ++i) {
+  for (size_t i = bucket; i < bucket + bucket_look_forward; ++i) {
     size_t j = i % n_buckets; // wrap around if we reach the end
     if (buckets[j].uid == uid)
       return &buckets[j];
