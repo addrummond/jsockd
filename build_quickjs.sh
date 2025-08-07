@@ -2,6 +2,8 @@
 
 set -e
 
+__BUST_CACHE=1 # increment to bust QuickJS build cache manually if needed
+
 QUICKJS_COMMIT=1fdc768fdc8571300755cdd3e4654ce99c0255ce
 
 # The qjsc tool in Bellard's QuickJS repo doesn't support binary output.
