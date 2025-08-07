@@ -92,10 +92,17 @@ set(JS_SERVER_SOURCES
   ${ED25519_LIB_SOURCES}
   )
 
-add_executable(js_server src/main.c ${JS_SERVER_SOURCES})
+# This lib is just here to stop CMake building most of the sources twice, once
+# for the main executable and once for the tests.
+add_library(js_server_lib STATIC ${JS_SERVER_SOURCES})
+target_compile_features(js_server_lib PUBLIC c_std_11)
+
+add_executable(js_server src/main.c)
+target_link_libraries(js_server js_server_lib)
 target_compile_features(js_server PUBLIC c_std_11)
 
-add_executable(js_server_tests tests/unit/tests.c tests/unit/lib/pcg.c ${JS_SERVER_SOURCES})
+add_executable(js_server_tests tests/unit/tests.c tests/unit/lib/pcg.c)
+target_link_libraries(js_server_tests js_server_lib)
 target_compile_features(js_server_tests PUBLIC c_std_11)
 
 if (CMAKE_SIZEOF_VOID_P EQUAL 8 AND (CMAKE_SYSTEM_PROCESSOR MATCHES "arm" OR CMAKE_SYSTEM_PROCESSOR MATCHES "aarch"))
@@ -112,5 +119,4 @@ set_target_properties(qjs PROPERTIES
     ${CMAKE_SOURCE_DIR}/../.scratch/quickjs/libquickjs_${CMAKE_SYSTEM_NAME}_${QUICKJS_LIB_ARCH}${FILC}_${CMAKE_BUILD_TYPE}.a
   INTERFACE_INCLUDE_DIRECTORIES
     "${CMAKE_SOURCE_DIR}/../.scratch/quickjs;${CMAKE_SOURCE_DIR}/src/lib")
-target_link_libraries(js_server qjs m)
-target_link_libraries(js_server_tests qjs m)
+target_link_libraries(js_server_lib qjs m)
