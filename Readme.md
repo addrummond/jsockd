@@ -10,26 +10,30 @@ The server receives commands over one or more UNIX domain sockets. The motivatin
 - Valgrind tests, fuzz tests
 - Memory-safe [Fil-C](https://github.com/pizlonator/llvm-project-deluge/) build available on Linux/x86_64 for the safety conscious.
 
-## 1. Using JSockD
+## 1. Getting started
 
-### 1.1 Setting up JSockD for your application
+### 1.1 Adding JSockD to your application
 
 Applications should generally connect to JSockD via a client library that manages the JSockD server process. At the moment, this repo contains one example of such a library in `clients/elixir/jsockd_client`. At this level of abstraction, JSockD is a simple command execution service. Commands are JavaScript functions executed with specified parameters.
 
 Steps to add JSockD to your application:
 
 * Bundle all of the required Javascript library code into a single ES6 module (using e.g. [esbuild](https://esbuild.github.io/api/)).
+* Generate an ED25519 public/private key pair for signing your code (see section 2).
 * Compile the ES6 module into a QuickJS bytecode file using the `compile_es6_module` command (see section 2).
 * Configure your client library with the path to the bytecode file and the public key used to sign it.
 * Use the client library to send commands to the JSockD server.
-
-### 1.2 Execution model
 
 Commands are cached in the same sort of way that a SQL server caches queries. When a command is executed, the server first checks if the command has been executed before. If it has, the server executes the cached bytecode for that command. If not, the server compiles the command and caches the bytecode for future use.
 
 Commands should not mutate global state. Global state may or may not persist across command executions. JSockD reserves the right to reset global state at any time.
 
-JSockD monitors each QuickJS VM to see if memory usage is increasing with the number of commands executed. Once a certain threshold is reached, the VM is restarted. This provides some protection against memory leaks. (The QuickJS VM itself does not leak memory, but buggy JavaScript code might.)
+### 1.2 Tips for SSR with React 19
+
+**TODO: rough notes**
+
+- Import `react-dom/server.edge` rather than `react-dom/server`.
+- Shim `TextEncoder` and `console`. In `js_server/tests/e2e/filc_relative_bench/shims.mjs` you can see example shims for use with `esbuild`'s `--inject` option.
 
 ## 2. The module compiler
 
