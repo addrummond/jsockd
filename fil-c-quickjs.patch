@@ -22,7 +22,7 @@ index 3b1c745..2be9da3 100644
  endif
  endif
 diff --git a/libregexp.c b/libregexp.c
-index 2b33c86..f5466ea 100644
+index 2b33c86..2254199 100644
 --- a/libregexp.c
 +++ b/libregexp.c
 @@ -2711,10 +2711,11 @@ static int lre_poll_timeout(REExecContext *s)
@@ -82,7 +82,7 @@ index 2b33c86..f5466ea 100644
      return ret;
  }
 diff --git a/quickjs.c b/quickjs.c
-index caad931..0ca1753 100644
+index caad931..8e2d7fe 100644
 --- a/quickjs.c
 +++ b/quickjs.c
 @@ -54,6 +54,8 @@
@@ -94,7 +94,15 @@ index caad931..0ca1753 100644
  
  #if defined(__APPLE__)
  #define MALLOC_OVERHEAD  0
-@@ -875,7 +877,7 @@ typedef struct JSProperty {
+@@ -76,6 +78,7 @@
+ /* enable stack limitation */
+ #define CONFIG_STACK_CHECK
+ #endif
++#undef CONFIG_STACK_CHECK // doesn't play well with Fil-C
+ 
+ 
+ /* dump object free */
+@@ -875,7 +878,7 @@ typedef struct JSProperty {
          struct {            /* JS_PROP_AUTOINIT */
              /* in order to use only 2 pointers, we compress the realm
                 and the init function pointer */
@@ -103,7 +111,7 @@ index caad931..0ca1753 100644
                                         in the 2 low bits */
              void *opaque;
          } init;
-@@ -5475,12 +5477,13 @@ JSValue JS_NewCFunctionData(JSContext *ctx, JSCFunctionData *func,
+@@ -5475,12 +5478,13 @@ JSValue JS_NewCFunctionData(JSContext *ctx, JSCFunctionData *func,
  
  static JSContext *js_autoinit_get_realm(JSProperty *pr)
  {
@@ -119,7 +127,7 @@ index caad931..0ca1753 100644
  }
  
  static void js_autoinit_free(JSRuntime *rt, JSProperty *pr)
-@@ -9819,10 +9822,10 @@ static int JS_DefineAutoInitProperty(JSContext *ctx, JSValueConst this_obj,
+@@ -9819,10 +9823,10 @@ static int JS_DefineAutoInitProperty(JSContext *ctx, JSValueConst this_obj,
      pr = add_property(ctx, p, prop, (flags & JS_PROP_C_W_E) | JS_PROP_AUTOINIT);
      if (unlikely(!pr))
          return -1;
@@ -133,7 +141,7 @@ index caad931..0ca1753 100644
      pr->u.init.opaque = opaque;
      return TRUE;
  }
-@@ -29055,7 +29058,10 @@ static JSValue js_build_module_ns(JSContext *ctx, JSModuleDef *m)
+@@ -29055,7 +29059,10 @@ static JSValue js_build_module_ns(JSContext *ctx, JSModuleDef *m)
          ExportedNameEntry *en = &s->exported_names[i];
          switch(en->export_type) {
          case EXPORTED_NAME_NORMAL:
@@ -145,7 +153,7 @@ index caad931..0ca1753 100644
                  JSVarRef *var_ref = en->u.var_ref;
                  pr = add_property(ctx, p, en->export_name,
                                    JS_PROP_ENUMERABLE | JS_PROP_WRITABLE |
-@@ -29065,7 +29071,7 @@ static JSValue js_build_module_ns(JSContext *ctx, JSModuleDef *m)
+@@ -29065,7 +29072,7 @@ static JSValue js_build_module_ns(JSContext *ctx, JSModuleDef *m)
                  var_ref->header.ref_count++;
                  pr->u.var_ref = var_ref;
              }
