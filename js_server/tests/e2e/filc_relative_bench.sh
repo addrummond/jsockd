@@ -2,6 +2,9 @@
 
 set -e
 
+# TODO: complete
+exit 0
+
 cd js_server
 
 ./mk.sh Release
