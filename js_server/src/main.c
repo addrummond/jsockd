@@ -689,10 +689,7 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
   JS_FreeValue(ts->ctx, parsed_arg);
   JS_FreeValue(ts->ctx, ret);
 
-  // Freeing twice because we create two refs via JS_ToCStringLen.
-  // (`JS_FreeValue` is a refcount decrement.)
   JS_FreeValue(ts->ctx, stringified);
-  //JS_FreeValue(ts->ctx, stringified);
 
   if (0 == (ts->memory_check_count =
                 ((ts->memory_check_count + 1) % MEMORY_CHECK_INTERVAL))) {
