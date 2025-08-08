@@ -145,7 +145,7 @@ case $1 in
         ;;
 
     run_js_server_fuzz_tests)
-        ./js_server/tests/fuzz/fuxx.sh
+        ./js_server/tests/fuzz/fuzz.sh
         ;;
 
     package_binaries)
