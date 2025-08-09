@@ -43,7 +43,7 @@ case $1 in
         ;;
 
     build_quickjs)
-        JSOCKD_IN_CI=1 ./build_quickjs.sh
+        JSOCKD_IN_CI=1 ./build_quickjs.sh native linux_arm64 mac_arm64 linux_x86_64_filc
         ;;
 
     check_js_server_formatting)

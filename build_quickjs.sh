@@ -80,106 +80,112 @@ done
 DEBUG_CFLAGS="-DDUMP_LEAKS"
 RELEASE_CFLAGS="-O2"
 
-filc_debug_build() {
-    # See https://github.com/pizlonator/pizlonated-quickjs/commit/258a4a291fd0f080614e5b345528478c31e51705#diff-45f1ae674139f993bf8a99c382c1ba4863272a6fec2f492d76d7ff1b2cfcfbe2R56-R5187 for diff the patch is based on
-    git apply ../../fil-c-quickjs.patch
-    CFLAGS="$DEBUG_CFLAGS" make CC=~/filc-0.668.8-linux-x86_64/build/bin/clang CONFIG_LTO= CONFIG_CLANG=y
-    generate_qjsc_wrapper qjsc > ../../tools-bin/compile_es6_module_Linux_x86_64_filc
-    git apply -R ../../fil-c-quickjs.patch
-    mv libquickjs.a /tmp/libquickjs_Linux_x86_64_filc_Debug.a
-}
-
-filc_release_build() {
-    git apply ../../fil-c-quickjs.patch
-    CFLAGS="$RELEASE_CFLAGS" make CC=~/filc-0.668.8-linux-x86_64/build/bin/clang CONFIG_LTO= CONFIG_CLANG=y
-    git apply -R ../../fil-c-quickjs.patch
-    mv libquickjs.a /tmp/libquickjs_Linux_x86_64_filc_Release.a
-}
-
-if [ -z "$JSOCKD_IN_CI" ]; then
-    if [ -z "$JSOCKD_FILC" ]; then
-        # We're not in CI, so just do Debug and Release builds for the current
-        # architecture.
-
-        OS=$(uname)
-        ARCH=$(uname -m)
-        if [ "$ARCH" = aarch64 ]; then
-            ARCH=arm64
-        fi
-        # Debug build for quickjs library
-        CFLAGS="$DEBUG_CFLAGS" make CONFIG_LTO=n
-        cp qjs ../../tools-bin
-        cp qjsc ../../tools-bin
-        generate_qjsc_wrapper qjsc > ../../tools-bin/compile_es6_module
-        chmod +x ../../tools-bin/compile_es6_module
-        mv libquickjs.a /tmp/libquickjs_${OS}_${ARCH}_Debug.a # this will get killed by make clean
-
-        # Release build for quickjs library
-        make clean
-        CFLAGS="$RELEASE_CFLAGS" make CONFIG_LTO=y
-        mv libquickjs.a /tmp/libquickjs_${OS}_${ARCH}_Release.a
-
-        mv /tmp/libquickjs_${OS}_${ARCH}_Debug.a .
-        mv /tmp/libquickjs_${OS}_${ARCH}_Release.a .
-    else
-        filc_debug_build
-        make clean
-        filc_release_build
-
-        mv /tmp/libquickjs_Linux_x86_64_filc_Debug.a .
-        mv /tmp/libquickjs_Linux_x86_64_filc_Release.a .
-    fi
-else
-    # We're in CI, so do Debug and Release builds for the host x86_64
-    # architecture and also cross-compile for arm64 Linux and Mac.
-
-    # Debug build for quickjs library
-    CFLAGS="$DEBUG_CFLAGS" make CONFIG_LTO=n
-    generate_qjsc_wrapper qjsc > ../../tools-bin/compile_es6_module_Linux_x86_64
-    cp ../../tools-bin/compile_es6_module_Linux_x86_64 ../../tools-bin/compile_es6_module
-    chmod +x ../../tools-bin/compile_es6_module_Linux_x86_64
-    chmod +x ../../tools-bin/compile_es6_module
-    mv libquickjs.a /tmp/libquickjs_Linux_x86_64_Debug.a # this will get killed by make clean
-    cp qjs ../../tools-bin
-    cp qjsc ../../tools-bin
-    # cross-compile for Linux arm
-    make clean
-    CFLAGS="$DEBUG_CFLAGS" make CONFIG_LTO=n CROSS_PREFIX=aarch64-linux-gnu-
-    generate_qjsc_wrapper qjsc > ../../tools-bin/compile_es6_module_Linux_arm64
-    chmod +x ../../tools-bin/compile_es6_module_Linux_arm64
-    mv libquickjs.a /tmp/libquickjs_Linux_arm64_Debug.a
-    # cross-compile for Mac (aarch64)
-    make clean
-    CFLAGS="$DEBUG_CFLAGS" make CONFIG_DEFAULT_AR=y CONFIG_CLANG=y CROSS_PREFIX=aarch64-apple-darwin24.5-
-    generate_qjsc_wrapper qjsc > ../../tools-bin/compile_es6_module_Darwin_arm64
-    chmod +x ../../tools-bin/compile_es6_module_Darwin_arm64
-    mv libquickjs.a /tmp/libquickjs_Darwin_arm64_Debug.a
-    # compile for Fil-C x86_64
-    make clean
-    filc_debug_build
-
-    # Release build for quickjs library
-    make clean
-    CFLAGS="$RELEASE_CFLAGS" make CONFIG_LTO=y
-    mv libquickjs.a /tmp/libquickjs_Linux_x86_64_Release.a
-    # cross-compile for arm
-    make clean
-    CFLAGS="$RELEASE_CFLAGS" make CONFIG_LTO=y CROSS_PREFIX=aarch64-linux-gnu-
-    mv libquickjs.a /tmp/libquickjs_Linux_arm64_Release.a
-    # cross-compile for Mac (aarch64)
-    make clean
-    CFLAGS="$RELEASE_CFLAGS" make CONFIG_DEFAULT_AR=y CONFIG_CLANG=y CROSS_PREFIX=aarch64-apple-darwin24.5-
-    mv libquickjs.a /tmp/libquickjs_Darwin_arm64_Release.a
-    # compile for Fil-C x86_64
-    make clean
-    filc_release_build
-
-    mv /tmp/libquickjs_Linux_x86_64_Debug.a .
-    mv /tmp/libquickjs_Linux_arm64_Debug.a .
-    mv /tmp/libquickjs_Linux_x86_64_Release.a .
-    mv /tmp/libquickjs_Linux_arm64_Release.a .
-    mv /tmp/libquickjs_Darwin_arm64_Debug.a .
-    mv /tmp/libquickjs_Darwin_arm64_Release.a .
-    mv /tmp/libquickjs_Linux_x86_64_filc_Debug.a .
-    mv /tmp/libquickjs_Linux_x86_64_filc_Release.a .
+OS=$(uname)
+ARCH=$(uname -m)
+if [ "$ARCH" = aarch64 ]; then
+    ARCH=arm64
 fi
+
+# Go through the requested builds
+if [ -z "$@" ]; then
+    platforms=native
+else
+    platforms="$@"
+fi
+echo "Building for platforms: $platforms"
+for platform in $platforms; do
+    rm -f /tmp/libquickjs_*.a || true
+    case "$platform" in
+        native)
+            # Debug build for quickjs library
+            CFLAGS="$DEBUG_CFLAGS" make CONFIG_LTO=n
+            cp qjs ../../tools-bin
+            cp qjsc ../../tools-bin
+            generate_qjsc_wrapper qjsc > ../../tools-bin/compile_es6_module
+            chmod +x ../../tools-bin/compile_es6_module
+            mv libquickjs.a /tmp/libquickjs_${OS}_${ARCH}_Debug.a # this will get killed by make clean
+
+            # Release build for quickjs library
+            make clean
+            CFLAGS="$RELEASE_CFLAGS" make CONFIG_LTO=y
+            mv libquickjs.a /tmp/libquickjs_${OS}_${ARCH}_Release.a
+            ;;
+        mac_arm64)
+            if [ "$OS" == "Darwin" ] && [ "$ARCH" == "arm64" ]; then
+                echo "You seem to be running on a native MacOS/ARM64 system, so pass the 'native' argument to 'build_quickjs.sh', not 'mac_arm64'."
+                exit 1
+            fi
+            # Debug
+            CFLAGS="$DEBUG_CFLAGS" make CONFIG_DEFAULT_AR=y CONFIG_CLANG=y CROSS_PREFIX=aarch64-apple-darwin24.5-
+            generate_qjsc_wrapper qjsc > ../../tools-bin/compile_es6_module_Darwin_arm64
+            chmod +x ../../tools-bin/compile_es6_module_Darwin_arm64
+            mv libquickjs.a /tmp/libquickjs_Darwin_arm64_Debug.a
+            # Release
+            make clean
+            CFLAGS="$RELEASE_CFLAGS" make CONFIG_DEFAULT_AR=y CONFIG_CLANG=y CROSS_PREFIX=aarch64-apple-darwin24.5-
+            mv libquickjs.a /tmp/libquickjs_Darwin_arm64_Release.a
+            ;;
+        linux_x86_64)
+            if [ "$OS" == "Linux" ] && [ "$ARCH" == "x86_64" ]; then
+                echo "You seem to be running on a native Linux/x86_64 system, so pass the 'native' argument to 'build_quickjs.sh', not 'linux_x86_64'."
+                exit 1
+            fi
+            # Debug
+            CFLAGS="$DEBUG_CFLAGS" make CONFIG_LTO=n
+            generate_qjsc_wrapper qjsc > ../../tools-bin/compile_es6_module_Linux_x86_64
+            if [ ! -z "$JSOCKD_IN_CI" ]; then
+                cp ../../tools-bin/compile_es6_module_Linux_x86_64 ../../tools-bin/compile_es6_module
+            fi
+            cp ../../tools-bin/compile_es6_module_Linux_x86_64 ../../tools-bin/compile_es6_module_x86_64
+            chmod +x ../../tools-bin/compile_es6_module_Linux_x86_64
+            chmod +x ../../tools-bin/compile_es6_module
+            mv libquickjs.a /tmp/libquickjs_Linux_x86_64_Debug.a # this will get killed by make clean
+            if [ ! -z "$JSOCKD_IN_CI" ]; then
+                cp qjs ../../tools-bin
+                cp qjsc ../../tools-bin
+            fi
+            make clean
+            # Release
+            CFLAGS="$RELEASE_CFLAGS" make CONFIG_LTO=y
+            mv libquickjs.a /tmp/libquickjs_Linux_x86_64_Release.a
+            ;;
+        linux_arm64)
+            if [ "$OS" == "Linux" ] && [ "$ARCH" == "arm64" ]; then
+                echo "You seem to be running on a native Linux/arm64 system, so pass the 'native' argument to 'build_quickjs.sh', not 'linux_arm64'."
+                exit 1
+            fi
+            # Debug
+            CFLAGS="$DEBUG_CFLAGS" make CONFIG_LTO=n CROSS_PREFIX=aarch64-linux-gnu-
+            generate_qjsc_wrapper qjsc > ../../tools-bin/compile_es6_module_Linux_arm64
+            chmod +x ../../tools-bin/compile_es6_module_Linux_arm64
+            mv libquickjs.a /tmp/libquickjs_Linux_arm64_Debug.a
+            # Release
+            make clean
+            CFLAGS="$RELEASE_CFLAGS" make CONFIG_LTO=y CROSS_PREFIX=aarch64-linux-gnu-
+            mv libquickjs.a /tmp/libquickjs_Linux_arm64_Release.a
+            ;;
+        linux_x86_64_filc)
+            # Debug
+            # See https://github.com/pizlonator/pizlonated-quickjs/commit/258a4a291fd0f080614e5b345528478c31e51705#diff-45f1ae674139f993bf8a99c382c1ba4863272a6fec2f492d76d7ff1b2cfcfbe2R56-R5187 for diff the patch is based on
+            git apply ../../fil-c-quickjs.patch
+            CFLAGS="$DEBUG_CFLAGS" make CC=~/filc-0.668.8-linux-x86_64/build/bin/clang CONFIG_LTO= CONFIG_CLANG=y
+            generate_qjsc_wrapper qjsc > ../../tools-bin/compile_es6_module_Linux_x86_64_filc
+            git apply -R ../../fil-c-quickjs.patch
+            mv libquickjs.a /tmp/libquickjs_Linux_x86_64_filc_Debug.a
+            # Release
+            make clean
+            git apply ../../fil-c-quickjs.patch
+            CFLAGS="$RELEASE_CFLAGS" make CC=~/filc-0.668.8-linux-x86_64/build/bin/clang CONFIG_LTO= CONFIG_CLANG=y
+            git apply -R ../../fil-c-quickjs.patch
+            mv libquickjs.a /tmp/libquickjs_Linux_x86_64_filc_Release.a
+            ;;
+        *)
+            echo "Unknown platform: $platform"
+            exit 1
+            ;;
+    esac
+    make clean
+    for lib in /tmp/libquickjs_*.a; do
+        cp $lib .
+    done
+done
