@@ -125,7 +125,7 @@ for platform in $platforms; do
             mv libquickjs.a /tmp/libquickjs_${OS}_${ARCH}_Release.a
             ;;
         mac_arm64)
-            if [ "$OS" == "Darwin" ] && [ "$ARCH" == "arm64" ]; then
+            if [ "$OS" = "Darwin" ] && [ "$ARCH" = "arm64" ]; then
                 echo "You seem to be on a MacOS/ARM64 system, so pass the 'native' argument to 'build_quickjs.sh', not 'mac_arm64'."
                 exit 1
             fi
@@ -140,7 +140,7 @@ for platform in $platforms; do
             mv libquickjs.a /tmp/libquickjs_Darwin_arm64_Release.a
             ;;
         linux_x86_64)
-            if [ "$OS" == "Linux" ] && [ "$ARCH" == "x86_64" ]; then
+            if [ "$OS" = "Linux" ] && [ "$ARCH" = "x86_64" ]; then
                 echo "You seem to be on a Linux/x86_64 system, so pass the 'native' argument to 'build_quickjs.sh', not 'linux_x86_64'."
                 exit 1
             fi
@@ -157,7 +157,7 @@ for platform in $platforms; do
             mv libquickjs.a /tmp/libquickjs_Linux_x86_64_Release.a
             ;;
         linux_arm64)
-            if [ "$OS" == "Linux" ] && [ "$ARCH" == "arm64" ]; then
+            if [ "$OS" = "Linux" ] && [ "$ARCH" = "arm64" ]; then
                 echo "You seem to be on a Linux/arm64 system, so pass the 'native' argument to 'build_quickjs.sh', not 'linux_arm64'."
                 exit 1
             fi
