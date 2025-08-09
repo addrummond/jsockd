@@ -181,5 +181,6 @@ for platform in $platforms; do
     make clean
 done
 for lib in /tmp/libquickjs_*.a; do
+    echo "Copying $lib to current directory"
     cp $lib .
 done
