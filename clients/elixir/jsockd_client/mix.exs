@@ -30,7 +30,7 @@ defmodule JsockdClient.MixProject do
         js_server_exec: nil,
         source_map: nil,
         max_command_runtime_us: nil,
-        use_filc_when_available?: true
+        use_filc_when_available?: false
       ]
     ]
   end
