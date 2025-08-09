@@ -38,6 +38,8 @@ defmodule JSockDClient.JsServerManager do
         :in,
         :exit_status,
         line: 80,
+        # required for Fil-C exec
+        cd: Path.basename(js_server_exec),
         args:
           if source_map do
             ["-sm", source_map]
