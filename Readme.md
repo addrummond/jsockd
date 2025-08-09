@@ -28,6 +28,8 @@ Commands are cached in the same sort of way that a SQL server caches queries. Wh
 
 Commands should not mutate global state. Global state may or may not persist across command executions. JSockD reserves the right to reset global state at any time.
 
+Commands must return a either value that can be serialized to JSON or a promise that resolves to such a value.
+
 ### 1.2 Tips for SSR with React 19
 
 **TODO: rough notes**
