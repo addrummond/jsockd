@@ -102,6 +102,7 @@ for platform in $platforms; do
             cp qjs ../../tools-bin
             cp qjsc ../../tools-bin
             generate_qjsc_wrapper qjsc > ../../tools-bin/compile_es6_module
+            cp ../../tools-bin/compile_es6_module ../../tools-bin/compile_es6_module_${OS}_${ARCH}
             chmod +x ../../tools-bin/compile_es6_module
             mv libquickjs.a /tmp/libquickjs_${OS}_${ARCH}_Debug.a # this will get killed by make clean
 
@@ -133,17 +134,10 @@ for platform in $platforms; do
             # Debug
             CFLAGS="$DEBUG_CFLAGS" make CONFIG_LTO=n
             generate_qjsc_wrapper qjsc > ../../tools-bin/compile_es6_module_Linux_x86_64
-            if [ ! -z "$JSOCKD_IN_CI" ]; then
-                cp ../../tools-bin/compile_es6_module_Linux_x86_64 ../../tools-bin/compile_es6_module
-            fi
             cp ../../tools-bin/compile_es6_module_Linux_x86_64 ../../tools-bin/compile_es6_module_x86_64
             chmod +x ../../tools-bin/compile_es6_module_Linux_x86_64
             chmod +x ../../tools-bin/compile_es6_module
             mv libquickjs.a /tmp/libquickjs_Linux_x86_64_Debug.a # this will get killed by make clean
-            if [ ! -z "$JSOCKD_IN_CI" ]; then
-                cp qjs ../../tools-bin
-                cp qjsc ../../tools-bin
-            fi
             make clean
             # Release
             CFLAGS="$RELEASE_CFLAGS" make CONFIG_LTO=y
