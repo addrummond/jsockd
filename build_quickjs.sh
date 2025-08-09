@@ -95,6 +95,8 @@ fi
 echo "Building for platforms: $platforms"
 for platform in $platforms; do
     rm -f /tmp/libquickjs_*.a || true
+    echo "Building for platform $platform..."
+    make clean
     case "$platform" in
         native)
             # Debug build for quickjs library
@@ -104,7 +106,7 @@ for platform in $platforms; do
             generate_qjsc_wrapper qjsc > ../../tools-bin/compile_es6_module
             cp ../../tools-bin/compile_es6_module ../../tools-bin/compile_es6_module_${OS}_${ARCH}
             chmod +x ../../tools-bin/compile_es6_module
-            mv libquickjs.a /tmp/libquickjs_${OS}_${ARCH}_Debug.a # this will get killed by make clean
+            mv libquickjs.a /tmp/libquickjs_${OS}_${ARCH}_Debug.a
 
             # Release build for quickjs library
             make clean
@@ -178,7 +180,6 @@ for platform in $platforms; do
             exit 1
             ;;
     esac
-    make clean
 done
 echo "Listing .a files in /tmp:"
 ls -l /tmp/libquickjs_*.a
