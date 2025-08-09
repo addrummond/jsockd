@@ -192,9 +192,4 @@ for platform in $platforms; do
             ;;
     esac
 done
-echo "Listing .a files in /tmp:"
-ls -l /tmp/libquickjs_*.a
-for lib in /tmp/libquickjs_*.a; do
-    echo "Copying $lib to current directory"
-    cp $lib .
-done
+cp /tmp/libquickjs_*.a .
