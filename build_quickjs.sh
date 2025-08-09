@@ -104,8 +104,8 @@ for platform in $platforms; do
     esac
 done
 echo "Building for platforms: $platforms"
+rm -f /tmp/libquickjs_*.a || true
 for platform in $platforms; do
-    rm -f /tmp/libquickjs_*.a || true
     echo "Building for platform $platform..."
     make clean
     case "$platform" in
