@@ -75,9 +75,10 @@ static void dump_error(JSContext *ctx) {
 }
 
 // The input buffer gets malloced to this size once per thread. Longer inputs
-// are truncated. I tried starting with a smaller buffer and reallocing as
-// needed, but it doesn't actually improve memory usage. I guess most of the
-// large allocation doesn't get paged in till it's needed anyway.
+// are truncated and an error is returned. I tried starting with a smaller
+// buffer and reallocing as needed, but it doesn't actually improve memory
+// usage. I guess most of the large allocation doesn't get paged in till it's
+// needed anyway.
 static const int LINE_BUF_BYTES = 1024 * 1024 * 1024;
 
 typedef struct {
