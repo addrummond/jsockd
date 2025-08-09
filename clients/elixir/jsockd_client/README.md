@@ -12,7 +12,7 @@ JSockDClient.send_js("(module,params) => 99", %{"param1" => "value1", "param2" =
 ```elixir
 def deps do
   [
-    {:jsockd_client, git: "git@github.com:addrummond/jsockd.git", sparse: "/clients/elixir/jsockd_client", tag: "v0.0.36"}
+    {:jsockd_client, git: "git@github.com:addrummond/jsockd.git", sparse: "/clients/elixir/jsockd_client", tag: "v0.0.37"}
   ]
 end
 ```

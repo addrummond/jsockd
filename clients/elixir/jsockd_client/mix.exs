@@ -1,7 +1,7 @@
 defmodule JsockdClient.MixProject do
   use Mix.Project
 
-  @jsockd_version "0.0.36"
+  @jsockd_version "0.0.37"
   @jsockd_binary_public_key "b136fca8fbfc42fe6dc95dedd035b0b50ad93b6a5d6fcaf8fc0552e9d29ee406"
 
   def project do
