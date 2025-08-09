@@ -185,7 +185,7 @@ for platform in $platforms; do
             ;;
     esac
     make clean
-    for lib in /tmp/libquickjs_*.a; do
-        cp $lib .
-    done
+done
+for lib in /tmp/libquickjs_*.a; do
+    cp $lib .
 done
