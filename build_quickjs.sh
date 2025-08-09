@@ -92,6 +92,17 @@ if [ -z "$*" ]; then
 else
     platforms="$*"
 fi
+for platform in $platforms; do
+    case "$platform" in
+        native|mac_arm64|linux_x86_64|linux_arm64|linux_x86_64_filc)
+            # Valid platforms, continue
+            ;;
+        *)
+            echo "Unknown platform: $platform"
+            exit 1
+            ;;
+    esac
+done
 echo "Building for platforms: $platforms"
 for platform in $platforms; do
     rm -f /tmp/libquickjs_*.a || true
