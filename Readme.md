@@ -24,11 +24,28 @@ Steps to add JSockD to your application:
 * Configure your client library with the path to the bytecode file and the public key used to sign it.
 * Use the client library to send commands to the JSockD server.
 
-Commands are cached in the same sort of way that a SQL server caches queries. When a command is executed, the server first checks if the command has been executed before. If it has, the server executes the cached bytecode for that command. If not, the server compiles the command and caches the bytecode for future use.
+### 1.2 What is a JSockD command?
+
+A JSockD command is a JavaScript function that takes two arguments:
+
+* the module loaded from your bundle (or `undefined` if no bundle was specified), and
+* the parameter passed to the command.
+
+The parameter can be any JSON-serializable value. A command should return either a value that can be serialized to JSON or a promise that resolves to such a value.
+
+Commands are cached in the same sort of way that a SQL server caches queries. When a command is executed, the server first checks if the command has been executed before. If it has, the server executes the cached bytecode for that command with the specified parameter. If not, the server first compiles the command and caches the bytecode for future use.
 
 Commands should not mutate global state. Global state may or may not persist across command executions. JSockD reserves the right to reset global state at any time.
 
-Commands must return a either value that can be serialized to JSON or a promise that resolves to such a value.
+The following is a typical example of a command in the context of React SSR. The bundled module exports some key React functions such as `renderToString` and `createElement`. The parameter supplies one of the props for the `UserDetails` component.
+
+```javascript
+(mod, userDetails) => {
+  return mod.renderToString(
+    mod.createElement(mod.UserDetails, { size: 'small', userDetails })
+  )
+}
+````
 
 ### 1.2 Tips for SSR with React 19
 
