@@ -81,10 +81,10 @@ jobs:
       - name: Upload release artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: release-artifacts
+          name: jsockd-release-artifacts
           path: |
-            ${{ github.workspace }}/js_server/release-artifacts/*.tar.gz
-            ${{ github.workspace }}/js_server/release-artifacts/*.txt
+            ${{ github.workspace }}/js_server/jsockd-release-artifacts/*.tar.gz
+            ${{ github.workspace }}/js_server/jsockd-release-artifacts/*.txt
   release:
     runs-on: ubuntu-24.04
     needs: CI
@@ -97,8 +97,8 @@ jobs:
       - name: Download release artifacts
         uses: actions/download-artifact@v4
         with:
-          name: release-artifacts
-          path: js_server/release-artifacts
+          name: jsockd-release-artifacts
+          path: js_server/jsockd-release-artifacts
       - name: Create release
         env:
           GITHUB_TOKEN: ${{ github.TOKEN }}

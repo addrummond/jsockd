@@ -30,7 +30,7 @@ defmodule JSockDClient.JsServerManager do
 
     exec =
       js_server_exec ||
-        Path.join([:code.priv_dir(:jsockd_client), "release-artifacts/jsockd/js_server"])
+        Path.join([:code.priv_dir(:jsockd_client), "jsockd-release-artifacts/jsockd/js_server"])
 
     port_id =
       Port.open({:spawn_executable, exec}, [

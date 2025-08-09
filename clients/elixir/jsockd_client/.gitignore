@@ -22,7 +22,5 @@ jsockd_client-*.tar
 # Temporary files, for example, from tests.
 /tmp/
 
-priv/release-artifacts
 priv/jsockd-release-artifacts
 priv/jsockd_js_server_version_tag_*
-

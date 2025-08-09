@@ -51,7 +51,7 @@ defmodule JsockdClient.MixProject do
     release_filename = Path.basename(release_url)
     release_path = Path.join(priv_dir, release_filename)
 
-    unless File.exists?(Path.join([priv_dir, "release-artifacts/jsockd/js_server"])) and
+    unless File.exists?(Path.join([priv_dir, "jsockd-release-artifacts/jsockd/js_server"])) and
              File.exists?(
                Path.join([
                  priv_dir,
@@ -80,7 +80,7 @@ defmodule JsockdClient.MixProject do
 
       File.write!(release_path, body)
 
-      File.rm_rf!(Path.join([priv_dir, "release-artifacts"]))
+      File.rm_rf!(Path.join([priv_dir, "jsockd-release-artifacts"]))
 
       :ok =
         :erl_tar.extract(String.to_charlist(release_path), [
@@ -93,7 +93,7 @@ defmodule JsockdClient.MixProject do
       js_server_binary_filename =
         Path.join([
           priv_dir,
-          "release-artifacts",
+          "jsockd-release-artifacts",
           String.replace(release_filename, ".tar.gz", ""),
           "js_server"
         ])
@@ -101,7 +101,7 @@ defmodule JsockdClient.MixProject do
       js_server_signature_filename =
         Path.join([
           priv_dir,
-          "release-artifacts",
+          "jsockd-release-artifacts",
           String.replace(release_filename, ".tar.gz", ""),
           "js_server_signature.bin"
         ])
@@ -122,7 +122,7 @@ defmodule JsockdClient.MixProject do
         Path.dirname(js_server_binary_filename),
         Path.join([
           priv_dir,
-          "release-artifacts",
+          "jsockd-release-artifacts",
           "jsockd"
         ])
       )
