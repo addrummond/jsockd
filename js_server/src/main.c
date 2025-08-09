@@ -942,8 +942,8 @@ int main(int argc, char *argv[]) {
     g_module_bytecode = load_module_bytecode(
         g_cmd_args.es6_module_bytecode_file, &g_module_bytecode_size);
     if (g_module_bytecode == NULL) {
-      release_logf("Error loading module bytecode from %s\n",
-                   g_cmd_args.es6_module_bytecode_file);
+      release_logf("Error loading module bytecode from %s: %s\n",
+                   g_cmd_args.es6_module_bytecode_file, strerror(errno));
       pthread_mutex_destroy(&g_log_mutex);
       pthread_mutex_destroy(&g_cached_functions_mutex);
       return 1;
@@ -952,9 +952,10 @@ int main(int argc, char *argv[]) {
 
   if (g_cmd_args.source_map_file) {
     g_source_map = mmap_file(g_cmd_args.source_map_file, &g_source_map_size);
-    if (!g_source_map)
-      release_logf(
-          "Error loading source map file %s; continuing without source map\n");
+    if (!g_source_map) {
+      release_logf("Error loading source map file %s: %s\n", strerror(errno));
+      release_log("Continuing without source map\n");
+    }
   }
 
   int n_threads = MIN(g_cmd_args.n_sockets, MAX_THREADS);
