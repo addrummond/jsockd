@@ -767,6 +767,7 @@ static int line_handler(const char *line, size_t len, void *data,
       write_const_to_stream(ts, " exception \"js_server command was too long "
                                 "and had to be truncated\"\n");
     } else {
+      // we'll signal an error once the client has sent the third line
       ts->line_n++;
     }
     return 0;
