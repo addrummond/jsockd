@@ -87,10 +87,10 @@ if [ "$ARCH" = aarch64 ]; then
 fi
 
 # Go through the requested builds
-if [ -z "$@" ]; then
+if [ -z "$*" ]; then
     platforms=native
 else
-    platforms="$@"
+    platforms="$*"
 fi
 echo "Building for platforms: $platforms"
 for platform in $platforms; do
