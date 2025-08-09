@@ -113,7 +113,7 @@ for platform in $platforms; do
             ;;
         mac_arm64)
             if [ "$OS" == "Darwin" ] && [ "$ARCH" == "arm64" ]; then
-                echo "You seem to be running on a native MacOS/ARM64 system, so pass the 'native' argument to 'build_quickjs.sh', not 'mac_arm64'."
+                echo "You seem to be on a MacOS/ARM64 system, so pass the 'native' argument to 'build_quickjs.sh', not 'mac_arm64'."
                 exit 1
             fi
             # Debug
@@ -128,7 +128,7 @@ for platform in $platforms; do
             ;;
         linux_x86_64)
             if [ "$OS" == "Linux" ] && [ "$ARCH" == "x86_64" ]; then
-                echo "You seem to be running on a native Linux/x86_64 system, so pass the 'native' argument to 'build_quickjs.sh', not 'linux_x86_64'."
+                echo "You seem to be on a Linux/x86_64 system, so pass the 'native' argument to 'build_quickjs.sh', not 'linux_x86_64'."
                 exit 1
             fi
             # Debug
@@ -145,7 +145,7 @@ for platform in $platforms; do
             ;;
         linux_arm64)
             if [ "$OS" == "Linux" ] && [ "$ARCH" == "arm64" ]; then
-                echo "You seem to be running on a native Linux/arm64 system, so pass the 'native' argument to 'build_quickjs.sh', not 'linux_arm64'."
+                echo "You seem to be on a Linux/arm64 system, so pass the 'native' argument to 'build_quickjs.sh', not 'linux_arm64'."
                 exit 1
             fi
             # Debug
