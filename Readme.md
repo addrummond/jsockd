@@ -14,8 +14,7 @@ The server receives commands over one or more UNIX domain sockets. The motivatin
 
 ### 1.1 Adding JSockD to your application
 
-Applications should generally connect to JSockD via a client library that manages the JSockD server process. At the moment, this repo contains one example of such a library in `clients/elixir/jsockd_client`. At this level of abstraction, JSockD is a simple command execution service. Commands are JavaScript functions executed with specified parameters.
-
+Applications should generally connect to JSockD via a client library that manages the JSockD server process. At the moment, this repo contains one example of such a library in `clients/elixir/jsockd_client`. At this level of abstraction, JSockD is a simple command execution service.
 Steps to add JSockD to your application:
 
 * Bundle all of the required Javascript library code into a single ES6 module (using e.g. [esbuild](https://esbuild.github.io/api/)).
