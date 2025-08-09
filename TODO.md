@@ -1,1 +1,2 @@
 - Signature veritication in mix.exs for the .so files in the Fil-C build
+- Finish the Fil-C vs. regular C benchmark script.
