@@ -688,7 +688,6 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
 
   JS_FreeValue(ts->ctx, parsed_arg);
   JS_FreeValue(ts->ctx, ret);
-
   JS_FreeCString(ts->ctx, str);
   JS_FreeValue(ts->ctx, stringified);
 
