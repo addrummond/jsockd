@@ -29,7 +29,8 @@ defmodule JsockdClient.MixProject do
         bytecode_module_public_key: "",
         js_server_exec: nil,
         source_map: nil,
-        max_command_runtime_us: nil
+        max_command_runtime_us: nil,
+        use_filc_when_available?: false
       ]
     ]
   end

@@ -160,8 +160,8 @@ case $1 in
             mkdir jsockd-release-artifacts/jsockd-linux-x86_64
             cp build_Release/js_server jsockd-release-artifacts/jsockd-linux-x86_64
             cp ../tools-bin/compile_es6_module_Linux_x86_64 jsockd-release-artifacts/jsockd-linux-x86_64/compile_es6_module
-            openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out jsockd-release-artifacts/jsockd-linux-x86_64/js_server_signature.bin -rawin -in release-artifacts/jsockd-linux-x86_64/js_server
-            openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out jsockd-release-artifacts/jsockd-linux-x86_64/compile_es6_module_signature.bin -rawin -in release-artifacts/jsockd-linux-x86_64/compile_es6_module
+            openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out jsockd-release-artifacts/jsockd-linux-x86_64/js_server_signature.bin -rawin -in jsockd-release-artifacts/jsockd-linux-x86_64/js_server
+            openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out jsockd-release-artifacts/jsockd-linux-x86_64/compile_es6_module_signature.bin -rawin -in jsockd-release-artifacts/jsockd-linux-x86_64/compile_es6_module
             tar -czf jsockd-release-artifacts/jsockd-linux-x86_64.tar.gz jsockd-release-artifacts/jsockd-linux-x86_64
 
             # Package Linux x86_64 Fil-C. For now we include the regular x86_64 build of compile_es6_module.
@@ -173,25 +173,25 @@ case $1 in
             cp -L /home/runner/filc-0.668.8-linux-x86_64/pizfix/lib/libc.so jsockd-release-artifacts/jsockd-linux-x86_64_filc/js_server/libc.so
             cp -L /home/runner/filc-0.668.8-linux-x86_64/pizfix/lib/libpizlo.so jsockd-release-artifacts/jsockd-linux-x86_64_filc/js_server/libpizlo.so
             cp ../tools-bin/compile_es6_module_Linux_x86_64 jsockd-release-artifacts/jsockd-linux-x86_64_filc/compile_es6_module
-            openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out jsockd-release-artifacts/jsockd-linux-x86_64_filc/js_server_signature.bin -rawin -in release-artifacts/jsockd-linux-x86_64_filc/js_server/js_server
-            openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out jsockd-release-artifacts/jsockd-linux-x86_64_filc/ld-yolo-x86_64.so_signature.bin -rawin -in release-artifacts/jsockd-linux-x86_64_filc/js_server/ld-yolo-x86_64.so
-            openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out jsockd-release-artifacts/jsockd-linux-x86_64_filc/compile_es6_module_signature.bin -rawin -in release-artifacts/jsockd-linux-x86_64_filc/compile_es6_module
+            openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out jsockd-release-artifacts/jsockd-linux-x86_64_filc/js_server_signature.bin -rawin -in jsockd-release-artifacts/jsockd-linux-x86_64_filc/js_server/js_server
+            openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out jsockd-release-artifacts/jsockd-linux-x86_64_filc/ld-yolo-x86_64.so_signature.bin -rawin -in jsockd-release-artifacts/jsockd-linux-x86_64_filc/js_server/ld-yolo-x86_64.so
+            openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out jsockd-release-artifacts/jsockd-linux-x86_64_filc/compile_es6_module_signature.bin -rawin -in jsockd-release-artifacts/jsockd-linux-x86_64_filc/compile_es6_module
             tar -czf jsockd-release-artifacts/jsockd-linux-x86_64_filc.tar.gz jsockd-release-artifacts/jsockd-linux-x86_64_filc
 
             # Package Linux ARM64
             mkdir jsockd-release-artifacts/jsockd-linux-arm64
             cp build_Release_TC-gcc-arm64.cmake/js_server jsockd-release-artifacts/jsockd-linux-arm64
             cp ../tools-bin/compile_es6_module_Linux_arm64 jsockd-release-artifacts/jsockd-linux-arm64/compile_es6_module
-            openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out jsockd-release-artifacts/jsockd-linux-arm64/js_server_signature.bin -rawin -in release-artifacts/jsockd-linux-arm64/js_server
-            openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out jsockd-release-artifacts/jsockd-linux-arm64/compile_es6_module_signature.bin -rawin -in release-artifacts/jsockd-linux-arm64/compile_es6_module
+            openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out jsockd-release-artifacts/jsockd-linux-arm64/js_server_signature.bin -rawin -in jsockd-release-artifacts/jsockd-linux-arm64/js_server
+            openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out jsockd-release-artifacts/jsockd-linux-arm64/compile_es6_module_signature.bin -rawin -in jsockd-release-artifacts/jsockd-linux-arm64/compile_es6_module
             tar -czf jsockd-release-artifacts/jsockd-linux-arm64.tar.gz jsockd-release-artifacts/jsockd-linux-arm64
 
             # Package MacOS ARM64
             mkdir jsockd-release-artifacts/jsockd-macos-arm64
             cp build_Release_TC-oa64.cmake/js_server jsockd-release-artifacts/jsockd-macos-arm64
             cp ../tools-bin/compile_es6_module_Darwin_arm64 jsockd-release-artifacts/jsockd-macos-arm64/compile_es6_module
-            openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out jsockd-release-artifacts/jsockd-macos-arm64/js_server_signature.bin -rawin -in release-artifacts/jsockd-macos-arm64/js_server
-            openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out jsockd-release-artifacts/jsockd-macos-arm64/compile_es6_module_signature.bin -rawin -in release-artifacts/jsockd-macos-arm64/compile_es6_module
+            openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out jsockd-release-artifacts/jsockd-macos-arm64/js_server_signature.bin -rawin -in jsockd-release-artifacts/jsockd-macos-arm64/js_server
+            openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out jsockd-release-artifacts/jsockd-macos-arm64/compile_es6_module_signature.bin -rawin -in jsockd-release-artifacts/jsockd-macos-arm64/compile_es6_module
             tar -czf jsockd-release-artifacts/jsockd-macos-arm64.tar.gz jsockd-release-artifacts/jsockd-macos-arm64
 
             # Create checksums
