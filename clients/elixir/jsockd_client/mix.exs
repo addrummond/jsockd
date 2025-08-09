@@ -30,7 +30,7 @@ defmodule JsockdClient.MixProject do
         js_server_exec: nil,
         source_map: nil,
         max_command_runtime_us: nil,
-        use_filc_when_available?: false
+        use_filc_when_available?: true
       ]
     ]
   end
@@ -45,7 +45,10 @@ defmodule JsockdClient.MixProject do
   end
 
   defp download_js_server_binary(_) do
-    release_url = get_release_url()
+    platform = :erlang.system_info(:system_architecture) |> to_string()
+    use_filc_when_available? = Application.get_env(:jsockd_client, :use_filc_when_available?)
+
+    release_url = get_release_url(platform, use_filc_when_available?)
 
     priv_dir = Path.join(__DIR__, "priv")
     File.mkdir_p!(priv_dir)
@@ -99,6 +102,15 @@ defmodule JsockdClient.MixProject do
           "js_server"
         ])
 
+      # The Fil-C build is tucked away inside a js_server folder with its .so friends.
+      js_server_binary_filename =
+        if String.contains?(platform, "x86_64") and String.contains?(platform, "linux") and
+             use_filc_when_available? do
+          Path.join(js_server_binary_filename, "js_server")
+        else
+          js_server_binary_filename
+        end
+
       js_server_signature_filename =
         Path.join([
           priv_dir,
@@ -107,6 +119,7 @@ defmodule JsockdClient.MixProject do
           "js_server_signature.bin"
         ])
 
+      # TODO: Sig verification for the .so libs in the Fil-C build.
       unless verify_signature(
                File.read!(js_server_signature_filename),
                File.read!(js_server_binary_filename)
@@ -134,13 +147,15 @@ defmodule JsockdClient.MixProject do
     :ok
   end
 
-  defp get_release_url do
-    platform = :erlang.system_info(:system_architecture) |> to_string()
-
+  defp get_release_url(platform, use_filc_when_available?) do
     release_file =
       cond do
         String.contains?(platform, "x86_64") and String.contains?(platform, "linux") ->
-          "jsockd-linux-x86_64.tar.gz"
+          if use_filc_when_available? do
+            "jsockd-linux-x86_64_filc.tar.gz"
+          else
+            "jsockd-linux-x86_64.tar.gz"
+          end
 
         String.contains?(platform, "aarch64") and String.contains?(platform, "linux") ->
           "jsockd-linux-arm64.tar.gz"
