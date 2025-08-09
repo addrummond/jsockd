@@ -72,3 +72,7 @@ export function TextDecoder(encoding, options) {
     }
   };
 }
+
+globalThis.console = console;
+globalThis.TextEncoder = TextEncoder;
+globalThis.TextDecoder = TextDecoder;

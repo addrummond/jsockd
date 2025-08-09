@@ -33,7 +33,6 @@ Commands should not mutate global state. Global state may or may not persist acr
 **TODO: rough notes**
 
 - Import `react-dom/server.edge` rather than `react-dom/server`.
-- Shim `TextEncoder` and `console`. In `js_server/tests/e2e/filc_relative_bench/shims.mjs` you can see example shims for use with `esbuild`'s `--inject` option.
 
 ## 2. The module compiler
 

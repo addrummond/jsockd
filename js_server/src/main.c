@@ -41,6 +41,9 @@
 extern const uint32_t g_backtrace_module_bytecode_size;
 extern const uint8_t g_backtrace_module_bytecode[];
 
+extern const uint32_t g_shims_module_bytecode_size;
+extern const uint8_t g_shims_module_bytecode[];
+
 static const uint8_t *g_module_bytecode;
 static size_t g_module_bytecode_size;
 
@@ -434,6 +437,11 @@ static int init_thread_state(ThreadState *ts,
   ts->backtrace_module = load_binary_module(ctx, g_backtrace_module_bytecode,
                                             g_backtrace_module_bytecode_size);
   assert(!JS_IsException(ts->backtrace_module));
+
+  JSValue shims_module = load_binary_module(ctx, g_shims_module_bytecode,
+                                            g_shims_module_bytecode_size);
+  assert(!JS_IsException(shims_module));
+  JS_FreeValue(ts->ctx, shims_module); // imported just for side effects
 
   ts->rt = rt;
   ts->ctx = ctx;

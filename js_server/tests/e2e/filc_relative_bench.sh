@@ -16,7 +16,7 @@ FILC_JS_SERVER=build_Release_TC-fil-c.cmake/js_server
 
 npm install
 
-./node_modules/.bin/esbuild --target=es2018 --format=esm --bundle tests/e2e/filc_relative_bench/bench.jsx --inject:./tests/e2e/filc_relative_bench/shims.mjs --outfile=tests/e2e/filc_relative_bench/bundle.js
+./node_modules/.bin/esbuild --target=es2018 --format=esm --bundle tests/e2e/filc_relative_bench/bench.jsx --outfile=tests/e2e/filc_relative_bench/bundle.js
 
 openssl genpkey -algorithm ed25519 -out filc_bench_private_signing_key.pem
 openssl pkey -inform pem -pubout -outform der -in filc_bench_private_signing_key.pem | tail -c 32 | xxd -p | tr -d '\n' > filc_bench_public_signing_key

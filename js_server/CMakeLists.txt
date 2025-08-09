@@ -59,10 +59,18 @@ if(CMAKE_C_COMPILER MATCHES "filc")
     set(FILC "_filc")
 endif()
 
+# Generate the QuickJS bytecode for the backtrace module
 add_custom_command(
   OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/src/js/gen_backtrace.c
   COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../tools-bin/qjsc -c -o ${CMAKE_CURRENT_SOURCE_DIR}/src/js/gen_backtrace.c -N g_backtrace_module_bytecode ${CMAKE_CURRENT_SOURCE_DIR}/src/js/backtrace.mjs
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/js/backtrace.mjs
+  )
+
+# Generate the QuickJS bytecode for the shims module
+add_custom_command(
+  OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/src/js/gen_shims.c
+  COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../tools-bin/qjsc -c -o ${CMAKE_CURRENT_SOURCE_DIR}/src/js/gen_shims.c -N g_shims_module_bytecode ${CMAKE_CURRENT_SOURCE_DIR}/src/js/shims.mjs
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/js/shims.mjs
   )
 
 set(ED25519_LIB_SOURCES
@@ -89,6 +97,7 @@ set(JS_SERVER_SOURCES
   src/cmdargs.c
   src/mmap_file.c
   src/js/gen_backtrace.c
+  src/js/gen_shims.c
   ${ED25519_LIB_SOURCES}
   )
 
