@@ -649,7 +649,7 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
     JSValue parsed_backtrace_js = JS_Call(ts->ctx, parseBacktrace, JS_UNDEFINED,
                                           sizeof(argv) / sizeof(argv[0]), argv);
     if (JS_IsException(parsed_backtrace_js)) {
-      release_log("Error parsing backtrace\n");
+      release_logf("Error parsing backtrace:\n%.*s\n", emb.index, emb.buf);
       dump_error(ts->ctx);
       write_const_to_stream(ts, "{}\n");
     } else {
