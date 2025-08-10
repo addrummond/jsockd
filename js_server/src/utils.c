@@ -65,7 +65,7 @@ void munmap_or_warn(const void *addr, size_t length) {
 }
 
 int64_t us_time_diff(const struct timespec *t1, const struct timespec *t2) {
-  int64_t us1 = (int64_t)t1->tv_sec * 1000000 + (int64_t)t1->tv_nsec / 1000;
-  int64_t us2 = (int64_t)t2->tv_sec * 1000000 + (int64_t)t2->tv_nsec / 1000;
+  int64_t us1 = (int64_t)(t1->tv_sec * 1000000ULL + t1->tv_nsec / 1000ULL);
+  int64_t us2 = (int64_t)(t2->tv_sec * 1000000ULL + t2->tv_nsec / 1000ULL);
   return us2 - us1;
 }
