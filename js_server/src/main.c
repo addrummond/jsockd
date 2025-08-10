@@ -409,6 +409,11 @@ static int init_thread_state(ThreadState *ts,
                           js_module_check_attributes, NULL);
   JS_SetInterruptHandler(rt, interrupt_handler, ts);
 
+  JSValue shims_module = load_binary_module(ctx, g_shims_module_bytecode,
+                                            g_shims_module_bytecode_size);
+  assert(!JS_IsException(shims_module));
+  JS_FreeValue(ts->ctx, shims_module); // imported just for side effects
+
   // Load the precompiled module.
   if (g_module_bytecode)
     ts->compiled_module =
@@ -416,6 +421,8 @@ static int init_thread_state(ThreadState *ts,
   else
     ts->compiled_module = JS_UNDEFINED;
   if (JS_IsException(ts->compiled_module)) {
+    // TODO: We should also use source map here to provide a better error
+    // message if it's available.
     release_log("Failed to load precompiled module\n");
     js_std_dump_error(ctx);
     JS_FreeValue(ctx, ts->compiled_module);
@@ -437,11 +444,6 @@ static int init_thread_state(ThreadState *ts,
   ts->backtrace_module = load_binary_module(ctx, g_backtrace_module_bytecode,
                                             g_backtrace_module_bytecode_size);
   assert(!JS_IsException(ts->backtrace_module));
-
-  JSValue shims_module = load_binary_module(ctx, g_shims_module_bytecode,
-                                            g_shims_module_bytecode_size);
-  assert(!JS_IsException(shims_module));
-  JS_FreeValue(ts->ctx, shims_module); // imported just for side effects
 
   ts->rt = rt;
   ts->ctx = ctx;

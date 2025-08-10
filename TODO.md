@@ -1,2 +1,3 @@
 - Signature veritication in mix.exs for the .so files in the Fil-C build
 - Finish the Fil-C vs. regular C benchmark script.
+- Use sourcemaps to provide better error message for bundle load failures (and not just for command errors).
