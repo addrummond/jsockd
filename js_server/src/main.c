@@ -93,8 +93,8 @@ static HashCacheBucket g_cached_function_buckets[CACHED_FUNCTIONS_N_BUCKETS];
 static cached_function_t g_cached_functions[CACHED_FUNCTIONS_N_BUCKETS];
 static atomic_int g_n_cached_functions;
 
-static int add_cached_function(uint64_t uid, const uint8_t *bytecode,
-                               size_t bytecode_size) {
+static void add_cached_function(uint64_t uid, const uint8_t *bytecode,
+                                size_t bytecode_size) {
   assert(0 != JS_TAG_FUNCTION_BYTECODE);
   assert(bytecode);
 
