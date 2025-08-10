@@ -468,6 +468,7 @@ static int init_thread_state(ThreadState *ts,
   ts->memory_check_count = 0;
   ts->memory_increase_count = 0;
   ts->last_memory_usage = 0;
+  ts->last_n_cached_functions = 1;
   ts->sourcemap_str = JS_UNDEFINED;
 
   return 0;
@@ -571,6 +572,13 @@ static void write_to_buf(void *opaque_buf, const char *inp, size_t size) {
       buf->length >= buf->index ? MIN(buf->length - buf->index, size) : 0;
   memcpy(buf->buf + buf->index, inp, to_write);
   buf->index += to_write;
+}
+
+static int64_t memusage(const JSMemoryUsage *m) {
+  return m->malloc_count + m->memory_used_count + m->atom_count + m->str_count +
+         m->obj_count + m->prop_count + m->shape_count + m->js_func_count +
+         m->js_func_pc2line_count + m->c_func_count + m->fast_array_count +
+         m->binary_object_count;
 }
 
 static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
@@ -717,9 +725,10 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
     JS_ComputeMemoryUsage(ts->rt, &mu);
     debug_logf("Memory usage memory_used_size=%" PRId64 "\n",
                mu.memory_used_size);
+    int64_t current_usage = memusage(&mu);
     if (atomic_load(&g_n_cached_functions) <= ts->last_n_cached_functions &&
-        mu.memory_used_size > ts->last_memory_usage) {
-      ts->last_memory_usage = mu.memory_used_size;
+        current_usage > ts->last_memory_usage) {
+      ts->last_memory_usage = current_usage;
       ts->last_n_cached_functions = atomic_load(&g_n_cached_functions);
       ts->memory_increase_count++;
       if (ts->memory_increase_count > MEMORY_INCREASE_MAX_COUNT) {

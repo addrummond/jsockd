@@ -13,11 +13,12 @@ cd js_server
 #   (m, p) => { (global_var=(globalThis.global_var ?? { })); globalVar[p] = { }; return "foo"; }
 #   $n
 # which should leak memory.
-awk 'BEGIN { for (i = 0; i < 2000; i++) { print "cmd"i"\n(m, p) => { (global_var=(globalThis.global_var ?? { })); globalVar[p] = { }; return \"foo\"; }\n"i } }' > /tmp/jsockd_memory_increase_test_input
+awk 'BEGIN { for (i = 0; i < 2000; i++) { print "cmd"i"\n(m, p) => { (globalThis.globalVar=(globalThis.global_var ?? { })); globalThis.globalVar[p] = { \"foo\": p }; return \"foo\"; }\n"i } }' > /tmp/jsockd_memory_increase_test_input
 echo "?quit" >> /tmp/jsockd_memory_increase_test_input
 
 ./mk.sh Debug
 
+rm -f /tmp/jsockd_memory_increase_test_sock
 # Start the server
 (
     ./build_Debug/js_server -m /tmp/jsockd_memory_increase_test_example_module.qjsb -s /tmp/jsockd_memory_increase_test_sock > /tmp/jsockd_memory_increase_test_output 2>&1
@@ -44,6 +45,7 @@ fi
 
 n_state_resets=$(grep "Memory usage has increased" /tmp/jsockd_memory_increase_test_output | wc -l | sed -e 's/^[[:space:]]*//')
 # Rough sanity check
+echo "Number of state resets due to memory increase: $n_state_resets"
 if [ $n_state_resets -lt 2 ] || [ $n_state_resets -gt 20 ]; then
     echo "Expected approximately 5 state resets due to memory increases, but found $n_state_resets."
     exit 1
