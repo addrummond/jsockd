@@ -93,7 +93,7 @@ rm -f /tmp/jsockd_filc_relative_bench_filc_server_exit_code
 ) &
 filc_server_pid=$!
 i=0
-while ! [ -e /tmp/jsockd_filc_relative_bench_sock ] && [ $i -lt 15 ]; do
+while ! [ -e /tmp/jsockd_filc_relative_bench_sock_filc ] && [ $i -lt 15 ]; do
   echo "Waiting for Fil-C x86_64 server to start"
   sleep 1
   i=$(($i + 1))
@@ -102,7 +102,7 @@ sleep 1
 echo "Fil-C x86_64 server started..."
 
 # Send a bunch of React SSR rendering commands to the Fil-C x86_64 server
-time ( nc -U /tmp/jsockd_filc_relative_bench_sock < /tmp/jsockd_filc_relative_bench_sock_command_input > /tmp/jsockd_filc_relative_bench_sock_command_output_filc )
+time ( nc -U /tmp/jsockd_filc_relative_bench_sock_filc < /tmp/jsockd_filc_relative_bench_sock_command_input > /tmp/jsockd_filc_relative_bench_sock_command_output_filc )
 
 wait $filc_server_pid
 
