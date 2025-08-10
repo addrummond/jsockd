@@ -436,6 +436,10 @@ static int init_thread_state(ThreadState *ts,
     return -1;
   }
 
+  ts->backtrace_module = load_binary_module(ctx, g_backtrace_module_bytecode,
+                                            g_backtrace_module_bytecode_size);
+  assert(!JS_IsException(ts->backtrace_module));
+
   if (unix_socket_filename) { // it's not a reinit
     ts->unix_socket_filename = unix_socket_filename;
     ts->sockfd = -1;   // to be set later
@@ -445,10 +449,6 @@ static int init_thread_state(ThreadState *ts,
     // It is a reinit.
     assert(JS_IsUndefined(ts->compiled_query));
   }
-
-  ts->backtrace_module = load_binary_module(ctx, g_backtrace_module_bytecode,
-                                            g_backtrace_module_bytecode_size);
-  assert(!JS_IsException(ts->backtrace_module));
 
   ts->rt = rt;
   ts->ctx = ctx;
