@@ -21,6 +21,35 @@ index 3b1c745..2be9da3 100644
  endif
  endif
  endif
+diff --git a/cutils.c b/cutils.c
+index c038cf4..458b122 100644
+--- a/cutils.c
++++ b/cutils.c
+@@ -630,4 +630,11 @@ void rqsort(void *base, size_t nmemb, size_t size, cmp_f cmp, void *opaque)
+     }
+ }
+ 
++void patched_rqsort(void *base, size_t nmemb, size_t size,
++            int (*cmp)(const void *, const void *, void *),
++            void *arg)
++{
++    qsort_r(base, nmemb, size, cmp, arg);
++}
++
+ #endif
+diff --git a/cutils.h b/cutils.h
+index 9fcb7a6..84db494 100644
+--- a/cutils.h
++++ b/cutils.h
+@@ -420,4 +420,8 @@ static inline int isfp16zero(uint16_t v)
+     return (v & 0x7FFF) == 0;
+ }
+ 
++void patched_rqsort(void *base, size_t nmemb, size_t size,
++            int (*cmp)(const void *, const void *, void *),
++            void *arg);
++
+ #endif  /* CUTILS_H */
 diff --git a/libregexp.c b/libregexp.c
 index 2b33c86..2254199 100644
 --- a/libregexp.c
@@ -82,7 +111,7 @@ index 2b33c86..2254199 100644
      return ret;
  }
 diff --git a/quickjs.c b/quickjs.c
-index caad931..8e2d7fe 100644
+index caad931..f131366 100644
 --- a/quickjs.c
 +++ b/quickjs.c
 @@ -54,6 +54,8 @@
@@ -127,6 +156,15 @@ index caad931..8e2d7fe 100644
  }
  
  static void js_autoinit_free(JSRuntime *rt, JSProperty *pr)
+@@ -8133,7 +8137,7 @@ static int __exception JS_GetOwnPropertyNamesInternal(JSContext *ctx,
+     assert(sym_index == atom_count);
+ 
+     if (num_keys_count != 0 && !num_sorted) {
+-        rqsort(tab_atom, num_keys_count, sizeof(tab_atom[0]), num_keys_cmp,
++        patched_rqsort(tab_atom, num_keys_count, sizeof(tab_atom[0]), num_keys_cmp,
+                ctx);
+     }
+     *ptab = tab_atom;
 @@ -9819,10 +9823,10 @@ static int JS_DefineAutoInitProperty(JSContext *ctx, JSValueConst this_obj,
      pr = add_property(ctx, p, prop, (flags & JS_PROP_C_W_E) | JS_PROP_AUTOINIT);
      if (unlikely(!pr))
@@ -141,24 +179,48 @@ index caad931..8e2d7fe 100644
      pr->u.init.opaque = opaque;
      return TRUE;
  }
-@@ -29055,7 +29059,10 @@ static JSValue js_build_module_ns(JSContext *ctx, JSModuleDef *m)
-         ExportedNameEntry *en = &s->exported_names[i];
-         switch(en->export_type) {
-         case EXPORTED_NAME_NORMAL:
--            {
-+	    // Something about this code spooks Fil-C. Could even be a genuine bug?
-+	    // For now we can just resolve all references lazily for Fil-C builds,
-+	    // which seems like not the worst thing.
-+            /*{
-                 JSVarRef *var_ref = en->u.var_ref;
-                 pr = add_property(ctx, p, en->export_name,
-                                   JS_PROP_ENUMERABLE | JS_PROP_WRITABLE |
-@@ -29065,7 +29072,7 @@ static JSValue js_build_module_ns(JSContext *ctx, JSModuleDef *m)
-                 var_ref->header.ref_count++;
-                 pr->u.var_ref = var_ref;
+@@ -29048,7 +29052,7 @@ static JSValue js_build_module_ns(JSContext *ctx, JSModuleDef *m)
+     }
+ 
+     /* sort the exported names */
+-    rqsort(s->exported_names, s->exported_names_count,
++    patched_rqsort(s->exported_names, s->exported_names_count,
+            sizeof(s->exported_names[0]), exported_names_cmp, ctx);
+ 
+     for(i = 0; i < s->exported_names_count; i++) {
+@@ -29958,7 +29962,7 @@ static JSValue js_async_module_execution_fulfilled(JSContext *ctx, JSValueConst
+     }
+ 
+     /* sort by increasing async_evaluation timestamp */
+-    rqsort(exec_list->tab, exec_list->count, sizeof(exec_list->tab[0]),
++    patched_rqsort(exec_list->tab, exec_list->count, sizeof(exec_list->tab[0]),
+            exec_module_list_cmp, NULL);
+ 
+     for(i = 0; i < exec_list->count; i++) {
+@@ -41831,7 +41835,7 @@ static JSValue js_array_sort(JSContext *ctx, JSValueConst this_val,
+         array[pos].pos = i;
+         pos++;
+     }
+-    rqsort(array, pos, sizeof(*array), js_array_cmp_generic, &asc);
++    patched_rqsort(array, pos, sizeof(*array), js_array_cmp_generic, &asc);
+     if (asc.exception)
+         goto exception;
+ 
+@@ -54391,7 +54395,7 @@ static JSValue js_typed_array_sort(JSContext *ctx, JSValueConst this_val,
+                 array_idx[i] = i;
+             tsc.array_ptr = array_ptr;
+             tsc.elt_size = elt_size;
+-            rqsort(array_idx, len, sizeof(array_idx[0]),
++            patched_rqsort(array_idx, len, sizeof(array_idx[0]),
+                    js_TA_cmp_generic, &tsc);
+             if (tsc.exception) {
+                 if (tsc.exception == 1)
+@@ -54437,7 +54441,7 @@ static JSValue js_typed_array_sort(JSContext *ctx, JSValueConst this_val,
              }
--            break;
-+            break;*/
-         case EXPORTED_NAME_DELAYED:
-             /* the exported namespace or reference may depend on
-                circular references, so we resolve it lazily */
+             js_free(ctx, array_idx);
+         } else {
+-            rqsort(array_ptr, len, elt_size, cmpfun, &tsc);
++            patched_rqsort(array_ptr, len, elt_size, cmpfun, &tsc);
+             if (tsc.exception)
+                 return JS_EXCEPTION;
+         }
