@@ -1,6 +1,7 @@
 #include "utils.h"
 #include <errno.h>
 #include <stdarg.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
@@ -62,4 +63,10 @@ void munmap_or_warn(const void *addr, size_t length) {
     debug_logf("Error unmapping memory at %p of size %zu: %s\n", addr, length,
                strerror(errno));
   }
+}
+
+int64_t us_time_diff(const struct timespec *t1, const struct timespec *t2) {
+  int64_t us1 = (int64_t)t1->tv_sec * 1000000 + (int64_t)t1->tv_nsec / 1000;
+  int64_t us2 = (int64_t)t2->tv_sec * 1000000 + (int64_t)t2->tv_nsec / 1000;
+  return us2 - us1;
 }

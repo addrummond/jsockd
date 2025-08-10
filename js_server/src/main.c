@@ -381,9 +381,14 @@ static int interrupt_handler(JSRuntime *rt, void *opaque) {
   if (start->tv_sec != 0) {
     struct timespec now;
     clock_gettime(CLOCK_MONOTONIC_RAW, &now);
-    uint64_t delta_us = (uint64_t)(now.tv_sec - start->tv_sec) * 1000000ULL +
-                        (uint64_t)(now.tv_nsec - start->tv_nsec) / 1000ULL;
-    return delta_us > g_cmd_args.max_command_runtime_us;
+    int64_t delta_us = us_time_diff(&now, start);
+    if (delta_us > 0 &&
+        (uint64_t)delta_us > g_cmd_args.max_command_runtime_us) {
+      release_logf("Command runtime of %" PRIu64 "us exceeded %" PRIu64
+                   "us, interrupting\n",
+                   delta_us, g_cmd_args.max_command_runtime_us);
+      return 1;
+    }
   }
   return (int)atomic_load(&g_interrupted_or_error);
 }

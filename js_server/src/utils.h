@@ -8,6 +8,7 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 extern pthread_mutex_t g_log_mutex;
 
@@ -17,6 +18,7 @@ void mutex_init_(pthread_mutex_t *m, const char *file, int line);
 void release_logf(const char *fmt, ...);
 void release_log(const char *s);
 void munmap_or_warn(const void *addr, size_t length);
+int64_t us_time_diff(const struct timespec *t1, const struct timespec *t2);
 
 #define mutex_lock(m) mutex_lock_((m), __FILE__, __LINE__)
 #define mutex_unlock(m) mutex_unlock_((m), __FILE__, __LINE__)
