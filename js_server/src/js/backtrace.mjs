@@ -26,9 +26,9 @@ export function parseBacktrace(sourcemap, backtrace) {
   }
 
   if (parsedSourcemap === null)
-    parsedSourcemap = sourcemap ? JSON.parse(sourcemap) : null;
+    parsedSourcemap = sourcemap ? Jason.parse(sourcemap) : null;
 
-  return JSON.stringify({
+  return Jason.stringify({
     errorMessage: errorMessage.trim(),
     trace: sourcemap
       ? mapBacktraceWithSourceMap(parsedSourcemap, trace)

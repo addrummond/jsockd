@@ -19,7 +19,7 @@ defmodule JSockDClient do
     try do
       JSockDClient.JsServerManager
       |> GenServer.call(
-        {:send_command, message_uuid, function, JSON.encode!(argument)},
+        {:send_command, message_uuid, function, Jason.encode!(argument)},
         _timeout = 800
       )
       |> parse_response()
@@ -36,9 +36,9 @@ defmodule JSockDClient do
 
   def parse_response(response) do
     if String.starts_with?(response, "exception ") do
-      {:error, JSON.decode!(String.trim_leading(response, "exception "))}
+      {:error, Jason.decode!(String.trim_leading(response, "exception "))}
     else
-      {:ok, JSON.decode!(response)}
+      {:ok, Jason.decode!(response)}
     end
   end
 end
