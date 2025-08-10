@@ -9,10 +9,11 @@ export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=dangerously_allow_invalid_signatures
 
 cd js_server
 
-# Generate input for a series of commands like
-#   m => { global_var_<counter> = { } }
+# Generate input for a series of commands/param pairs like
+#   (m, p) => { (global_var=(globalThis.global_var ?? { })); globalVar[p] = { }; return "foo"; }
+#   $n
 # which should leak memory.
-awk 'BEGIN { for (i = 0; i < 2000; i++) { print i"\nm => { global_var_"i"={x"i": "i"}; return \"foo\"; }\n\"foo\"" } }' > /tmp/jsockd_memory_increase_test_input
+awk 'BEGIN { for (i = 0; i < 2000; i++) { print "cmd"i"\n(m, p) => { (global_var=(globalThis.global_var ?? { })); globalVar[p] = { }; return \"foo\"; }\n"i } }' > /tmp/jsockd_memory_increase_test_input
 echo "?quit" >> /tmp/jsockd_memory_increase_test_input
 
 ./mk.sh Debug
