@@ -412,7 +412,6 @@ static int init_thread_state(ThreadState *ts,
 
   JS_SetModuleLoaderFunc2(rt, NULL, jsockd_js_module_loader,
                           js_module_check_attributes, NULL);
-  JS_SetInterruptHandler(rt, interrupt_handler, ts);
 
   JSValue shims_module = load_binary_module(ctx, g_shims_module_bytecode,
                                             g_shims_module_bytecode_size);
@@ -430,9 +429,8 @@ static int init_thread_state(ThreadState *ts,
     // message if it's available.
     release_log("Failed to load precompiled module\n");
     js_std_dump_error(ctx);
-    JS_FreeValue(ctx, ts->compiled_module);
-    JS_FreeContext(ctx);
-    JS_FreeRuntime(rt);
+    // This return value will eventually lead to stuff getting cleaned up by
+    // cleanup_js_runtime
     return -1;
   }
 
@@ -449,6 +447,8 @@ static int init_thread_state(ThreadState *ts,
     // It is a reinit.
     assert(JS_IsUndefined(ts->compiled_query));
   }
+
+  JS_SetInterruptHandler(rt, interrupt_handler, ts);
 
   ts->rt = rt;
   ts->ctx = ctx;
