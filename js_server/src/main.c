@@ -91,9 +91,10 @@ typedef struct {
 
 static HashCacheBucket g_cached_function_buckets[CACHED_FUNCTIONS_N_BUCKETS];
 static cached_function_t g_cached_functions[CACHED_FUNCTIONS_N_BUCKETS];
+static atomic_int g_n_cached_functions;
 
-static void add_cached_function(uint64_t uid, const uint8_t *bytecode,
-                                size_t bytecode_size) {
+static int add_cached_function(uint64_t uid, const uint8_t *bytecode,
+                               size_t bytecode_size) {
   assert(0 != JS_TAG_FUNCTION_BYTECODE);
   assert(bytecode);
 
@@ -105,6 +106,8 @@ static void add_cached_function(uint64_t uid, const uint8_t *bytecode,
   if (g_cached_functions[bi].bytecode) {
     debug_log("Hash collision: freeing existing bytecode\n");
     free((void *)(g_cached_functions[bi].bytecode));
+  } else {
+    atomic_fetch_add(&g_n_cached_functions, 1);
   }
   g_cached_functions[bi].bytecode = bytecode;
   g_cached_functions[bi].bytecode_size = bytecode_size;
@@ -145,6 +148,7 @@ typedef struct {
   int memory_check_count;
   int memory_increase_count;
   int64_t last_memory_usage;
+  int last_n_cached_functions;
   char error_msg_buf[8192];
   bool truncated;
   JSValue sourcemap_str;
@@ -713,8 +717,10 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
     JS_ComputeMemoryUsage(ts->rt, &mu);
     debug_logf("Memory usage memory_used_size=%" PRId64 "\n",
                mu.memory_used_size);
-    if (mu.memory_used_size > ts->last_memory_usage) {
+    if (atomic_load(&g_n_cached_functions) <= ts->last_n_cached_functions &&
+        mu.memory_used_size > ts->last_memory_usage) {
       ts->last_memory_usage = mu.memory_used_size;
+      ts->last_n_cached_functions = atomic_load(&g_n_cached_functions);
       ts->memory_increase_count++;
       if (ts->memory_increase_count > MEMORY_INCREASE_MAX_COUNT) {
         release_logf("Memory usage has increased over the last %i commands. "
