@@ -8,15 +8,16 @@
 set -e
 
 N_ITERATIONS=1000
+BUILD="${BUILD:-Release}"
 
 cd js_server
 
-./mk.sh Release
-TOOLCHAIN_FILE=TC-fil-c.cmake ./mk.sh Release
+./mk.sh $BUILD
+TOOLCHAIN_FILE=TC-fil-c.cmake ./mk.sh $BUILD
 
 # build_Debug_TC-fil-c.cmake
-JS_SERVER=build_Release/js_server
-FILC_JS_SERVER=build_Release_TC-fil-c.cmake/js_server
+JS_SERVER=build_$BUILD/js_server
+FILC_JS_SERVER=build_${BUILD}_TC-fil-c.cmake/js_server
 
 npm install
 
@@ -54,7 +55,7 @@ echo ?quit >> /tmp/jsockd_filc_relative_bench_sock_command_input
 #
 rm -f /tmp/jsockd_filc_relative_bench_regular_server_exit_code
 (
-    ./build_Release/js_server -m tests/e2e/filc_relative_bench/bundle.qjsbc -s /tmp/jsockd_filc_relative_bench_sock ;
+    ./build_$BUILD/js_server -m tests/e2e/filc_relative_bench/bundle.qjsbc -s /tmp/jsockd_filc_relative_bench_sock ;
     echo $? > /tmp/jsockd_filc_relative_bench_regular_server_exit_code
 ) &
 regular_server_pid=$!
@@ -87,7 +88,7 @@ fi
 #
 rm -f /tmp/jsockd_filc_relative_bench_filc_server_exit_code
 (
-    ./build_Release_TC-fil-c.cmake/js_server -m tests/e2e/filc_relative_bench/bundle.qjsbc -s /tmp/jsockd_filc_relative_bench_sock ;
+    ./build_$BUILD_TC-fil-c.cmake/js_server -m tests/e2e/filc_relative_bench/bundle.qjsbc -s /tmp/jsockd_filc_relative_bench_sock ;
     echo $? > /tmp/jsockd_filc_relative_bench_filc_server_exit_code
 ) &
 filc_server_pid=$!
