@@ -79,6 +79,7 @@ done
 
 DEBUG_CFLAGS="-DDUMP_LEAKS"
 RELEASE_CFLAGS="-O2"
+FILC_RELEASE_CFLAGS="-O"
 
 OS=$(uname)
 ARCH=$(uname -m)
@@ -182,7 +183,7 @@ for platform in $platforms; do
             # Release
             make clean
             git apply ../../fil-c-quickjs.patch
-            CFLAGS="$RELEASE_CFLAGS" make CC=~/filc-0.668.8-linux-x86_64/build/bin/clang CONFIG_LTO= CONFIG_CLANG=y
+            CFLAGS="$FILC_RELEASE_CFLAGS" make CC=~/filc-0.668.8-linux-x86_64/build/bin/clang CONFIG_LTO= CONFIG_CLANG=y
             git apply -R ../../fil-c-quickjs.patch
             mv libquickjs.a /tmp/libquickjs_Linux_x86_64_filc_Release.a
             ;;
