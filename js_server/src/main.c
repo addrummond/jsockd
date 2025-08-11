@@ -36,8 +36,6 @@
 #include <time.h>
 #include <unistd.h>
 
-// Code for dealing with backteaces and source maps is written in JS and then
-// compiled to bytecode in the build process.
 extern const uint32_t g_backtrace_module_bytecode_size;
 extern const uint8_t g_backtrace_module_bytecode[];
 
@@ -432,7 +430,7 @@ static int init_thread_state(ThreadState *ts,
     // TODO: We should also use source map here to provide a better error
     // message if it's available.
     release_log("Failed to load precompiled module\n");
-    js_std_dump_error(ctx);
+    dump_error(ctx);
     // This return value will eventually lead to stuff getting cleaned up by
     // cleanup_js_runtime
     return -1;
@@ -895,9 +893,7 @@ static void global_cleanup(void) {
   pthread_mutex_destroy(&g_log_mutex);
   wait_group_destroy(&g_thread_ready_wait_group);
 
-  // if it's zero, we know mem was never mapped
-  // (because mmap_file errors on empty files)
-  if (g_module_bytecode_size != 0)
+  if (g_module_bytecode_size != 0 && g_module_bytecode)
     munmap_or_warn((void *)g_module_bytecode,
                    g_module_bytecode_size + ED25519_SIGNATURE_SIZE);
   if (g_source_map_size != 0 && g_source_map)
