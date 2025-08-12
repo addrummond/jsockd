@@ -490,6 +490,8 @@ static int init_thread_state(ThreadState *ts,
       ts->ctx, g_backtrace_module_bytecode, g_backtrace_module_bytecode_size);
   assert(!JS_IsException(ts->backtrace_module));
 
+  ts->sourcemap_str = JS_UNDEFINED;
+
   // Load the precompiled module.
   if (g_module_bytecode)
     ts->compiled_module =
@@ -546,7 +548,6 @@ static int init_thread_state(ThreadState *ts,
   ts->memory_increase_count = 0;
   ts->last_memory_usage = 0;
   ts->last_n_cached_functions = 1;
-  ts->sourcemap_str = JS_UNDEFINED;
 
   return 0;
 }
