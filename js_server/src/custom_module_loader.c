@@ -28,15 +28,11 @@ JSValue load_binary_module(JSContext *ctx, const uint8_t *buf, size_t buf_len) {
   assert(JS_VALUE_GET_TAG(obj) == JS_TAG_MODULE);
 
   if (JS_ResolveModule(ctx, obj) < 0) {
-    if (CMAKE_BUILD_TYPE_IS_DEBUG)
-      js_std_dump_error(ctx);
     JS_FreeValue(ctx, obj);
     return JS_EXCEPTION;
   }
 
   if (js_module_set_import_meta(ctx, obj, 0, 1) < 0) {
-    if (CMAKE_BUILD_TYPE_IS_DEBUG)
-      js_std_dump_error(ctx);
     JS_FreeValue(ctx, obj);
     return JS_EXCEPTION;
   }
@@ -44,11 +40,8 @@ JSValue load_binary_module(JSContext *ctx, const uint8_t *buf, size_t buf_len) {
   val = JS_EvalFunction(ctx, obj);
   val = js_std_await(ctx, val);
 
-  if (JS_IsException(val)) {
-    if (CMAKE_BUILD_TYPE_IS_DEBUG)
-      js_std_dump_error(ctx);
+  if (JS_IsException(val))
     return val;
-  }
 
   JS_FreeValue(ctx, val);
 

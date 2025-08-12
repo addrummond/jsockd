@@ -395,50 +395,131 @@ static int interrupt_handler(JSRuntime *rt, void *opaque) {
   return (int)atomic_load(&g_interrupted_or_error);
 }
 
+typedef struct {
+  char *buf;
+  size_t index;
+  size_t length;
+} WBuf;
+
+static void write_to_buf(void *opaque_buf, const char *inp, size_t size) {
+  WBuf *buf = (WBuf *)opaque_buf;
+  size_t to_write =
+      buf->length >= buf->index ? MIN(buf->length - buf->index, size) : 0;
+  memcpy(buf->buf + buf->index, inp, to_write);
+  buf->index += to_write;
+}
+
+typedef enum { BACKTRACE_JSON, BACKTRACE_PRETTY } BacktraceFormat;
+
+static const char *get_backtrace(ThreadState *ts, const char *backtrace,
+                                 size_t backtrace_length,
+                                 size_t *out_json_backtrace_length,
+                                 BacktraceFormat backtrace_format) {
+  const char *bt_func_name =
+      backtrace_format == BACKTRACE_JSON ? "parseBacktrace" : "formatBacktrace";
+  JSValue bt_func =
+      JS_GetPropertyStr(ts->ctx, ts->backtrace_module, bt_func_name);
+  if (!JS_IsFunction(ts->ctx, bt_func)) {
+    JS_FreeValue(ts->ctx, bt_func);
+    release_logf("Internal error: %s is not a function\n", bt_func_name);
+    return NULL;
+  }
+  if (JS_IsUndefined(ts->sourcemap_str)) {
+    ts->sourcemap_str =
+        g_source_map_size == 0
+            ? JS_UNDEFINED
+            : JS_NewStringLen(ts->ctx, (const char *)g_source_map,
+                              g_source_map_size);
+    int c = atomic_fetch_add(&g_source_map_load_count, 1);
+    if (c + 1 == g_n_threads && g_source_map_size != 0 && g_source_map) {
+      debug_log("All threads have loaded the sourcemap, calling munmap...\n");
+      munmap_or_warn((void *)g_source_map, g_source_map_size);
+      g_source_map = NULL;
+    }
+  }
+  JSValue backtrace_str = JS_NewStringLen(ts->ctx, backtrace, backtrace_length);
+  JSValue argv[] = {ts->sourcemap_str, backtrace_str};
+  JSValue parsed_backtrace_js = JS_Call(ts->ctx, bt_func, JS_UNDEFINED,
+                                        sizeof(argv) / sizeof(argv[0]), argv);
+
+  const char *bt_str;
+  if (JS_IsException(parsed_backtrace_js)) {
+    release_log("Error parsing backtrace:\n");
+    dump_error(ts->ctx);
+    release_logf("The backtrace that could not be parsed:\n%.*s",
+                 backtrace_length, backtrace);
+    bt_str = NULL;
+  } else {
+    bt_str = JS_ToCStringLen(ts->ctx, out_json_backtrace_length,
+                             parsed_backtrace_js);
+  }
+
+  JS_FreeValue(ts->ctx, parsed_backtrace_js);
+  JS_FreeValue(ts->ctx, backtrace_str);
+  JS_FreeValue(ts->ctx, bt_func);
+
+  return bt_str;
+}
+
 static int init_thread_state(ThreadState *ts,
                              const char *unix_socket_filename) {
-  JSRuntime *rt = JS_NewRuntime();
-  if (!rt) {
+  ts->rt = JS_NewRuntime();
+  if (!ts->rt) {
     release_log("Failed to create JS runtime\n");
     return -1;
   }
 
   js_std_set_worker_new_context_func(JS_NewCustomContext);
-  js_std_init_handlers(rt);
-  JSContext *ctx = JS_NewCustomContext(rt);
-  if (!ctx) {
+  js_std_init_handlers(ts->rt);
+  ts->ctx = JS_NewCustomContext(ts->rt);
+  if (!ts->ctx) {
     release_log("Failed to create JS context\n");
-    JS_FreeRuntime(rt);
+    JS_FreeRuntime(ts->rt);
     return -1;
   }
 
-  JS_SetModuleLoaderFunc2(rt, NULL, jsockd_js_module_loader,
+  JS_SetModuleLoaderFunc2(ts->rt, NULL, jsockd_js_module_loader,
                           js_module_check_attributes, NULL);
 
-  JSValue shims_module = load_binary_module(ctx, g_shims_module_bytecode,
+  JSValue shims_module = load_binary_module(ts->ctx, g_shims_module_bytecode,
                                             g_shims_module_bytecode_size);
   assert(!JS_IsException(shims_module));
   JS_FreeValue(ts->ctx, shims_module); // imported just for side effects
 
+  ts->backtrace_module = load_binary_module(
+      ts->ctx, g_backtrace_module_bytecode, g_backtrace_module_bytecode_size);
+  assert(!JS_IsException(ts->backtrace_module));
+
   // Load the precompiled module.
   if (g_module_bytecode)
     ts->compiled_module =
-        load_binary_module(ctx, g_module_bytecode, g_module_bytecode_size);
+        load_binary_module(ts->ctx, g_module_bytecode, g_module_bytecode_size);
   else
     ts->compiled_module = JS_UNDEFINED;
   if (JS_IsException(ts->compiled_module)) {
-    // TODO: We should also use source map here to provide a better error
-    // message if it's available.
     release_log("Failed to load precompiled module\n");
-    dump_error(ctx);
-    // This return value will eventually lead to stuff getting cleaned up by
-    // cleanup_js_runtime
+    WBuf emb = {.buf = ts->error_msg_buf,
+                .index = 0,
+                .length =
+                    sizeof(ts->error_msg_buf) / sizeof(ts->error_msg_buf[0])};
+    JS_PrintValue(ts->ctx, write_to_buf, &emb.buf, JS_GetException(ts->ctx),
+                  NULL);
+    size_t bt_length;
+    const char *bt_str =
+        get_backtrace(ts, emb.buf, emb.index, &bt_length, BACKTRACE_PRETTY);
+    if (!bt_str) {
+      release_logf("<no backtrace available>\n");
+    } else {
+      release_logf("%.*s\n", bt_length, bt_str);
+      JS_FreeCString(ts->ctx, bt_str);
+    }
+
+    JS_FreeValue(ts->ctx, ts->compiled_module);
+
+    // This return value will eventually lead to stuff getting
+    // cleaned up by cleanup_js_runtime
     return -1;
   }
-
-  ts->backtrace_module = load_binary_module(ctx, g_backtrace_module_bytecode,
-                                            g_backtrace_module_bytecode_size);
-  assert(!JS_IsException(ts->backtrace_module));
 
   if (unix_socket_filename) { // it's not a reinit
     ts->unix_socket_filename = unix_socket_filename;
@@ -450,10 +531,8 @@ static int init_thread_state(ThreadState *ts,
     assert(JS_IsUndefined(ts->compiled_query));
   }
 
-  JS_SetInterruptHandler(rt, interrupt_handler, ts);
+  JS_SetInterruptHandler(ts->rt, interrupt_handler, ts);
 
-  ts->rt = rt;
-  ts->ctx = ctx;
   ts->stream_io_err = 0;
   // set to nonzero if program should eventually exit with non-zero exit code
   ts->exit_status = 0;
@@ -558,20 +637,6 @@ static int handle_line_2_query(ThreadState *ts, const char *line, int len) {
   return 0;
 }
 
-typedef struct {
-  char *buf;
-  size_t index;
-  size_t length;
-} WBuf;
-
-static void write_to_buf(void *opaque_buf, const char *inp, size_t size) {
-  WBuf *buf = (WBuf *)opaque_buf;
-  size_t to_write =
-      buf->length >= buf->index ? MIN(buf->length - buf->index, size) : 0;
-  memcpy(buf->buf + buf->index, inp, to_write);
-  buf->index += to_write;
-}
-
 static int64_t memusage(const JSMemoryUsage *m) {
   return m->malloc_count + m->memory_used_count + m->atom_count + m->str_count +
          m->obj_count + m->prop_count + m->shape_count + m->js_func_count +
@@ -636,44 +701,17 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
     JSValue exception = JS_GetException(ts->ctx);
     JS_PrintValue(ts->ctx, write_to_buf, &emb, exception, NULL);
 
-    // Parse the error message and backtrace and encode it as JSON using
-    // the code in src/js/backtrace.mjs. Not super efficient, but we only run
-    // this code in the error case, so it doesn't matter too much.
-    JSValue parseBacktrace =
-        JS_GetPropertyStr(ts->ctx, ts->backtrace_module, "parseBacktrace");
-    if (JS_IsUndefined(ts->sourcemap_str)) {
-      ts->sourcemap_str =
-          g_source_map_size == 0
-              ? JS_UNDEFINED
-              : JS_NewStringLen(ts->ctx, (const char *)g_source_map,
-                                g_source_map_size);
-      int c = atomic_fetch_add(&g_source_map_load_count, 1);
-      if (c + 1 == g_n_threads && g_source_map_size != 0 && g_source_map) {
-        debug_log("All threads have loaded the sourcemap, calling munmap...\n");
-        munmap_or_warn((void *)g_source_map, g_source_map_size);
-        g_source_map = NULL;
-      }
-    }
-    JSValue backtrace_str = JS_NewStringLen(ts->ctx, emb.buf, emb.index);
-    JSValue argv[] = {ts->sourcemap_str, backtrace_str};
-    JSValue parsed_backtrace_js = JS_Call(ts->ctx, parseBacktrace, JS_UNDEFINED,
-                                          sizeof(argv) / sizeof(argv[0]), argv);
-    if (JS_IsException(parsed_backtrace_js)) {
-      release_logf("Error parsing backtrace:\n%.*s\n", emb.index, emb.buf);
-      dump_error(ts->ctx);
+    size_t json_bt_length;
+    const char *json_bt_str =
+        get_backtrace(ts, emb.buf, emb.index, &json_bt_length, BACKTRACE_JSON);
+    if (!json_bt_str) {
       write_const_to_stream(ts, "{}\n");
     } else {
-      size_t parsed_backtrace_len;
-      const char *parsed_backtrace =
-          JS_ToCStringLen(ts->ctx, &parsed_backtrace_len, parsed_backtrace_js);
-      write_to_stream(ts, parsed_backtrace, parsed_backtrace_len);
+      write_to_stream(ts, json_bt_str, json_bt_length);
       write_const_to_stream(ts, "\n");
-      JS_FreeCString(ts->ctx, parsed_backtrace);
+      JS_FreeCString(ts->ctx, json_bt_str);
     }
 
-    JS_FreeValue(ts->ctx, parsed_backtrace_js);
-    JS_FreeValue(ts->ctx, backtrace_str);
-    JS_FreeValue(ts->ctx, parseBacktrace);
     JS_FreeValue(ts->ctx, exception);
     JS_FreeValue(ts->ctx, parsed_arg);
     JS_FreeValue(ts->ctx, ret);
@@ -980,7 +1018,7 @@ int main(int argc, char *argv[]) {
   atomic_store(&g_n_threads, g_cmd_args.n_sockets);
 
   if (0 != wait_group_init(&g_thread_ready_wait_group, n_threads)) {
-    release_logf("Error initializing wait group: %s", strerror(errno));
+    release_logf("Error initializing wait group: %s\n", strerror(errno));
     if (g_module_bytecode_size != 0 && g_module_bytecode)
       munmap_or_warn((void *)g_module_bytecode,
                      g_module_bytecode_size + ED25519_SIGNATURE_SIZE);
@@ -994,7 +1032,7 @@ int main(int argc, char *argv[]) {
     debug_logf("Creating thread %i\n", n);
     if (0 !=
         init_thread_state(&g_thread_states[n], g_cmd_args.socket_path[n])) {
-      release_logf("Error initializing thread %i", n);
+      release_logf("Error initializing thread %i\n", n);
       if (g_module_bytecode_size != 0 && g_module_bytecode)
         munmap_or_warn((void *)g_module_bytecode, g_module_bytecode_size);
       pthread_mutex_destroy(&g_log_mutex);

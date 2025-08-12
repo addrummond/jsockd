@@ -3,6 +3,10 @@ let parsedSourcemap = null;
 // Bellard's QuickJS doesn't expose structured backtraces via the public API,
 // so we need to parse the backtrace's string representation.
 export function parseBacktrace(sourcemap, backtrace) {
+  return JSON.stringify(parseBacktraceHelper(sourcemap, backtrace));
+}
+
+function parseBacktraceHelper(sourcemap, backtrace) {
   const lines = backtrace.split("\n");
   const trace = [];
   let errorMessage = "";
@@ -28,13 +32,26 @@ export function parseBacktrace(sourcemap, backtrace) {
   if (parsedSourcemap === null)
     parsedSourcemap = sourcemap ? JSON.parse(sourcemap) : null;
 
-  return JSON.stringify({
+  return {
     errorMessage: errorMessage.trim(),
     trace: sourcemap
       ? mapBacktraceWithSourceMap(parsedSourcemap, trace)
       : trace,
     raw: backtrace.trim(),
-  });
+  };
+}
+
+export function formatBacktrace(sourcemap, backtrace) {
+  backtrace = parseBacktraceHelper(sourcemap, backtrace);
+  return `
+${backtrace.errorMessage}:
+  ${backtrace.trace.map((entry) => {
+    return `  at ${entry.functionName ?? "<unknown>"} (${entry.source ?? "<unknown>"}${entry.line !== null ? `:${entry.line}` : ""}${entry.column !== null ? `:${entry.column}` : ""})${(() => {
+      if (entry.mapped)
+        return ` -> ${entry.mapped.functionName ?? "<unknown>"} (${entry.mapped.source ?? "<unknown>"}${entry.mapped.line !== null ? `:${entry.mapped.line}` : ""}${entry.mapped.column !== null ? `:${entry.mapped.column}` : ""})`;
+      return "";
+    })()}`;
+  })}`;
 }
 
 // WARNING: AI-generated code from this point down. Haven't checked it very
