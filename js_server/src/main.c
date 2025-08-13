@@ -105,7 +105,7 @@ static void add_cached_function(uint64_t uid, const uint8_t *bytecode,
     debug_log("Hash collision: freeing existing bytecode\n");
     free((void *)(g_cached_functions[bi].bytecode));
   } else {
-    atomic_fetch_add(&g_n_cached_functions, 1);
+    atomic_fetch_add_explicit(&g_n_cached_functions, 1, memory_order_relaxed);
   }
   g_cached_functions[bi].bytecode = bytecode;
   g_cached_functions[bi].bytecode_size = bytecode_size;
@@ -313,7 +313,7 @@ error_no_inc:
 
   free(line_buf_buffer);
 
-  atomic_store(&g_interrupted_or_error, true);
+  atomic_store_explicit(&g_interrupted_or_error, true, memory_order_relaxed);
 }
 
 static JSContext *JS_NewCustomContext(JSRuntime *rt) {
@@ -392,7 +392,8 @@ static int interrupt_handler(JSRuntime *rt, void *opaque) {
       return 1;
     }
   }
-  return (int)atomic_load(&g_interrupted_or_error);
+  return (int)atomic_load_explicit(&g_interrupted_or_error,
+                                   memory_order_relaxed);
 }
 
 typedef struct {
@@ -430,7 +431,8 @@ static const char *get_backtrace(ThreadState *ts, const char *backtrace,
             ? JS_UNDEFINED
             : JS_NewStringLen(ts->ctx, (const char *)g_source_map,
                               g_source_map_size);
-    int c = atomic_fetch_add(&g_source_map_load_count, 1);
+    int c = atomic_fetch_add_explicit(&g_source_map_load_count, 1,
+                                      memory_order_relaxed);
     if (c + 1 == g_n_threads && g_source_map_size != 0 && g_source_map) {
       debug_log("All threads have loaded the sourcemap, calling munmap...\n");
       munmap_or_warn((void *)g_source_map, g_source_map_size);
@@ -763,10 +765,12 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
     debug_logf("Memory usage memory_used_size=%" PRId64 "\n",
                mu.memory_used_size);
     int64_t current_usage = memusage(&mu);
-    if (atomic_load(&g_n_cached_functions) <= ts->last_n_cached_functions &&
+    if (atomic_load_explicit(&g_n_cached_functions, memory_order_relaxed) <=
+            ts->last_n_cached_functions &&
         current_usage > ts->last_memory_usage) {
       ts->last_memory_usage = current_usage;
-      ts->last_n_cached_functions = atomic_load(&g_n_cached_functions);
+      ts->last_n_cached_functions =
+          atomic_load_explicit(&g_n_cached_functions, memory_order_relaxed);
       ts->memory_increase_count++;
       if (ts->memory_increase_count > MEMORY_INCREASE_MAX_COUNT) {
         release_logf("Memory usage has increased over the last %i commands. "
@@ -837,7 +841,7 @@ static int line_handler(const char *line, size_t len, void *data,
       JS_FreeValue(ts->ctx, ts->compiled_query);
       ts->compiled_query = JS_UNDEFINED;
     }
-    atomic_store(&g_interrupted_or_error, true);
+    atomic_store_explicit(&g_interrupted_or_error, true, memory_order_relaxed);
     write_const_to_stream(ts, "quit\n");
     return EXIT_ON_QUIT_COMMAND;
   }
@@ -940,7 +944,7 @@ static void global_cleanup(void) {
 }
 
 static void SIGINT_handler(int sig) {
-  atomic_store(&g_interrupted_or_error, true);
+  atomic_store_explicit(&g_interrupted_or_error, true, memory_order_relaxed);
 
   // Using stdio inside an interrupt handler is not safe, but calls to write
   // are explicilty allowed.
@@ -952,20 +956,24 @@ static void SIGINT_handler(int sig) {
   if (wait_group_n_remaining(&g_thread_ready_wait_group) > 0)
     exit(1);
 
-  for (int i = 0; i < atomic_load(&g_n_threads); ++i)
+  for (int i = 0; i < atomic_load_explicit(&g_n_threads, memory_order_relaxed);
+       ++i)
     mutex_lock(&g_thread_states[i].doing_js_stuff_mutex);
 
-  for (int i = 0; i < atomic_load(&g_n_threads); ++i)
+  for (int i = 0; i < atomic_load_explicit(&g_n_threads, memory_order_relaxed);
+       ++i)
     pthread_join(g_threads[i], NULL); // can fail, but no useful error handling
                                       // to be done
 
-  for (int i = 0; i < atomic_load(&g_n_threads); ++i)
+  for (int i = 0; i < atomic_load_explicit(&g_n_threads, memory_order_relaxed);
+       ++i)
     mutex_unlock(&g_thread_states[i].doing_js_stuff_mutex);
 
-  if (atomic_load(&g_global_init_complete))
+  if (atomic_load_explicit(&g_global_init_complete, memory_order_relaxed))
     global_cleanup();
 
-  for (int i = 0; i < atomic_load(&g_n_threads); ++i)
+  for (int i = 0; i < atomic_load_explicit(&g_n_threads, memory_order_relaxed);
+       ++i)
     cleanup_thread_state(&g_thread_states[i]);
 
   exit(1);
@@ -1016,7 +1024,8 @@ int main(int argc, char *argv[]) {
   }
 
   int n_threads = MIN(g_cmd_args.n_sockets, MAX_THREADS);
-  atomic_store(&g_n_threads, g_cmd_args.n_sockets);
+  atomic_store_explicit(&g_n_threads, g_cmd_args.n_sockets,
+                        memory_order_relaxed);
 
   if (0 != wait_group_init(&g_thread_ready_wait_group, n_threads)) {
     release_logf("Error initializing wait group: %s\n", strerror(errno));
@@ -1061,17 +1070,20 @@ int main(int argc, char *argv[]) {
   fflush(stdout);
 
   // pthread_join can fail, but we can't do any useful error handling
-  for (int i = 0; i < atomic_load(&g_n_threads); ++i)
+  for (int i = 0; i < atomic_load_explicit(&g_n_threads, memory_order_relaxed);
+       ++i)
     pthread_join(g_threads[i], NULL);
 
   debug_log("All threads joined\n");
 
   global_cleanup();
 
-  for (int i = 0; i < atomic_load(&g_n_threads); ++i)
+  for (int i = 0; i < atomic_load_explicit(&g_n_threads, memory_order_relaxed);
+       ++i)
     cleanup_thread_state(&g_thread_states[i]);
 
-  for (int i = 0; i < atomic_load(&g_n_threads); ++i) {
+  for (int i = 0; i < atomic_load_explicit(&g_n_threads, memory_order_relaxed);
+       ++i) {
     if (g_thread_states[i].exit_status != 0)
       return 1;
   }

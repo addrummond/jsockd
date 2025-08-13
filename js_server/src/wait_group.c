@@ -1,6 +1,7 @@
 
 #include "wait_group.h"
 #include <assert.h>
+#include <stdatomic.h>
 #include <stdio.h>
 #include <time.h>
 #include <unistd.h>
@@ -24,7 +25,8 @@ int wait_group_init(WaitGroup *wg, int n_waiting_for) {
 
 int wait_group_inc(WaitGroup *wg, int n) {
   int r;
-  int previous_value = atomic_fetch_add(&wg->n_remaining, -n);
+  int previous_value =
+      atomic_fetch_add_explicit(&wg->n_remaining, -n, memory_order_relaxed);
   if (previous_value > 0 && previous_value <= n) {
     // We have just decremented the wait group to zero. If
     // wait_group_timed_wait has been called already then we need to call
@@ -46,7 +48,7 @@ int wait_group_inc(WaitGroup *wg, int n) {
 }
 
 int wait_group_n_remaining(WaitGroup *wg) {
-  return atomic_load(&wg->n_remaining);
+  return atomic_load_explicit(&wg->n_remaining, memory_order_relaxed);
 }
 
 int wait_group_timed_wait(WaitGroup *wg, uint64_t timeout_ns) {
@@ -56,7 +58,7 @@ int wait_group_timed_wait(WaitGroup *wg, uint64_t timeout_ns) {
   if (r != 0)
     return r;
 
-  if (atomic_load(&wg->n_remaining) == 0)
+  if (atomic_load_explicit(&wg->n_remaining, memory_order_relaxed) == 0)
     return pthread_mutex_unlock(&wg->mutex);
 
   wg->wait_called = true;
@@ -81,7 +83,7 @@ int wait_group_timed_wait(WaitGroup *wg, uint64_t timeout_ns) {
   struct timespec start_time;
   if (0 != clock_gettime(CLOCK_MONOTONIC, &start_time))
     return -1;
-  while (atomic_load(&wg->n_remaining) > 0) {
+  while (atomic_load_explicit(&wg->n_remaining, memory_order_relaxed) > 0) {
     usleep(w);
     if (w < 100000)
       w = w * 5 / 4;
@@ -106,7 +108,7 @@ int wait_group_timed_wait(WaitGroup *wg, uint64_t timeout_ns) {
 
   if (r != 0)
     return r;
-  assert(atomic_load(&wg->n_remaining) <= 0);
+  assert(atomic_load_explicit(&wg->n_remaining, memory_order_relaxed) <= 0);
   return 0;
 }
 
