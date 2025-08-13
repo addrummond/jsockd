@@ -126,8 +126,16 @@ static const uint8_t *get_cached_function(uint64_t uid, size_t *psize) {
   return NULL;
 }
 
+// values for ThreadState.replacement_thread_state
+enum {
+  REPLACEMENT_THREAD_STATE_NONE,
+  REPLACEMENT_THREAD_STATE_INIT,
+  REPLACEMENT_THREAD_STATE_INIT_COMPLETE,
+  REPLACEMENT_THREAD_STATE_CLEANUP
+};
+
 // The state for each thread which runs a QuickJS VM.
-typedef struct {
+typedef struct ThreadState {
   const char *unix_socket_filename;
   JSRuntime *rt;
   JSContext *ctx;
@@ -150,6 +158,9 @@ typedef struct {
   char error_msg_buf[8192];
   bool truncated;
   JSValue sourcemap_str;
+  struct ThreadState *my_replacement;
+  atomic_int replacement_thread_state;
+  pthread_t replacement_thread;
 } ThreadState;
 
 static void js_print_value_debug_write(void *opaque, const char *buf,
@@ -550,6 +561,8 @@ static int init_thread_state(ThreadState *ts,
   ts->memory_increase_count = 0;
   ts->last_memory_usage = 0;
   ts->last_n_cached_functions = 1;
+  ts->my_replacement = NULL;
+  atomic_init(&ts->replacement_thread_state, REPLACEMENT_THREAD_STATE_NONE);
 
   return 0;
 }
@@ -585,6 +598,13 @@ static void cleanup_thread_state(ThreadState *ts) {
   // This could fail, but no useful error handling to be done (we're exiting
   // anyway).
   pthread_mutex_destroy(&ts->doing_js_stuff_mutex);
+
+  int rts =
+      atomic_load_explicit(&ts->replacement_thread_state, memory_order_relaxed);
+  if (rts == REPLACEMENT_THREAD_STATE_INIT_COMPLETE ||
+      rts == REPLACEMENT_THREAD_STATE_CLEANUP) {
+    free(ts->my_replacement);
+  }
 }
 
 static void write_to_stream(ThreadState *ts, const char *buf, size_t len) {
@@ -598,6 +618,15 @@ static void write_to_stream(ThreadState *ts, const char *buf, size_t len) {
 #define write_const_to_stream(ts, str)                                         \
   write_to_stream((ts), (str), sizeof(str) - 1)
 
+static void *reset_thread_state_cleanup_old_runtime_thread(void *data) {
+  ThreadState *ts = (ThreadState *)data;
+  cleanup_thread_state(ts->my_replacement);
+  free(ts->my_replacement);
+  atomic_store_explicit(&ts->replacement_thread_state,
+                        REPLACEMENT_THREAD_STATE_NONE, memory_order_relaxed);
+  return NULL;
+}
+
 static int handle_line_1_message_uid(ThreadState *ts, const char *line,
                                      int len) {
   if (len > MESSAGE_UUID_MAX_BYTES) {
@@ -606,6 +635,24 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
                len, MESSAGE_UUID_MAX_BYTES);
     len = MESSAGE_UUID_MAX_BYTES;
   }
+
+  // Check to see if the thread state has been reinitialized (following a memory
+  // increase).
+  if (REPLACEMENT_THREAD_STATE_INIT_COMPLETE ==
+      atomic_load_explicit(&ts->replacement_thread_state,
+                           memory_order_relaxed)) {
+    memswap(&ts->my_replacement, &ts, sizeof(*ts));
+    if (0 != pthread_create(&ts->replacement_thread, NULL,
+                            reset_thread_state_cleanup_old_runtime_thread,
+                            ts)) {
+      release_logf("pthread_create failed: %s\n", strerror(errno));
+      return -1;
+    }
+    atomic_store_explicit(&ts->replacement_thread_state,
+                          REPLACEMENT_THREAD_STATE_CLEANUP,
+                          memory_order_relaxed);
+  }
+
   strncpy(ts->current_uuid, line, len);
   ts->current_uuid_len = len;
   ts->line_n++;
@@ -645,6 +692,17 @@ static int64_t memusage(const JSMemoryUsage *m) {
          m->obj_count + m->prop_count + m->shape_count + m->js_func_count +
          m->js_func_pc2line_count + m->c_func_count + m->fast_array_count +
          m->binary_object_count;
+}
+
+static void *reset_thread_state_thread(void *data) {
+  ThreadState *ts = (ThreadState *)data;
+  ts->my_replacement = (ThreadState *)malloc(sizeof(ThreadState));
+  init_thread_state((ThreadState *)ts->my_replacement,
+                    ts->unix_socket_filename);
+  atomic_store_explicit(&ts->replacement_thread_state,
+                        REPLACEMENT_THREAD_STATE_INIT_COMPLETE,
+                        memory_order_relaxed);
+  return NULL;
 }
 
 static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
@@ -776,15 +834,20 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
         release_logf("Memory usage has increased over the last %i commands. "
                      "Resetting interpreter state.\n",
                      MEMORY_INCREASE_MAX_COUNT * MEMORY_CHECK_INTERVAL);
-        cleanup_js_runtime(ts);
-        debug_log("Runtime cleaned up.\n");
-        if (0 != init_thread_state(ts, NULL)) {
-          release_log(
-              "Error re-initializing JS runtime after memory increase\n");
-          mutex_unlock(&ts->doing_js_stuff_mutex);
+        // To avoid latency, we do the following:
+        //   (i)   create a new thread state in a background thread,
+        //   (ii)  swap the old and new thread states the next time we're in
+        //         the line_1 handler and the new thread state has finished
+        //         initializing, and then
+        //   (iii) clean up the old thread state in a background thread.
+        if (0 != pthread_create(&ts->replacement_thread, NULL,
+                                reset_thread_state_thread, (void *)ts)) {
+          release_logf("pthread_create failed: %s\n", strerror(errno));
           return -1;
         }
-        debug_log("Thread state reinitialized.\n");
+        atomic_store_explicit(&ts->replacement_thread_state,
+                              REPLACEMENT_THREAD_STATE_INIT,
+                              memory_order_relaxed);
       }
     } else {
       ts->memory_increase_count = 0;
@@ -1052,8 +1115,14 @@ int main(int argc, char *argv[]) {
       wait_group_destroy(&g_thread_ready_wait_group);
       return 1;
     }
-    pthread_create(&g_threads[n], NULL, listen_thread_func,
-                   &g_thread_states[n]);
+    if (0 != pthread_create(&g_threads[n], NULL, listen_thread_func,
+                            &g_thread_states[n])) {
+      release_logf("pthread_create failed; exiting: %s", strerror(errno));
+      for (int i = 0; i <= n; ++i)
+        cleanup_thread_state(&g_thread_states[i]);
+      global_cleanup();
+      exit(1);
+    }
   }
 
   // Wait for all threads to be ready
@@ -1071,8 +1140,17 @@ int main(int argc, char *argv[]) {
 
   // pthread_join can fail, but we can't do any useful error handling
   for (int i = 0; i < atomic_load_explicit(&g_n_threads, memory_order_relaxed);
-       ++i)
+       ++i) {
     pthread_join(g_threads[i], NULL);
+    int rts = atomic_load_explicit(&g_thread_states[i].replacement_thread_state,
+                                   memory_order_relaxed);
+    if (rts == REPLACEMENT_THREAD_STATE_INIT ||
+        rts == REPLACEMENT_THREAD_STATE_CLEANUP) {
+      // As we've just joined the thread, we know it won't be concurrently
+      // updating replacement_thread.
+      pthread_join(g_thread_states[i].replacement_thread, NULL);
+    }
+  }
 
   debug_log("All threads joined\n");
 

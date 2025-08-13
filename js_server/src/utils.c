@@ -69,3 +69,14 @@ int64_t us_time_diff(const struct timespec *t1, const struct timespec *t2) {
   int64_t us2 = (int64_t)(t2->tv_sec * 1000000ULL + t2->tv_nsec / 1000ULL);
   return us1 - us2;
 }
+
+// swap two blocks of memory of a given size
+void memswap(void *m1, void *m2, size_t size) {
+  char *p1 = (char *)m1;
+  char *p2 = (char *)m2;
+  for (size_t i = 0; i < size / sizeof(char); ++i) {
+    char tmp = p1[i];
+    p1[i] = p2[i];
+    p2[i] = tmp;
+  }
+}
