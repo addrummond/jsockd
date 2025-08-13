@@ -141,7 +141,9 @@ typedef struct {
   int stream_io_err;
 } SocketState;
 
-static void init_socket_state(SocketState *ss) {
+static void init_socket_state(SocketState *ss,
+                              const char *unix_socket_filename) {
+  ss->unix_socket_filename = unix_socket_filename;
   ss->sockfd = -1;
   ss->streamfd = -1;
   ss->stream_io_err = 0;
@@ -1126,7 +1128,7 @@ int main(int argc, char *argv[]) {
 
   for (int n = 0; n < n_threads; ++n) {
     debug_logf("Creating thread %i\n", n);
-    init_socket_state(&g_socket_states[n]);
+    init_socket_state(&g_socket_states[n], g_cmd_args.socket_path[n]);
     if (0 != init_thread_state(&g_thread_states[n], &g_socket_states[n])) {
       release_logf("Error initializing thread %i\n", n);
       if (g_module_bytecode_size != 0 && g_module_bytecode)
