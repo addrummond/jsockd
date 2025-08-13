@@ -859,6 +859,7 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
         if (0 != pthread_create(&ts->replacement_thread, NULL,
                                 reset_thread_state_thread, (void *)ts)) {
           release_logf("pthread_create failed: %s\n", strerror(errno));
+          mutex_unlock(&ts->doing_js_stuff_mutex);
           return -1;
         }
         atomic_store_explicit(&ts->replacement_thread_state,
