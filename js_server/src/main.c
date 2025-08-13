@@ -75,13 +75,6 @@ static void dump_error(JSContext *ctx) {
     JS_FreeValue(ctx, JS_GetException(ctx));
 }
 
-// The input buffer gets malloced to this size once per thread. Longer inputs
-// are truncated and an error is returned. I tried starting with a smaller
-// buffer and reallocing as needed, but it doesn't actually improve memory
-// usage. I guess most of the large allocation doesn't get paged in till it's
-// needed anyway.
-static const int LINE_BUF_BYTES = 1024 * 1024 * 1024;
-
 typedef struct {
   const uint8_t *bytecode;
   size_t bytecode_size;
@@ -664,7 +657,7 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
       atomic_load_explicit(&ts->replacement_thread_state,
                            memory_order_relaxed)) {
     ThreadState *r = ts->my_replacement;
-    memswap(ts->my_replacement, ts, sizeof(*ts));
+    memswap_small(ts->my_replacement, ts, sizeof(*ts));
     if (0 != pthread_create(&ts->replacement_thread, NULL,
                             reset_thread_state_cleanup_old_runtime_thread, r)) {
       release_logf("pthread_create failed: %s\n", strerror(errno));

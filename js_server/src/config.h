@@ -21,4 +21,6 @@
 
 #define ERROR_MSG_MAX_BYTES (1024 * 10)
 
+#define LINE_BUF_BYTES (1024 * 1024 * 1024)
+
 #endif
