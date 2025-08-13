@@ -294,6 +294,10 @@ static void listen_on_unix_socket(const char *unix_socket_filename,
     } break;
     }
 
+    // This is cheap, and we need to reset it if we've reset the ThreadState, so
+    // just call it on every loop.
+    JS_UpdateStackTop(ts->rt);
+
     int exit_value = line_buf_read(&line_buf, g_cmd_args.socket_sep_char,
                                    lb_read, &ts->streamfd, line_handler, data);
     if (exit_value == EXIT_ON_QUIT_COMMAND)
@@ -474,8 +478,8 @@ static const char *get_backtrace(ThreadState *ts, const char *backtrace,
   return bt_str;
 }
 
-static int init_thread_state(ThreadState *ts,
-                             const char *unix_socket_filename) {
+static int init_thread_state(ThreadState *ts, const char *unix_socket_filename,
+                             int sockfd, int streamfd) {
   ts->rt = JS_NewRuntime();
   if (!ts->rt) {
     release_log("Failed to create JS runtime\n");
@@ -536,15 +540,11 @@ static int init_thread_state(ThreadState *ts,
     return -1;
   }
 
-  if (unix_socket_filename) { // it's not a reinit
-    ts->unix_socket_filename = unix_socket_filename;
-    ts->sockfd = -1;   // to be set later
-    ts->streamfd = -1; // to be set later
-    mutex_init(&ts->doing_js_stuff_mutex);
-  } else {
-    // It is a reinit.
-    assert(JS_IsUndefined(ts->compiled_query));
-  }
+  ts->unix_socket_filename = unix_socket_filename;
+  ts->sockfd = sockfd;
+  ts->streamfd = streamfd;
+
+  mutex_init(&ts->doing_js_stuff_mutex);
 
   JS_SetInterruptHandler(ts->rt, interrupt_handler, ts);
 
@@ -567,7 +567,7 @@ static int init_thread_state(ThreadState *ts,
   return 0;
 }
 
-static void cleanup_js_runtime(ThreadState *ts) {
+static void cleanup_thread_state(ThreadState *ts) {
   JS_FreeValue(ts->ctx, ts->backtrace_module);
   JS_FreeValue(ts->ctx, ts->compiled_query);
   JS_FreeValue(ts->ctx, ts->compiled_module);
@@ -582,28 +582,30 @@ static void cleanup_js_runtime(ThreadState *ts) {
 
   JS_FreeContext(ts->ctx);
   JS_FreeRuntime(ts->rt);
-}
-
-static void cleanup_thread_state(ThreadState *ts) {
-  // Don't add logs to this function as it may be called from a signal
-  // handler.
-
-  // We're about to exit, so we don't need to check for errors.
-  if (ts->streamfd != -1)
-    close(ts->streamfd);
-  unlink(ts->unix_socket_filename);
-
-  cleanup_js_runtime(ts);
 
   // This could fail, but no useful error handling to be done (we're exiting
   // anyway).
   pthread_mutex_destroy(&ts->doing_js_stuff_mutex);
+}
+
+static void destroy_thread_state(ThreadState *ts) {
+  // Don't add logs to this function as it may be called from a signal
+  // handler.
+
+  // We're about to exit, so we don't need to check for errors.
+  if (ts->streamfd != -1) {
+    close(ts->streamfd);
+  }
+  unlink(ts->unix_socket_filename);
+
+  cleanup_thread_state(ts);
 
   int rts =
       atomic_load_explicit(&ts->replacement_thread_state, memory_order_relaxed);
-  if (rts == REPLACEMENT_THREAD_STATE_INIT_COMPLETE ||
-      rts == REPLACEMENT_THREAD_STATE_CLEANUP) {
+  if (ts->my_replacement && (rts == REPLACEMENT_THREAD_STATE_INIT_COMPLETE ||
+                             rts == REPLACEMENT_THREAD_STATE_CLEANUP)) {
     free(ts->my_replacement);
+    ts->my_replacement = NULL;
   }
 }
 
@@ -621,7 +623,10 @@ static void write_to_stream(ThreadState *ts, const char *buf, size_t len) {
 static void *reset_thread_state_cleanup_old_runtime_thread(void *data) {
   ThreadState *ts = (ThreadState *)data;
   cleanup_thread_state(ts->my_replacement);
-  free(ts->my_replacement);
+  if (ts->my_replacement) {
+    free(ts->my_replacement);
+    ts->my_replacement = NULL;
+  }
   atomic_store_explicit(&ts->replacement_thread_state,
                         REPLACEMENT_THREAD_STATE_NONE, memory_order_relaxed);
   return NULL;
@@ -641,10 +646,10 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
   if (REPLACEMENT_THREAD_STATE_INIT_COMPLETE ==
       atomic_load_explicit(&ts->replacement_thread_state,
                            memory_order_relaxed)) {
-    memswap(&ts->my_replacement, &ts, sizeof(*ts));
+    ThreadState *r = ts->my_replacement;
+    memswap(ts->my_replacement, ts, sizeof(*ts));
     if (0 != pthread_create(&ts->replacement_thread, NULL,
-                            reset_thread_state_cleanup_old_runtime_thread,
-                            ts)) {
+                            reset_thread_state_cleanup_old_runtime_thread, r)) {
       release_logf("pthread_create failed: %s\n", strerror(errno));
       return -1;
     }
@@ -697,8 +702,8 @@ static int64_t memusage(const JSMemoryUsage *m) {
 static void *reset_thread_state_thread(void *data) {
   ThreadState *ts = (ThreadState *)data;
   ts->my_replacement = (ThreadState *)malloc(sizeof(ThreadState));
-  init_thread_state((ThreadState *)ts->my_replacement,
-                    ts->unix_socket_filename);
+  init_thread_state((ThreadState *)ts->my_replacement, ts->unix_socket_filename,
+                    ts->sockfd, ts->streamfd);
   atomic_store_explicit(&ts->replacement_thread_state,
                         REPLACEMENT_THREAD_STATE_INIT_COMPLETE,
                         memory_order_relaxed);
@@ -929,7 +934,6 @@ static int line_handler(const char *line, size_t len, void *data,
 
 static void *listen_thread_func(void *data) {
   ThreadState *ts = (ThreadState *)data;
-  JS_UpdateStackTop(ts->rt);
   listen_on_unix_socket(ts->unix_socket_filename, line_handler, (void *)ts);
   return NULL;
 }
@@ -1037,7 +1041,7 @@ static void SIGINT_handler(int sig) {
 
   for (int i = 0; i < atomic_load_explicit(&g_n_threads, memory_order_relaxed);
        ++i)
-    cleanup_thread_state(&g_thread_states[i]);
+    destroy_thread_state(&g_thread_states[i]);
 
   exit(1);
 }
@@ -1103,15 +1107,15 @@ int main(int argc, char *argv[]) {
 
   for (int n = 0; n < n_threads; ++n) {
     debug_logf("Creating thread %i\n", n);
-    if (0 !=
-        init_thread_state(&g_thread_states[n], g_cmd_args.socket_path[n])) {
+    if (0 != init_thread_state(&g_thread_states[n], g_cmd_args.socket_path[n],
+                               -1, -1)) {
       release_logf("Error initializing thread %i\n", n);
       if (g_module_bytecode_size != 0 && g_module_bytecode)
         munmap_or_warn((void *)g_module_bytecode, g_module_bytecode_size);
       pthread_mutex_destroy(&g_log_mutex);
       pthread_mutex_destroy(&g_cached_functions_mutex);
       for (int i = n - 1; i >= 0; --i)
-        cleanup_thread_state(&g_thread_states[i]);
+        destroy_thread_state(&g_thread_states[i]);
       wait_group_destroy(&g_thread_ready_wait_group);
       return 1;
     }
@@ -1119,7 +1123,7 @@ int main(int argc, char *argv[]) {
                             &g_thread_states[n])) {
       release_logf("pthread_create failed; exiting: %s", strerror(errno));
       for (int i = 0; i <= n; ++i)
-        cleanup_thread_state(&g_thread_states[i]);
+        destroy_thread_state(&g_thread_states[i]);
       global_cleanup();
       exit(1);
     }
@@ -1158,7 +1162,7 @@ int main(int argc, char *argv[]) {
 
   for (int i = 0; i < atomic_load_explicit(&g_n_threads, memory_order_relaxed);
        ++i)
-    cleanup_thread_state(&g_thread_states[i]);
+    destroy_thread_state(&g_thread_states[i]);
 
   for (int i = 0; i < atomic_load_explicit(&g_n_threads, memory_order_relaxed);
        ++i) {
