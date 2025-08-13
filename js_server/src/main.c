@@ -177,7 +177,6 @@ typedef struct ThreadState {
   int memory_increase_count;
   int64_t last_memory_usage;
   int last_n_cached_functions;
-  char *error_msg_buf;
   bool truncated;
   JSValue sourcemap_str;
   struct ThreadState *my_replacement;
@@ -231,7 +230,7 @@ static void listen_on_unix_socket(const char *unix_socket_filename,
     goto error;
   }
 
-  if (0 != socket_fchmod(ts->sockfd, 0600)) {
+  if (0 != socket_fchmod(ts->socket_state->sockfd, 0600)) {
     release_logf("Error setting permissions 0600 on socket %s: %s\n",
                  unix_socket_filename, strerror(errno));
     ts->exit_status = -1;
@@ -541,8 +540,9 @@ static int init_thread_state(ThreadState *ts, SocketState *socket_state) {
     ts->compiled_module = JS_UNDEFINED;
   if (JS_IsException(ts->compiled_module)) {
     release_log("Failed to load precompiled module\n");
+    char *error_msg_buf = calloc(ERROR_MSG_MAX_BYTES, sizeof(char));
     WBuf emb = {
-        .buf = ts->error_msg_buf, .index = 0, .length = ERROR_MSG_MAX_BYTES};
+        .buf = error_msg_buf, .index = 0, .length = ERROR_MSG_MAX_BYTES};
     JS_PrintValue(ts->ctx, write_to_buf, &emb.buf, JS_GetException(ts->ctx),
                   NULL);
     size_t bt_length;
@@ -556,6 +556,7 @@ static int init_thread_state(ThreadState *ts, SocketState *socket_state) {
     }
 
     JS_FreeValue(ts->ctx, ts->compiled_module);
+    free(error_msg_buf);
 
     // This return value will eventually lead to stuff getting
     // cleaned up by cleanup_js_runtime
@@ -565,8 +566,6 @@ static int init_thread_state(ThreadState *ts, SocketState *socket_state) {
   mutex_init(&ts->doing_js_stuff_mutex);
 
   JS_SetInterruptHandler(ts->rt, interrupt_handler, ts);
-
-  ts->error_msg_buf = calloc(ERROR_MSG_MAX_BYTES, sizeof(char));
 
   ts->socket_state = socket_state;
   // set to nonzero if program should eventually exit with non-zero exit code
@@ -606,9 +605,6 @@ static void cleanup_thread_state(ThreadState *ts) {
   // This could fail, but no useful error handling to be done (we're exiting
   // anyway).
   pthread_mutex_destroy(&ts->doing_js_stuff_mutex);
-
-  // Don't free error_msg_buf, as the replacement state can use it. This is
-  // freed in destroy_thread_state below.
 }
 
 static void destroy_thread_state(ThreadState *ts) {
@@ -626,8 +622,6 @@ static void destroy_thread_state(ThreadState *ts) {
     free(ts->my_replacement);
     ts->my_replacement = NULL;
   }
-
-  free(ts->error_msg_buf);
 }
 
 static void write_to_stream(ThreadState *ts, const char *buf, size_t len) {
@@ -780,8 +774,9 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
     mutex_unlock(&ts->doing_js_stuff_mutex);
     write_to_stream(ts, ts->current_uuid, ts->current_uuid_len);
     write_const_to_stream(ts, " exception ");
+    char *error_msg_buf = calloc(ERROR_MSG_MAX_BYTES, sizeof(char));
     WBuf emb = {
-        .buf = ts->error_msg_buf, .index = 0, .length = ERROR_MSG_MAX_BYTES};
+        .buf = error_msg_buf, .index = 0, .length = ERROR_MSG_MAX_BYTES};
     JSValue exception = JS_GetException(ts->ctx);
     JS_PrintValue(ts->ctx, write_to_buf, &emb, exception, NULL);
 
@@ -799,6 +794,9 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
     JS_FreeValue(ts->ctx, exception);
     JS_FreeValue(ts->ctx, parsed_arg);
     JS_FreeValue(ts->ctx, ret);
+
+    free(error_msg_buf);
+
     return ts->socket_state->stream_io_err;
   }
 
