@@ -134,14 +134,36 @@ enum {
   REPLACEMENT_THREAD_STATE_CLEANUP
 };
 
-// The state for each thread which runs a QuickJS VM.
-typedef struct ThreadState {
+typedef struct {
   const char *unix_socket_filename;
-  JSRuntime *rt;
-  JSContext *ctx;
   int sockfd;
   int streamfd;
   int stream_io_err;
+} SocketState;
+
+static void init_socket_state(SocketState *ss) {
+  ss->sockfd = -1;
+  ss->streamfd = -1;
+  ss->stream_io_err = 0;
+}
+
+static void cleanup_socket_state(SocketState *socket_state) {
+  // Don't add logs to this function as it may be called from a signal
+  // handler.
+
+  // We're about to exit, so we don't need to check for errors.
+  if (socket_state->streamfd != -1)
+    close(socket_state->streamfd);
+  if (socket_state->sockfd != -1)
+    close(socket_state->sockfd);
+  unlink(socket_state->unix_socket_filename);
+}
+
+// The state for each thread which runs a QuickJS VM.
+typedef struct ThreadState {
+  SocketState *socket_state;
+  JSRuntime *rt;
+  JSContext *ctx;
   int exit_status;
   pthread_mutex_t doing_js_stuff_mutex;
   int line_n;
@@ -155,7 +177,7 @@ typedef struct ThreadState {
   int memory_increase_count;
   int64_t last_memory_usage;
   int last_n_cached_functions;
-  char error_msg_buf[8192];
+  char *error_msg_buf;
   bool truncated;
   JSValue sourcemap_str;
   struct ThreadState *my_replacement;
@@ -203,8 +225,8 @@ static void listen_on_unix_socket(const char *unix_socket_filename,
   char *line_buf_buffer = calloc(LINE_BUF_BYTES, sizeof(char));
   LineBuf line_buf = {.buf = line_buf_buffer, .size = LINE_BUF_BYTES};
 
-  ts->sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
-  if (ts->sockfd < 0) {
+  ts->socket_state->sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
+  if (ts->socket_state->sockfd < 0) {
     ts->exit_status = -1;
     goto error;
   }
@@ -231,11 +253,12 @@ static void listen_on_unix_socket(const char *unix_socket_filename,
     ts->exit_status = -1;
     goto error;
   }
-  if (0 != bind(ts->sockfd, (struct sockaddr *)&addr, sizeof(addr))) {
+  if (0 !=
+      bind(ts->socket_state->sockfd, (struct sockaddr *)&addr, sizeof(addr))) {
     ts->exit_status = -1;
     goto error;
   }
-  if (0 != listen(ts->sockfd, SOMAXCONN)) {
+  if (0 != listen(ts->socket_state->sockfd, SOMAXCONN)) {
     ts->exit_status = -1;
     goto error;
   }
@@ -257,10 +280,10 @@ static void listen_on_unix_socket(const char *unix_socket_filename,
     goto error_no_inc;
   }
 
-  ts->streamfd = -1;
+  ts->socket_state->streamfd = -1;
   for (;;) {
   accept_loop:
-    switch (poll_fd(ts->sockfd)) {
+    switch (poll_fd(ts->socket_state->sockfd)) {
     case READY:
       break;
     case GO_AROUND:
@@ -272,9 +295,10 @@ static void listen_on_unix_socket(const char *unix_socket_filename,
     }
 
     socklen_t streamfd_size = sizeof(struct sockaddr);
-    ts->streamfd = accept(ts->sockfd, (struct sockaddr *)&addr, &streamfd_size);
+    ts->socket_state->streamfd = accept(
+        ts->socket_state->sockfd, (struct sockaddr *)&addr, &streamfd_size);
     debug_log("Accepted on ts->socket\n");
-    if (ts->streamfd < 0) {
+    if (ts->socket_state->streamfd < 0) {
       ts->exit_status = -1;
       goto error_no_inc;
     }
@@ -283,7 +307,7 @@ static void listen_on_unix_socket(const char *unix_socket_filename,
 
   for (;;) {
   read_loop:
-    switch (poll_fd(ts->streamfd)) {
+    switch (poll_fd(ts->socket_state->streamfd)) {
     case READY:
       break;
     case GO_AROUND:
@@ -298,8 +322,9 @@ static void listen_on_unix_socket(const char *unix_socket_filename,
     // just call it on every loop.
     JS_UpdateStackTop(ts->rt);
 
-    int exit_value = line_buf_read(&line_buf, g_cmd_args.socket_sep_char,
-                                   lb_read, &ts->streamfd, line_handler, data);
+    int exit_value =
+        line_buf_read(&line_buf, g_cmd_args.socket_sep_char, lb_read,
+                      &ts->socket_state->streamfd, line_handler, data);
     if (exit_value == EXIT_ON_QUIT_COMMAND)
       ; // "?quit"
     else if (exit_value < 0)
@@ -317,14 +342,14 @@ error:
     release_log(
         "Error incrementing thread ready wait group in error condition\n");
 error_no_inc:
-  if (ts->streamfd >= 0)
-    close(ts->streamfd);
-  if (ts->sockfd >= 0)
-    close(ts->sockfd);
+  if (ts->socket_state->streamfd >= 0)
+    close(ts->socket_state->streamfd);
+  if (ts->socket_state->sockfd >= 0)
+    close(ts->socket_state->sockfd);
   // indicate they're closed so we don't try to close them again in the main
   // teardown
-  ts->streamfd = -1;
-  ts->sockfd = -1;
+  ts->socket_state->streamfd = -1;
+  ts->socket_state->sockfd = -1;
 
   free(line_buf_buffer);
 
@@ -478,8 +503,7 @@ static const char *get_backtrace(ThreadState *ts, const char *backtrace,
   return bt_str;
 }
 
-static int init_thread_state(ThreadState *ts, const char *unix_socket_filename,
-                             int sockfd, int streamfd) {
+static int init_thread_state(ThreadState *ts, SocketState *socket_state) {
   ts->rt = JS_NewRuntime();
   if (!ts->rt) {
     release_log("Failed to create JS runtime\n");
@@ -517,10 +541,8 @@ static int init_thread_state(ThreadState *ts, const char *unix_socket_filename,
     ts->compiled_module = JS_UNDEFINED;
   if (JS_IsException(ts->compiled_module)) {
     release_log("Failed to load precompiled module\n");
-    WBuf emb = {.buf = ts->error_msg_buf,
-                .index = 0,
-                .length =
-                    sizeof(ts->error_msg_buf) / sizeof(ts->error_msg_buf[0])};
+    WBuf emb = {
+        .buf = ts->error_msg_buf, .index = 0, .length = ERROR_MSG_MAX_BYTES};
     JS_PrintValue(ts->ctx, write_to_buf, &emb.buf, JS_GetException(ts->ctx),
                   NULL);
     size_t bt_length;
@@ -540,15 +562,13 @@ static int init_thread_state(ThreadState *ts, const char *unix_socket_filename,
     return -1;
   }
 
-  ts->unix_socket_filename = unix_socket_filename;
-  ts->sockfd = sockfd;
-  ts->streamfd = streamfd;
-
   mutex_init(&ts->doing_js_stuff_mutex);
 
   JS_SetInterruptHandler(ts->rt, interrupt_handler, ts);
 
-  ts->stream_io_err = 0;
+  ts->error_msg_buf = calloc(ERROR_MSG_MAX_BYTES, sizeof(char));
+
+  ts->socket_state = socket_state;
   // set to nonzero if program should eventually exit with non-zero exit code
   ts->exit_status = 0;
   ts->line_n = 0;
@@ -586,17 +606,16 @@ static void cleanup_thread_state(ThreadState *ts) {
   // This could fail, but no useful error handling to be done (we're exiting
   // anyway).
   pthread_mutex_destroy(&ts->doing_js_stuff_mutex);
+
+  // Don't free error_msg_buf, as the replacement state can use it. This is
+  // freed in destroy_thread_state below.
 }
 
 static void destroy_thread_state(ThreadState *ts) {
   // Don't add logs to this function as it may be called from a signal
   // handler.
 
-  // We're about to exit, so we don't need to check for errors.
-  if (ts->streamfd != -1) {
-    close(ts->streamfd);
-  }
-  unlink(ts->unix_socket_filename);
+  cleanup_socket_state(ts->socket_state);
 
   cleanup_thread_state(ts);
 
@@ -607,11 +626,13 @@ static void destroy_thread_state(ThreadState *ts) {
     free(ts->my_replacement);
     ts->my_replacement = NULL;
   }
+
+  free(ts->error_msg_buf);
 }
 
 static void write_to_stream(ThreadState *ts, const char *buf, size_t len) {
-  if (0 != write_all(ts->streamfd, buf, len)) {
-    ts->stream_io_err = -1;
+  if (0 != write_all(ts->socket_state->streamfd, buf, len)) {
+    ts->socket_state->stream_io_err = -1;
     release_logf("Error writing to socket: %s\n", strerror(errno));
     return;
   }
@@ -702,8 +723,7 @@ static int64_t memusage(const JSMemoryUsage *m) {
 static void *reset_thread_state_thread(void *data) {
   ThreadState *ts = (ThreadState *)data;
   ts->my_replacement = (ThreadState *)malloc(sizeof(ThreadState));
-  init_thread_state((ThreadState *)ts->my_replacement, ts->unix_socket_filename,
-                    ts->sockfd, ts->streamfd);
+  init_thread_state((ThreadState *)ts->my_replacement, ts->socket_state);
   atomic_store_explicit(&ts->replacement_thread_state,
                         REPLACEMENT_THREAD_STATE_INIT_COMPLETE,
                         memory_order_relaxed);
@@ -731,7 +751,7 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
     mutex_unlock(&ts->doing_js_stuff_mutex);
     write_to_stream(ts, ts->current_uuid, ts->current_uuid_len);
     write_const_to_stream(ts, " exception \"error compiling command\"\n");
-    return ts->stream_io_err;
+    return ts->socket_state->stream_io_err;
   }
 
   mutex_lock(&ts->doing_js_stuff_mutex);
@@ -746,7 +766,7 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
     mutex_unlock(&ts->doing_js_stuff_mutex);
     write_to_stream(ts, ts->current_uuid, ts->current_uuid_len);
     write_const_to_stream(ts, " exception \"JSON input parse error\"\n");
-    return ts->stream_io_err;
+    return ts->socket_state->stream_io_err;
   }
 
   JSValue argv[] = {ts->compiled_module, parsed_arg};
@@ -760,10 +780,8 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
     mutex_unlock(&ts->doing_js_stuff_mutex);
     write_to_stream(ts, ts->current_uuid, ts->current_uuid_len);
     write_const_to_stream(ts, " exception ");
-    WBuf emb = {.buf = ts->error_msg_buf,
-                .index = 0,
-                .length =
-                    sizeof(ts->error_msg_buf) / sizeof(ts->error_msg_buf[0])};
+    WBuf emb = {
+        .buf = ts->error_msg_buf, .index = 0, .length = ERROR_MSG_MAX_BYTES};
     JSValue exception = JS_GetException(ts->ctx);
     JS_PrintValue(ts->ctx, write_to_buf, &emb, exception, NULL);
 
@@ -781,7 +799,7 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
     JS_FreeValue(ts->ctx, exception);
     JS_FreeValue(ts->ctx, parsed_arg);
     JS_FreeValue(ts->ctx, ret);
-    return ts->stream_io_err;
+    return ts->socket_state->stream_io_err;
   }
 
   JSValue stringified =
@@ -795,7 +813,7 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
     write_to_stream(ts, ts->current_uuid, ts->current_uuid_len);
     write_const_to_stream(
         ts, " exception \"error attempting to JSON serialize return value\"\n");
-    return ts->stream_io_err;
+    return ts->socket_state->stream_io_err;
   }
 
   if (JS_IsUndefined(stringified)) {
@@ -805,7 +823,7 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
     write_to_stream(ts, ts->current_uuid, ts->current_uuid_len);
     write_const_to_stream(ts, " exception \"unserializable return value\"\n");
     mutex_unlock(&ts->doing_js_stuff_mutex);
-    return ts->stream_io_err;
+    return ts->socket_state->stream_io_err;
   }
 
   size_t sz;
@@ -861,13 +879,14 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
 
   mutex_unlock(&ts->doing_js_stuff_mutex);
 
-  return ts->stream_io_err;
+  return ts->socket_state->stream_io_err;
 }
 
 static int line_handler(const char *line, size_t len, void *data,
                         bool truncated) {
   ThreadState *ts = (ThreadState *)data;
-  debug_logf("LINE %i on %s: %s\n", ts->line_n, ts->unix_socket_filename, line);
+  debug_logf("LINE %i on %s: %s\n", ts->line_n,
+             ts->socket_state->unix_socket_filename, line);
 
   if (!truncated && !strcmp("?reset", line)) {
     if (!JS_IsUndefined(ts->compiled_query)) {
@@ -934,11 +953,13 @@ static int line_handler(const char *line, size_t len, void *data,
 
 static void *listen_thread_func(void *data) {
   ThreadState *ts = (ThreadState *)data;
-  listen_on_unix_socket(ts->unix_socket_filename, line_handler, (void *)ts);
+  listen_on_unix_socket(ts->socket_state->unix_socket_filename, line_handler,
+                        (void *)ts);
   return NULL;
 }
 
 static pthread_t g_threads[MAX_THREADS];
+static SocketState g_socket_states[MAX_THREADS];
 static ThreadState g_thread_states[MAX_THREADS];
 
 static const uint8_t *load_module_bytecode(const char *filename,
@@ -1107,8 +1128,8 @@ int main(int argc, char *argv[]) {
 
   for (int n = 0; n < n_threads; ++n) {
     debug_logf("Creating thread %i\n", n);
-    if (0 != init_thread_state(&g_thread_states[n], g_cmd_args.socket_path[n],
-                               -1, -1)) {
+    init_socket_state(&g_socket_states[n]);
+    if (0 != init_thread_state(&g_thread_states[n], &g_socket_states[n])) {
       release_logf("Error initializing thread %i\n", n);
       if (g_module_bytecode_size != 0 && g_module_bytecode)
         munmap_or_warn((void *)g_module_bytecode, g_module_bytecode_size);
