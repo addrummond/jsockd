@@ -178,11 +178,9 @@ for platform in $platforms; do
             git apply ../../fil-c-quickjs.patch
             CFLAGS="$DEBUG_CFLAGS" make CC=~/filc-0.668.8-linux-x86_64/build/bin/clang CONFIG_LTO= CONFIG_CLANG=y
             generate_qjsc_wrapper qjsc > ../../tools-bin/compile_es6_module_Linux_x86_64_filc
-            git apply -R ../../fil-c-quickjs.patch
             mv libquickjs.a /tmp/libquickjs_Linux_x86_64_filc_Debug.a
             # Release
             make clean
-            git apply ../../fil-c-quickjs.patch
             CFLAGS="$FILC_RELEASE_CFLAGS" make CC=~/filc-0.668.8-linux-x86_64/build/bin/clang CONFIG_LTO= CONFIG_CLANG=y
             git apply -R ../../fil-c-quickjs.patch
             mv libquickjs.a /tmp/libquickjs_Linux_x86_64_filc_Release.a
