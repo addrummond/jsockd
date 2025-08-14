@@ -139,10 +139,7 @@ case $1 in
     run_js_server_e2e_tests)
         for test_script in js_server/tests/e2e/*.sh; do
             if [ -f "$test_script" ]; then
-                echo
-                echo
-                echo "Running E2E test script: $test_script"
-                echo
+                printf "\n\nRunning E2E test script %s\n\n" "$test_script"
                 $test_script
             fi
         done
