@@ -179,6 +179,8 @@ case $1 in
             cp ../tools-bin/compile_es6_module_Linux_x86_64 jsockd-release-artifacts/jsockd-linux-x86_64_filc/compile_es6_module
             openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out jsockd-release-artifacts/jsockd-linux-x86_64_filc/js_server_signature.bin -rawin -in jsockd-release-artifacts/jsockd-linux-x86_64_filc/js_server/js_server
             openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out jsockd-release-artifacts/jsockd-linux-x86_64_filc/ld-yolo-x86_64.so_signature.bin -rawin -in jsockd-release-artifacts/jsockd-linux-x86_64_filc/js_server/ld-yolo-x86_64.so
+            openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out jsockd-release-artifacts/jsockd-linux-x86_64_filc/libc.so_signature.bin -rawin -in jsockd-release-artifacts/jsockd-linux-x86_64_filc/js_server/libc.so
+            openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out jsockd-release-artifacts/jsockd-linux-x86_64_filc/libpizlo.so_signature.bin -rawin -in jsockd-release-artifacts/jsockd-linux-x86_64_filc/js_server/libpizlo.so
             openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out jsockd-release-artifacts/jsockd-linux-x86_64_filc/compile_es6_module_signature.bin -rawin -in jsockd-release-artifacts/jsockd-linux-x86_64_filc/compile_es6_module
             tar -czf jsockd-release-artifacts/jsockd-linux-x86_64_filc.tar.gz jsockd-release-artifacts/jsockd-linux-x86_64_filc
 
