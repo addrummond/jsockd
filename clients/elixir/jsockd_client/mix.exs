@@ -102,30 +102,52 @@ defmodule JsockdClient.MixProject do
           "js_server"
         ])
 
+      filc? =
+        String.contains?(platform, "x86_64") and String.contains?(platform, "linux") and
+          use_filc_when_available?
+
       # The Fil-C build is tucked away inside a js_server folder with its .so friends.
       js_server_binary_filename =
-        if String.contains?(platform, "x86_64") and String.contains?(platform, "linux") and
-             use_filc_when_available? do
+        if filc? do
           Path.join(js_server_binary_filename, "js_server")
         else
           js_server_binary_filename
         end
 
-      js_server_signature_filename =
+      release_dir =
         Path.join([
           priv_dir,
           "jsockd-release-artifacts",
-          String.replace(release_filename, ".tar.gz", ""),
-          "js_server_signature.bin"
+          String.replace(release_filename, ".tar.gz", "")
         ])
 
-      # TODO: Sig verification for the .so libs in the Fil-C build.
-      unless verify_signature(
-               File.read!(js_server_signature_filename),
-               File.read!(js_server_binary_filename)
-             ) do
-        raise "Signature verification failed for JSockD server binary."
-      end
+      signature_verifications = [
+        {
+          js_server_binary_filename,
+          Path.join(
+            release_dir,
+            "js_server_signature.bin"
+          )
+        }
+        | if filc? do
+            [
+              with_sig(Path.join([release_dir, "js_server", "ld-yolo-x86_64.so"])),
+              with_sig(Path.join([release_dir, "js_server", "libc.so"])),
+              with_sig(Path.join([release_dir, "js_server", "libpizlo.so"]))
+            ]
+          else
+            []
+          end
+      ]
+
+      Enum.each(signature_verifications, fn {filename, sigfilename} ->
+        unless verify_signature(
+                 File.read!(sigfilename),
+                 File.read!(filename)
+               ) do
+          raise "Signature verification failed for JSockD server binary."
+        end
+      end)
 
       File.chmod!(
         js_server_binary_filename,
@@ -188,5 +210,9 @@ defmodule JsockdClient.MixProject do
   defp verify_signature(signature, challenge) do
     public_key = Base.decode16!(@jsockd_binary_public_key, case: :mixed)
     :crypto.verify(:eddsa, :none, challenge, signature, [public_key, :ed25519])
+  end
+
+  defp with_sig(filename) do
+    {filename, Path.join(Path.dirname(filename), "#{Path.basename(filename)}_signature.bin")}
   end
 end
