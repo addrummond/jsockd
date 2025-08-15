@@ -174,6 +174,7 @@ typedef struct ThreadState {
   int last_n_cached_functions;
   bool truncated;
   JSValue sourcemap_str;
+  int64_t last_command_exec_time_ns;
   struct ThreadState *my_replacement;
   atomic_int replacement_thread_state;
   pthread_t replacement_thread;
@@ -578,6 +579,7 @@ static int init_thread_state(ThreadState *ts, SocketState *socket_state) {
   ts->memory_increase_count = 0;
   ts->last_memory_usage = 0;
   ts->last_n_cached_functions = 1;
+  ts->last_command_exec_time_ns = 0;
   ts->my_replacement = NULL;
   atomic_init(&ts->replacement_thread_state, REPLACEMENT_THREAD_STATE_NONE);
 
@@ -839,18 +841,13 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
     return -1;
   }
 
-  int64_t exec_time_ns = ns_time_diff(&now, &ts->last_js_execution_start);
-  char exec_time_buf[21]; // 20 digits for int64_t + 1 for zeroterm
-  int exec_time_len =
-      snprintf(exec_time_buf, sizeof(exec_time_buf), "%" PRId64, exec_time_ns);
+  ts->last_command_exec_time_ns =
+      ns_time_diff(&now, &ts->last_js_execution_start);
 
   size_t sz;
   const char *str = JS_ToCStringLen(ts->ctx, &sz, stringified);
 
   write_to_stream(ts, ts->current_uuid, ts->current_uuid_len);
-  write_const_to_stream(ts, " ");
-  write_to_stream(ts, exec_time_buf,
-                  MIN(exec_time_len, (int)(sizeof(exec_time_buf) - 1)));
   write_const_to_stream(ts, " ");
   write_to_stream(ts, str, sz);
   write_const_to_stream(ts, "\n");
@@ -910,15 +907,29 @@ static int line_handler(const char *line, size_t len, void *data,
   debug_logf("LINE %i on %s: %s\n", ts->line_n,
              ts->socket_state->unix_socket_filename, line);
 
-  if (!truncated && !strcmp("?reset", line)) {
-    if (!JS_IsUndefined(ts->compiled_query)) {
-      JS_FreeValue(ts->ctx, ts->compiled_query);
-      ts->compiled_query = JS_UNDEFINED;
+  if (!truncated) {
+    if (!strcmp("?reset", line)) {
+      if (!JS_IsUndefined(ts->compiled_query)) {
+        JS_FreeValue(ts->ctx, ts->compiled_query);
+        ts->compiled_query = JS_UNDEFINED;
+      }
+      ts->line_n = 0;
+      ts->truncated = false;
+      write_const_to_stream(ts, "reset\n");
+      return 0;
     }
-    ts->line_n = 0;
-    ts->truncated = false;
-    write_const_to_stream(ts, "reset\n");
-    return 0;
+    if (!strcmp("?exectime", line)) {
+      char exec_time_buf[21]; // 20 digits for int64_t, + 1 for zeroterm
+      int exec_time_len = snprintf(
+          exec_time_buf, sizeof(exec_time_buf) / sizeof(exec_time_buf[0]),
+          "%" PRId64, ts->last_command_exec_time_ns);
+      write_to_stream(
+          ts, exec_time_buf,
+          MIN(exec_time_len,
+              (int)(sizeof(exec_time_buf) / sizeof(exec_time_buf[0]) - 1)));
+      write_const_to_stream(ts, "\n");
+      return 0;
+    }
   }
 
   // Allow the truncation logic to be triggered by a special '?truncated' line
