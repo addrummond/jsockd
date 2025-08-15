@@ -5,7 +5,6 @@
 #include "custom_module_loader.h"
 #include "quickjs-libc.h"
 #include "quickjs.h"
-#include "utils.h"
 #include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>
