@@ -64,10 +64,21 @@ void munmap_or_warn(const void *addr, size_t length) {
   }
 }
 
-int64_t us_time_diff(const struct timespec *t1, const struct timespec *t2) {
-  int64_t us1 = (int64_t)(t1->tv_sec * 1000000ULL + t1->tv_nsec / 1000ULL);
-  int64_t us2 = (int64_t)(t2->tv_sec * 1000000ULL + t2->tv_nsec / 1000ULL);
-  return us1 - us2;
+int64_t ns_time_diff(const struct timespec *t1, const struct timespec *t2) {
+  int64_t tv_sec1 = (int64_t)t1->tv_sec;
+  int64_t tv_sec2 = (int64_t)t2->tv_sec;
+
+  if (tv_sec1 < tv_sec2) {
+    tv_sec2 -= tv_sec1;
+    tv_sec1 = 0;
+  } else {
+    tv_sec1 -= tv_sec2;
+    tv_sec2 = 0;
+  }
+
+  int64_t ns1 = (int64_t)(tv_sec1 * 1000000ULL * 1000ULL + t1->tv_nsec);
+  int64_t ns2 = (int64_t)(tv_sec2 * 1000000ULL * 1000ULL + t2->tv_nsec);
+  return ns1 - ns2;
 }
 
 // swap two small blocks of memory of a given size

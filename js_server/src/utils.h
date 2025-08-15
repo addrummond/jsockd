@@ -19,7 +19,7 @@ void mutex_init_(pthread_mutex_t *m, const char *file, int line);
 void release_logf(const char *fmt, ...);
 void release_log(const char *s);
 void munmap_or_warn(const void *addr, size_t length);
-int64_t us_time_diff(const struct timespec *t1, const struct timespec *t2);
+int64_t ns_time_diff(const struct timespec *t1, const struct timespec *t2);
 void memswap_small(void *m1, void *m2, size_t size);
 
 #define mutex_lock(m) mutex_lock_((m), __FILE__, __LINE__)

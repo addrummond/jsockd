@@ -416,13 +416,16 @@ static int interrupt_handler(JSRuntime *rt, void *opaque) {
   struct timespec *start = &state->last_js_execution_start;
   if (start->tv_sec != 0) {
     struct timespec now;
-    clock_gettime(CLOCK_MONOTONIC_RAW, &now);
-    int64_t delta_us = us_time_diff(&now, start);
-    if (delta_us > 0 &&
-        (uint64_t)delta_us > g_cmd_args.max_command_runtime_us) {
+    if (0 != clock_gettime(CLOCK_MONOTONIC_RAW, &now)) {
+      release_log("Error getting time in interrupt handler\n");
+      return 0;
+    }
+    int64_t delta_ns = ns_time_diff(&now, start);
+    if (delta_ns > 0 &&
+        (uint64_t)delta_ns > g_cmd_args.max_command_runtime_us * 1000ULL) {
       release_logf("Command runtime of %" PRIu64 "us exceeded %" PRIu64
                    "us, interrupting\n",
-                   delta_us, g_cmd_args.max_command_runtime_us);
+                   delta_ns / 1000ULL, g_cmd_args.max_command_runtime_us);
       return 1;
     }
   }
@@ -744,7 +747,14 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
   }
 
   mutex_lock(&ts->doing_js_stuff_mutex);
-  clock_gettime(CLOCK_MONOTONIC_RAW, &ts->last_js_execution_start);
+  if (0 != clock_gettime(CLOCK_MONOTONIC_RAW, &ts->last_js_execution_start)) {
+    mutex_lock(&ts->doing_js_stuff_mutex);
+    JS_FreeValue(ts->ctx, ts->compiled_query);
+    mutex_unlock(&ts->doing_js_stuff_mutex);
+    release_logf("Error getting time in handle_line_3_parameter [1]\n");
+    return -1;
+  }
+
   JSValue parsed_arg = JS_ParseJSON(ts->ctx, line, len, "<input>");
   if (JS_IsException(parsed_arg)) {
     debug_logf("Error parsing JSON argument: <<END\n%.*sEND\n", len, line);
@@ -819,10 +829,28 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
     return ts->socket_state->stream_io_err;
   }
 
+  struct timespec now;
+  if (0 != clock_gettime(CLOCK_MONOTONIC_RAW, &now)) {
+    JS_FreeValue(ts->ctx, parsed_arg);
+    JS_FreeValue(ts->ctx, ret);
+    JS_FreeValue(ts->ctx, stringified);
+    mutex_unlock(&ts->doing_js_stuff_mutex);
+    release_logf("Error getting time in handle_line_3_parameter [2]\n");
+    return -1;
+  }
+
+  int64_t exec_time_ns = ns_time_diff(&now, &ts->last_js_execution_start);
+  char exec_time_buf[21]; // 20 digits for int64_t + 1 for zeroterm
+  int exec_time_len =
+      snprintf(exec_time_buf, sizeof(exec_time_buf), "%" PRId64, exec_time_ns);
+
   size_t sz;
   const char *str = JS_ToCStringLen(ts->ctx, &sz, stringified);
 
   write_to_stream(ts, ts->current_uuid, ts->current_uuid_len);
+  write_const_to_stream(ts, " ");
+  write_to_stream(ts, exec_time_buf,
+                  MIN(exec_time_len, (int)(sizeof(exec_time_buf) - 1)));
   write_const_to_stream(ts, " ");
   write_to_stream(ts, str, sz);
   write_const_to_stream(ts, "\n");
