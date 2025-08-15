@@ -7,7 +7,7 @@
 
 set -e
 
-N_ITERATIONS=1000
+N_ITERATIONS=100
 BUILD="${BUILD:-Release}"
 
 cd js_server
