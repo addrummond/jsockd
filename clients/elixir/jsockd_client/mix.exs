@@ -55,7 +55,27 @@ defmodule JsockdClient.MixProject do
     release_filename = Path.basename(release_url)
     release_path = Path.join(priv_dir, release_filename)
 
-    unless File.exists?(Path.join([priv_dir, "jsockd-release-artifacts/jsockd/js_server"])) and
+    js_server_binary_filename =
+      Path.join([
+        priv_dir,
+        "jsockd-release-artifacts",
+        String.replace(release_filename, ".tar.gz", ""),
+        "js_server"
+      ])
+
+    filc? =
+      String.contains?(platform, "x86_64") and String.contains?(platform, "linux") and
+        use_filc_when_available?
+
+    # The Fil-C build is tucked away inside a js_server folder with its .so friends.
+    js_server_binary_filename =
+      if filc? do
+        Path.join(js_server_binary_filename, "js_server")
+      else
+        js_server_binary_filename
+      end
+
+    unless File.exists?(js_server_binary_filename) and
              File.exists?(
                Path.join([
                  priv_dir,
@@ -93,26 +113,6 @@ defmodule JsockdClient.MixProject do
         ])
 
       File.rm!(release_path)
-
-      js_server_binary_filename =
-        Path.join([
-          priv_dir,
-          "jsockd-release-artifacts",
-          String.replace(release_filename, ".tar.gz", ""),
-          "js_server"
-        ])
-
-      filc? =
-        String.contains?(platform, "x86_64") and String.contains?(platform, "linux") and
-          use_filc_when_available?
-
-      # The Fil-C build is tucked away inside a js_server folder with its .so friends.
-      js_server_binary_filename =
-        if filc? do
-          Path.join(js_server_binary_filename, "js_server")
-        else
-          js_server_binary_filename
-        end
 
       release_dir =
         Path.join([
@@ -213,6 +213,7 @@ defmodule JsockdClient.MixProject do
   end
 
   defp with_sig(filename) do
-    {filename, Path.join(Path.dirname(filename), "#{Path.basename(filename)}_signature.bin")}
+    {filename,
+     Path.join(Path.dirname(Path.dirname(filename)), "#{Path.basename(filename)}_signature.bin")}
   end
 end
