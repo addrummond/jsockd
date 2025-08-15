@@ -907,31 +907,6 @@ static int line_handler(const char *line, size_t len, void *data,
   debug_logf("LINE %i on %s: %s\n", ts->line_n,
              ts->socket_state->unix_socket_filename, line);
 
-  if (!truncated) {
-    if (!strcmp("?reset", line)) {
-      if (!JS_IsUndefined(ts->compiled_query)) {
-        JS_FreeValue(ts->ctx, ts->compiled_query);
-        ts->compiled_query = JS_UNDEFINED;
-      }
-      ts->line_n = 0;
-      ts->truncated = false;
-      write_const_to_stream(ts, "reset\n");
-      return 0;
-    }
-    if (!strcmp("?exectime", line)) {
-      char exec_time_buf[21]; // 20 digits for int64_t, + 1 for zeroterm
-      int exec_time_len = snprintf(
-          exec_time_buf, sizeof(exec_time_buf) / sizeof(exec_time_buf[0]),
-          "%" PRId64, ts->last_command_exec_time_ns);
-      write_to_stream(
-          ts, exec_time_buf,
-          MIN(exec_time_len,
-              (int)(sizeof(exec_time_buf) / sizeof(exec_time_buf[0]) - 1)));
-      write_const_to_stream(ts, "\n");
-      return 0;
-    }
-  }
-
   // Allow the truncation logic to be triggered by a special '?truncated' line
   // in debug builds so that we don't have to generate large inputs in the
   // Valgrind tests.
@@ -965,6 +940,29 @@ static int line_handler(const char *line, size_t len, void *data,
     write_const_to_stream(ts, "quit\n");
     return EXIT_ON_QUIT_COMMAND;
   }
+  if (!strcmp("?reset", line)) {
+    if (!JS_IsUndefined(ts->compiled_query)) {
+      JS_FreeValue(ts->ctx, ts->compiled_query);
+      ts->compiled_query = JS_UNDEFINED;
+    }
+    ts->line_n = 0;
+    ts->truncated = false;
+    write_const_to_stream(ts, "reset\n");
+    return 0;
+  }
+  if (!strcmp("?exectime", line)) {
+    char exec_time_buf[21]; // 20 digits for int64_t, + 1 for zeroterm
+    int exec_time_len = snprintf(
+        exec_time_buf, sizeof(exec_time_buf) / sizeof(exec_time_buf[0]),
+        "%" PRId64, ts->last_command_exec_time_ns);
+    write_to_stream(
+        ts, exec_time_buf,
+        MIN(exec_time_len,
+            (int)(sizeof(exec_time_buf) / sizeof(exec_time_buf[0]) - 1)));
+    write_const_to_stream(ts, "\n");
+    return 0;
+  }
+
   if (line[0] == '?') {
     write_const_to_stream(ts, "bad command\n");
     return 0;
