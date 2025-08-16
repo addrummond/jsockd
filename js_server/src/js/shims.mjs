@@ -17,6 +17,7 @@ export function TextEncoder(encoding) {
   } else {
     this.encoding = "utf-8";
     this.encode = function (str) {
+      return str;
       if (typeof str !== "string") {
         throw new TypeError("passed argument must be of type string");
       }
