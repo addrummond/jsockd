@@ -146,6 +146,7 @@ echo "Regular x86_64 server started for NodeJS bench..."
 rm -f /tmp/jsockd_filc_relative_bench_vs_node_command_input
 i=0
 while [ $i -lt $N_VS_NODE_ITERATIONS ]; do
+   echo "Input loop $i"
    printf "x\nm => m.renderToString(m.createElement(m.AccordionDemo))\n99\n?exectime\n" >> /tmp/jsockd_filc_relative_bench_vs_node_command_input
    i=$(($i + 1))
 done
