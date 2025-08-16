@@ -1,2 +1,1 @@
-- Signature veritication in mix.exs for the .so files in the Fil-C build
 - Turn js_server/tests/e2e/sourcemaps/todo_not_yet_a_test.sh into a proper test
