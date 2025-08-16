@@ -739,8 +739,8 @@ static int handle_line_2_query(ThreadState *ts, const char *line, int len) {
       add_cached_function(uid, bytecode, bytecode_size);
       ts->compiled_query = func_from_bytecode(ts->ctx, bytecode, bytecode_size);
     }
+    mutex_unlock(&ts->doing_js_stuff_mutex);
   }
-  mutex_unlock(&ts->doing_js_stuff_mutex);
 
   ts->line_n++;
   return 0;
