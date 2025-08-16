@@ -34,7 +34,7 @@ cd js_server
 
 ./mk.sh Debug
 (
-    ./build_Debug/js_server -m /tmp/example_module.qjsb -s /tmp/jsockd_test_sock
+    ./build_Debug/js_server -m /tmp/example_module.qjsb -s /tmp/jsockd_test_sock > /tmp/jsockd_fuzz_test_server_output 2>&1
     echo $? > /tmp/jsockd_fuzz_test_exit_code
 ) >/dev/null 2>&1 &
 server_pid=$!
@@ -70,6 +70,8 @@ if ! [ -f /tmp/jsockd_fuzz_test_exit_code ]; then
     echo "___START___"
     base64 /tmp/jsockd_fuzz_test_random_data
     echo "___END___"
+    echo "The server output:"
+    cat /tmp/jsockd_fuzz_test_server_output
     exit 1
 else
     echo "The last 3 lines of the server output:"
@@ -88,6 +90,8 @@ else
         echo "___START___"
         base64 /tmp/jsockd_fuzz_test_random_data
         echo "___END___"
+        echo "The server output:"
+        cat /tmp/jsockd_fuzz_test_server_output
     fi
     exit $exit_code
 fi
