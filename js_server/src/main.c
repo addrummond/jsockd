@@ -652,6 +652,8 @@ static void write_to_stream(ThreadState *ts, const char *buf, size_t len) {
 
 static void *reset_thread_state_cleanup_old_runtime_thread(void *data) {
   ThreadState *ts = (ThreadState *)data;
+  atomic_store_explicit(&ts->replacement_thread_state,
+                        REPLACEMENT_THREAD_STATE_CLEANUP, memory_order_relaxed);
   cleanup_thread_state(ts->my_replacement);
   if (ts->my_replacement) {
     free(ts->my_replacement);
@@ -694,9 +696,6 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
     }
     ThreadState *r = ts->my_replacement;
     memswap_small(ts->my_replacement, ts, sizeof(*ts));
-    atomic_store_explicit(&ts->replacement_thread_state,
-                          REPLACEMENT_THREAD_STATE_CLEANUP,
-                          memory_order_relaxed);
     if (0 != pthread_create(&ts->replacement_thread, NULL,
                             reset_thread_state_cleanup_old_runtime_thread, r)) {
       release_logf("pthread_create failed: %s\n", strerror(errno));
@@ -747,6 +746,8 @@ static int64_t memusage(const JSMemoryUsage *m) {
 
 static void *reset_thread_state_thread(void *data) {
   ThreadState *ts = (ThreadState *)data;
+  atomic_store_explicit(&ts->replacement_thread_state,
+                        REPLACEMENT_THREAD_STATE_INIT, memory_order_relaxed);
   ts->my_replacement = (ThreadState *)malloc(sizeof(ThreadState));
   init_thread_state((ThreadState *)ts->my_replacement, ts->socket_state);
   atomic_store_explicit(&ts->replacement_thread_state,
@@ -921,9 +922,6 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
           mutex_unlock(&ts->doing_js_stuff_mutex);
           return -1;
         }
-        atomic_store_explicit(&ts->replacement_thread_state,
-                              REPLACEMENT_THREAD_STATE_INIT,
-                              memory_order_relaxed);
 
 #ifdef CMAKE_BUILD_TYPE_DEBUG
         ts->manually_trigger_thread_state_reset = false;
