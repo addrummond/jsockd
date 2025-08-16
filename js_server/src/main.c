@@ -1277,14 +1277,14 @@ int main(int argc, char *argv[]) {
   // logging mutex is now destroyed and we're only running one thread, so we can
   // use stdio directly
   if (CMAKE_BUILD_TYPE_IS_DEBUG)
-    fputs("Global cleanup complete", stderr);
+    fputs("Global cleanup complete\n", stderr);
 
   for (int i = 0; i < atomic_load_explicit(&g_n_threads, memory_order_relaxed);
        ++i)
     destroy_thread_state(&g_thread_states[i]);
 
   if (CMAKE_BUILD_TYPE_IS_DEBUG)
-    fputs("All thread states destroyed", stderr);
+    fputs("All thread states destroyed\n", stderr);
 
   for (int i = 0; i < atomic_load_explicit(&g_n_threads, memory_order_relaxed);
        ++i) {

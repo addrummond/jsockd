@@ -39,6 +39,8 @@ cd js_server
 ) >/dev/null 2>&1 &
 server_pid=$!
 
+sleep 1
+
 # Start the client
 (
     i=0
@@ -53,6 +55,8 @@ server_pid=$!
     echo "Random data and commands sent."
 ) 2>&1 &
 client_pid=$!
+
+sleep 1
 
 wait $client_pid
 
