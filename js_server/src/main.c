@@ -218,6 +218,7 @@ static int lb_read(char *buf, size_t n, void *data) {
 }
 
 static const int EXIT_ON_QUIT_COMMAND = -999;
+static const int TRAMPOLINE = -9999;
 
 static CmdArgs g_cmd_args;
 
@@ -324,19 +325,21 @@ static void listen_on_unix_socket(const char *unix_socket_filename,
     } break;
     }
 
-    // This is cheap, and we need to reset it if we've reset the ThreadState, so
-    // just call it on every loop.
-    JS_UpdateStackTop(ts->rt);
+    for (;;) {
+      JS_UpdateStackTop(ts->rt);
 
-    int exit_value =
-        line_buf_read(&line_buf, g_cmd_args.socket_sep_char, lb_read,
-                      &ts->socket_state->streamfd, line_handler, data);
-    if (exit_value == EXIT_ON_QUIT_COMMAND)
-      ; // "?quit"
-    else if (exit_value < 0)
-      ts->exit_status = -1;
-    if (exit_value <= 0)
-      goto error_no_inc; // EOF or error
+      int exit_value =
+          line_buf_read(&line_buf, g_cmd_args.socket_sep_char, lb_read,
+                        &ts->socket_state->streamfd, line_handler, data);
+      if (exit_value == EXIT_ON_QUIT_COMMAND)
+        break; // "?quit"
+      else if (exit_value == TRAMPOLINE)
+        ;
+      else if (exit_value < 0)
+        ts->exit_status = -1;
+      if (exit_value <= 0)
+        goto error_no_inc; // EOF or error
+    }
   }
 
 error:
@@ -692,6 +695,7 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
       release_logf("pthread_create failed: %s\n", strerror(errno));
       return -1;
     }
+    return TRAMPOLINE;
   }
 
   strncpy(ts->current_uuid, line, len);
