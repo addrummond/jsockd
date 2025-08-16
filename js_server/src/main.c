@@ -759,7 +759,7 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
 
   JSValue parsed_arg = JS_ParseJSON(ts->ctx, line, len, "<input>");
   if (JS_IsException(parsed_arg)) {
-    debug_logf("Error parsing JSON argument: <<END\n%.*sEND\n", len, line);
+    debug_logf("Error parsing JSON argument: <<END\n%.*s\nEND\n", len, line);
     dump_error(ts->ctx);
     JS_FreeValue(ts->ctx, parsed_arg);
     JS_FreeValue(ts->ctx, ts->compiled_query);
