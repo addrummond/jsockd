@@ -124,7 +124,8 @@ enum {
   REPLACEMENT_THREAD_STATE_NONE,
   REPLACEMENT_THREAD_STATE_INIT,
   REPLACEMENT_THREAD_STATE_INIT_COMPLETE,
-  REPLACEMENT_THREAD_STATE_CLEANUP
+  REPLACEMENT_THREAD_STATE_CLEANUP,
+  REPLACEMENT_THREAD_STATE_CLEANUP_DONE
 };
 
 typedef struct {
@@ -657,7 +658,8 @@ static void *reset_thread_state_cleanup_old_runtime_thread(void *data) {
     ts->my_replacement = NULL;
   }
   atomic_store_explicit(&ts->replacement_thread_state,
-                        REPLACEMENT_THREAD_STATE_NONE, memory_order_relaxed);
+                        REPLACEMENT_THREAD_STATE_CLEANUP_DONE,
+                        memory_order_relaxed);
   return NULL;
 }
 
@@ -670,11 +672,26 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
     len = MESSAGE_UUID_MAX_BYTES;
   }
 
+  if (REPLACEMENT_THREAD_STATE_CLEANUP_DONE ==
+      atomic_load_explicit(&ts->replacement_thread_state,
+                           memory_order_relaxed)) {
+    atomic_store_explicit(&ts->replacement_thread_state,
+                          REPLACEMENT_THREAD_STATE_NONE, memory_order_relaxed);
+    // Reclaim pthread resources
+    pthread_join(ts->replacement_thread, NULL);
+  }
+
   // Check to see if the thread state has been reinitialized (following a memory
   // increase).
   if (REPLACEMENT_THREAD_STATE_INIT_COMPLETE ==
       atomic_load_explicit(&ts->replacement_thread_state,
                            memory_order_relaxed)) {
+    // Join the thread that initialized the replacement thread state to reclaim
+    // pthread resources.
+    if (0 != pthread_join(ts->replacement_thread, NULL)) {
+      release_logf("pthread_join failed: %s\n", strerror(errno));
+      return -1;
+    }
     ThreadState *r = ts->my_replacement;
     memswap_small(ts->my_replacement, ts, sizeof(*ts));
     if (0 != pthread_create(&ts->replacement_thread, NULL,
@@ -1229,7 +1246,8 @@ int main(int argc, char *argv[]) {
     int rts = atomic_load_explicit(&g_thread_states[i].replacement_thread_state,
                                    memory_order_relaxed);
     if (rts == REPLACEMENT_THREAD_STATE_INIT ||
-        rts == REPLACEMENT_THREAD_STATE_CLEANUP) {
+        rts == REPLACEMENT_THREAD_STATE_CLEANUP ||
+        rts == REPLACEMENT_THREAD_STATE_CLEANUP_DONE) {
       // As we've just joined the thread, we know it won't be concurrently
       // updating replacement_thread.
       pthread_join(g_thread_states[i].replacement_thread, NULL);
