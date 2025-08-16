@@ -1266,6 +1266,9 @@ int main(int argc, char *argv[]) {
 
   global_cleanup();
 
+  if (CMAKE_BUILD_TYPE_IS_DEBUG)
+    fputs("Global cleanup complete", stderr);
+
   for (int i = 0; i < atomic_load_explicit(&g_n_threads, memory_order_relaxed);
        ++i)
     destroy_thread_state(&g_thread_states[i]);
@@ -1275,6 +1278,9 @@ int main(int argc, char *argv[]) {
     if (g_thread_states[i].exit_status != 0)
       return 1;
   }
+
+  if (CMAKE_BUILD_TYPE_IS_DEBUG)
+    fputs("Exiting", stderr);
 
   return 0;
 }
