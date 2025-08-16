@@ -694,6 +694,7 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
     if (0 != pthread_create(&ts->replacement_thread, NULL,
                             reset_thread_state_cleanup_old_runtime_thread, r)) {
       release_logf("pthread_create failed: %s\n", strerror(errno));
+      ts->replacement_thread_state = REPLACEMENT_THREAD_STATE_NONE;
       return -1;
     }
     return TRAMPOLINE;
@@ -916,6 +917,7 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
         if (0 != pthread_create(&ts->replacement_thread, NULL,
                                 reset_thread_state_thread, (void *)ts)) {
           release_logf("pthread_create failed: %s\n", strerror(errno));
+          ts->replacement_thread_state = REPLACEMENT_THREAD_STATE_NONE;
           mutex_unlock(&ts->doing_js_stuff_mutex);
           return -1;
         }
