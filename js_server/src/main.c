@@ -1237,6 +1237,7 @@ int main(int argc, char *argv[]) {
     if (rts != REPLACEMENT_THREAD_STATE_NONE) {
       // As we've just joined the thread, we know it won't be concurrently
       // updating replacement_thread.
+      debug_logf("Joining replacement thread for thread %i\n", i);
       pthread_join(g_thread_states[i].replacement_thread, NULL);
     }
   }
