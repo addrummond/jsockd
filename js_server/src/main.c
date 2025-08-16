@@ -655,6 +655,7 @@ static void *reset_thread_state_cleanup_old_runtime_thread(void *data) {
   cleanup_thread_state(ts->my_replacement);
   free(ts->my_replacement);
   ts->my_replacement = NULL;
+  debug_log("Thread state cleanup complete\n");
   atomic_store_explicit(&ts->replacement_thread_state,
                         REPLACEMENT_THREAD_STATE_CLEANUP_DONE,
                         memory_order_relaxed);
