@@ -57,7 +57,7 @@ client_pid=$!
 wait $client_pid
 
 i=0
-while [ ! -f /tmp/jsockd_fuzz_test_exit_code ] && [ $i -lt 60 ]; do
+while [ ! -f /tmp/jsockd_fuzz_test_exit_code ] && [ $i -lt 30 ]; do
   echo "Waiting for server to exit"
   sleep 1
   i=$(($i + 1))
