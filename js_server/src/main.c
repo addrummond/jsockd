@@ -1275,6 +1275,9 @@ int main(int argc, char *argv[]) {
        ++i)
     destroy_thread_state(&g_thread_states[i]);
 
+  if (CMAKE_BUILD_TYPE_IS_DEBUG)
+    fputs("All thread states destroyed", stderr);
+
   for (int i = 0; i < atomic_load_explicit(&g_n_threads, memory_order_relaxed);
        ++i) {
     if (g_thread_states[i].exit_status != 0)
