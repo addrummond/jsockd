@@ -675,11 +675,12 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
     len = MESSAGE_UUID_MAX_BYTES;
   }
 
+  int rte =
+      atomic_load_explicit(&ts->replacement_thread_state, memory_order_relaxed);
+
   // Check to see if the thread state has been reinitialized (following a memory
   // increase).
-  if (REPLACEMENT_THREAD_STATE_INIT_COMPLETE ==
-      atomic_load_explicit(&ts->replacement_thread_state,
-                           memory_order_relaxed)) {
+  if (rte == REPLACEMENT_THREAD_STATE_INIT_COMPLETE) {
     // Join the thread that initialized the replacement thread state to reclaim
     // pthread resources.
     if (0 != pthread_join(ts->replacement_thread, NULL)) {
@@ -707,9 +708,7 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
     return TRAMPOLINE;
   }
 
-  if (REPLACEMENT_THREAD_STATE_CLEANUP_DONE ==
-      atomic_load_explicit(&ts->replacement_thread_state,
-                           memory_order_relaxed)) {
+  if (rte == REPLACEMENT_THREAD_STATE_CLEANUP_DONE) {
     atomic_store_explicit(&ts->replacement_thread_state,
                           REPLACEMENT_THREAD_STATE_NONE, memory_order_relaxed);
     // Reclaim pthread resources
