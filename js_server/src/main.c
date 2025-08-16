@@ -1287,9 +1287,6 @@ int main(int argc, char *argv[]) {
       return 1;
   }
 
-  if (CMAKE_BUILD_TYPE_IS_DEBUG)
-    fputs("Exiting", stderr);
-
   return 0;
 }
 
