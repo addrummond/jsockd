@@ -1266,6 +1266,8 @@ int main(int argc, char *argv[]) {
 
   global_cleanup();
 
+  // logging mutex is now destroyed and we're only running one thread, so we can
+  // use stdio directly
   if (CMAKE_BUILD_TYPE_IS_DEBUG)
     fputs("Global cleanup complete", stderr);
 
