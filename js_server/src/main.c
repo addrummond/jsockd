@@ -326,7 +326,9 @@ static void listen_on_unix_socket(const char *unix_socket_filename,
     }
 
     for (;;) {
+      mutex_lock(&ts->doing_js_stuff_mutex);
       JS_UpdateStackTop(ts->rt);
+      mutex_unlock(&ts->doing_js_stuff_mutex);
 
       int exit_value =
           line_buf_read(&line_buf, g_cmd_args.socket_sep_char, lb_read,
