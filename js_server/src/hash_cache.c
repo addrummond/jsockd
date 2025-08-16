@@ -8,7 +8,7 @@ static size_t get_cache_bucket(HashCacheUid uid, int n_bits) {
 
 static size_t get_bucket_look_forward(int n_bits) { return n_bits * 3 / 2; }
 
-static HashCacheUid zero_uid;
+static const HashCacheUid zero_uid;
 
 static bool hash_cache_uid_is_zero(const HashCacheUid *hcu) {
   return memcmp(hcu, &zero_uid, sizeof(*hcu)) == 0;
