@@ -36,7 +36,7 @@ generate_qjsc_wrapper() {
     echo "("
     echo "    set -e"
     echo "    \$decoded -c -m -o /dev/stdout -N jsockd_js_bytecode \$module_file |"
-    echo "    awk '{ if (start > 0) start++ } /{\$/ { start = 1 } start > 1 { if (\$0 != \"};\") print \$0 }' |"
+    echo "    awk '{ if (start > 0) start++ } /\{\$/ { start = 1 } start > 1 { if (\$0 != \"};\") print \$0 }' |"
     echo "    sed -e 's/^ //g;s/0x//g;s/,//g;s/,\$//;' |"
     echo "    xxd -r -p > \$output_file"
     echo "    if [ -z \"\$signing_key\" ]; then"
