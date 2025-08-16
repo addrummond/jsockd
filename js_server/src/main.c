@@ -726,12 +726,12 @@ static int handle_line_2_query(ThreadState *ts, const char *line, int len) {
   size_t bytecode_size = 0;
   const uint8_t *bytecode = get_cached_function(uid, &bytecode_size);
 
+  mutex_lock(&ts->doing_js_stuff_mutex);
   if (bytecode) {
     debug_log("Found cached function\n");
     ts->compiled_query = func_from_bytecode(ts->ctx, bytecode, bytecode_size);
   } else {
     debug_log("Compiling...\n");
-    mutex_lock(&ts->doing_js_stuff_mutex);
     // We compile and cache the function.
     size_t bytecode_size;
 
@@ -742,8 +742,8 @@ static int handle_line_2_query(ThreadState *ts, const char *line, int len) {
       add_cached_function(uid, bytecode, bytecode_size);
       ts->compiled_query = func_from_bytecode(ts->ctx, bytecode, bytecode_size);
     }
-    mutex_unlock(&ts->doing_js_stuff_mutex);
   }
+  mutex_unlock(&ts->doing_js_stuff_mutex);
 
   ts->line_n++;
   return 0;
