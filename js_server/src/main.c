@@ -677,7 +677,7 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
 
   int rts =
       atomic_load_explicit(&ts->replacement_thread_state, memory_order_relaxed);
-  debug_logf("TEMP: repl thread state %i\n", rte);
+  debug_logf("TEMP: repl thread state %i\n", rts);
 
   // Check to see if the thread state has been reinitialized (following a memory
   // increase).
