@@ -84,7 +84,7 @@ static HashCacheBucket g_cached_function_buckets[CACHED_FUNCTIONS_N_BUCKETS];
 static cached_function_t g_cached_functions[CACHED_FUNCTIONS_N_BUCKETS];
 static atomic_int g_n_cached_functions;
 
-static void add_cached_function(uint64_t uid, const uint8_t *bytecode,
+static void add_cached_function(HashCacheUid uid, const uint8_t *bytecode,
                                 size_t bytecode_size) {
   assert(0 != JS_TAG_FUNCTION_BYTECODE);
   assert(bytecode);
@@ -106,7 +106,7 @@ static void add_cached_function(uint64_t uid, const uint8_t *bytecode,
   mutex_unlock(&g_cached_functions_mutex);
 }
 
-static const uint8_t *get_cached_function(uint64_t uid, size_t *psize) {
+static const uint8_t *get_cached_function(HashCacheUid uid, size_t *psize) {
   mutex_lock(&g_cached_functions_mutex);
   HashCacheBucket *b = get_hash_cache_entry(g_cached_function_buckets,
                                             CACHED_FUNCTION_HASH_BITS, uid);
@@ -680,7 +680,7 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
 }
 
 static int handle_line_2_query(ThreadState *ts, const char *line, int len) {
-  const uint64_t uid = get_hash_cache_uid(line, len);
+  const HashCacheUid uid = get_hash_cache_uid(line, len);
   size_t bytecode_size = 0;
   const uint8_t *bytecode = get_cached_function(uid, &bytecode_size);
 
