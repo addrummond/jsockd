@@ -1,2 +1,2 @@
 CompileFlags:
-    Add: ["-I../../.scratch/quickjs", "-I./src/lib"]
+    Add: ["-I../.scratch/quickjs", "-I./src/lib"]

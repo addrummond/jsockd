@@ -7,8 +7,6 @@
 
 #include <pthread.h>
 #include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <time.h>
 
 extern pthread_mutex_t g_log_mutex;

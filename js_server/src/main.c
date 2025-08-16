@@ -178,7 +178,17 @@ typedef struct ThreadState {
   struct ThreadState *my_replacement;
   atomic_int replacement_thread_state;
   pthread_t replacement_thread;
+#ifdef CMAKE_BUILD_TYPE_DEBUG
+  bool manually_trigger_thread_state_reset;
+#endif
 } ThreadState;
+
+#ifdef CMAKE_BUILD_TYPE_DEBUG
+#define manually_trigger_thread_state_reset(ts)                                \
+  ((ts)->manually_trigger_thread_state_reset)
+#else
+#define manually_trigger_thread_state_reset(_ts) false
+#endif
 
 static void js_print_value_debug_write(void *opaque, const char *buf,
                                        size_t len) {
@@ -583,7 +593,11 @@ static int init_thread_state(ThreadState *ts, SocketState *socket_state) {
   ts->my_replacement = NULL;
   atomic_init(&ts->replacement_thread_state, REPLACEMENT_THREAD_STATE_NONE);
 
-  return 0;
+#ifdef DEBUG
+  ts->manually_trigger_thread_state_reset = false
+#endif
+
+      return 0;
 }
 
 static void cleanup_thread_state(ThreadState *ts) {
@@ -857,21 +871,24 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
   JS_FreeCString(ts->ctx, str);
   JS_FreeValue(ts->ctx, stringified);
 
-  if (0 == (ts->memory_check_count =
-                ((ts->memory_check_count + 1) % MEMORY_CHECK_INTERVAL))) {
+  if (manually_trigger_thread_state_reset(ts) ||
+      (0 == (ts->memory_check_count =
+                 ((ts->memory_check_count + 1) % MEMORY_CHECK_INTERVAL)))) {
     JSMemoryUsage mu;
     JS_ComputeMemoryUsage(ts->rt, &mu);
     debug_logf("Memory usage memory_used_size=%" PRId64 "\n",
                mu.memory_used_size);
     int64_t current_usage = memusage(&mu);
-    if (atomic_load_explicit(&g_n_cached_functions, memory_order_relaxed) <=
-            ts->last_n_cached_functions &&
-        current_usage > ts->last_memory_usage) {
+    if (manually_trigger_thread_state_reset(ts) ||
+        (atomic_load_explicit(&g_n_cached_functions, memory_order_relaxed) <=
+             ts->last_n_cached_functions &&
+         current_usage > ts->last_memory_usage)) {
       ts->last_memory_usage = current_usage;
       ts->last_n_cached_functions =
           atomic_load_explicit(&g_n_cached_functions, memory_order_relaxed);
       ts->memory_increase_count++;
-      if (ts->memory_increase_count > MEMORY_INCREASE_MAX_COUNT) {
+      if (manually_trigger_thread_state_reset(ts) ||
+          ts->memory_increase_count > MEMORY_INCREASE_MAX_COUNT) {
         release_logf("Memory usage has increased over the last %i commands. "
                      "Resetting interpreter state.\n",
                      MEMORY_INCREASE_MAX_COUNT * MEMORY_CHECK_INTERVAL);
@@ -890,6 +907,10 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
         atomic_store_explicit(&ts->replacement_thread_state,
                               REPLACEMENT_THREAD_STATE_INIT,
                               memory_order_relaxed);
+
+#ifdef CMAKE_BUILD_TYPE_DEBUG
+        ts->manually_trigger_thread_state_reset = false;
+#endif
       }
     } else {
       ts->memory_increase_count = 0;
@@ -962,6 +983,13 @@ static int line_handler(const char *line, size_t len, void *data,
     write_const_to_stream(ts, "\n");
     return 0;
   }
+#ifdef CMAKE_BUILD_TYPE_DEBUG
+  if (!strcmp("?tsreset", line)) {
+    ts->manually_trigger_thread_state_reset = true;
+    write_const_to_stream(ts, "tsreset\n");
+    return 0;
+  }
+#endif
 
   if (line[0] == '?') {
     write_const_to_stream(ts, "bad command\n");
