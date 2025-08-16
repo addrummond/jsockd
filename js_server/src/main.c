@@ -627,16 +627,7 @@ static void destroy_thread_state(ThreadState *ts) {
   // handler.
 
   cleanup_socket_state(ts->socket_state);
-
   cleanup_thread_state(ts);
-
-  int rts =
-      atomic_load_explicit(&ts->replacement_thread_state, memory_order_relaxed);
-  if (ts->my_replacement && (rts == REPLACEMENT_THREAD_STATE_INIT_COMPLETE ||
-                             rts == REPLACEMENT_THREAD_STATE_CLEANUP)) {
-    free(ts->my_replacement);
-    ts->my_replacement = NULL;
-  }
 }
 
 static void write_to_stream(ThreadState *ts, const char *buf, size_t len) {
