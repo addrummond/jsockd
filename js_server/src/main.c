@@ -651,11 +651,10 @@ static void write_to_stream(ThreadState *ts, const char *buf, size_t len) {
 
 static void *reset_thread_state_cleanup_old_runtime_thread(void *data) {
   ThreadState *ts = (ThreadState *)data;
+  assert(ts->my_replacement);
   cleanup_thread_state(ts->my_replacement);
-  if (ts->my_replacement) {
-    free(ts->my_replacement);
-    ts->my_replacement = NULL;
-  }
+  free(ts->my_replacement);
+  ts->my_replacement = NULL;
   atomic_store_explicit(&ts->replacement_thread_state,
                         REPLACEMENT_THREAD_STATE_CLEANUP_DONE,
                         memory_order_relaxed);
