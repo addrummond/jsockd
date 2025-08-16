@@ -130,7 +130,15 @@ fi
 # Time 1000 component renders using node after warmup
 node -e 'const m = await import("./tests/e2e/relative_bench/bundle.js"); for (let i = 0; i < 10; ++i) { m.renderToString(m.createElement(m.AccordionDemo)); } /* <-- allow warm up before timing */ console.time("render"); for (let i = 0; i < 1000; ++i) { JSON.stringify(m.renderToString(m.createElement(m.AccordionDemo))) } console.timeEnd("render")'
 
-# Start the server
+rm -f /tmp/jsockd_relative_bench_vs_node_command_input
+i=0
+while [ $i -lt $N_VS_NODE_ITERATIONS ]; do
+   printf "x\nm => m.renderToString(m.createElement(m.AccordionDemo))\n{}\n?exectime\n" >> /tmp/jsockd_relative_bench_vs_node_command_input
+   i=$(($i + 1))
+done
+echo "?quit" >> /tmp/jsockd_relative_bench_vs_node_command_input
+
+# Start the server (regular Linux/x86_64)
 ./build_$BUILD/js_server -m tests/e2e/relative_bench/bundle.qjsbc -s /tmp/jsockd_filc_relative_bench_sock &
 regular_server_pid=$!
 i=0
@@ -142,17 +150,24 @@ done
 sleep 1
 echo "Regular x86_64 server started for NodeJS bench..."
 
-rm -f /tmp/jsockd_relative_bench_vs_node_command_input
-i=0
-while [ $i -lt $N_VS_NODE_ITERATIONS ]; do
-   printf "x\nm => m.renderToString(m.createElement(m.AccordionDemo))\n{}\n?exectime\n" >> /tmp/jsockd_relative_bench_vs_node_command_input
-   i=$(($i + 1))
-done
-echo "?quit" >> /tmp/jsockd_relative_bench_vs_node_command_input
-
 total_nodejs_ns=$( ( ( node -e "const m = await import('./tests/e2e/relative_bench/bundle.js'); for (let i = 0; i < 10; ++i) { console.log('OUT', m.renderToString(m.createElement(m.AccordionDemo))); } /* <-- allow warm up before timing */ console.time('render'); for (let i = 0; i < Number(process.argv[1]); ++i) { m.renderToString(m.createElement(m.AccordionDemo, JSON.parse('{}'))) } console.timeEnd('render')" $N_VS_NODE_ITERATIONS | grep '^render' | awk '{print $2}' | sed -e s/ms$// | tr -d '\n' ) && echo ' * 1000000' ) | bc )
 total_jsockd_ns=$(nc -U /tmp/jsockd_filc_relative_bench_sock < /tmp/jsockd_relative_bench_vs_node_command_input | awk '/^[0-9]/ { n+=$1 } END { print n }')
 
+# Start the server (Fil-C Linux/x86_64)
+./build_${BUILD}_TC-fil-c.cmake/js_server -m tests/e2e/relative_bench/bundle.qjsbc -s /tmp/jsockd_filc_relative_bench_sock &
+regular_server_pid=$!
+i=0
+while ! [ -e /tmp/jsockd_filc_relative_bench_sock ] && [ $i -lt 15 ]; do
+  echo "Waiting for regular x86_64 server to start for bench vs. NodeJS"
+  sleep 1
+  i=$(($i + 1))
+done
+sleep 1
+echo "Fil-C x86_64 server started for NodeJS bench..."
+
+total_jsockd_filc_ns=$(nc -U /tmp/jsockd_filc_relative_bench_sock < /tmp/jsockd_relative_bench_vs_node_command_input | awk '/^[0-9]/ { n+=$1 } END { print n }')
+
 echo "Time to render React component $N_VS_NODE_ITERATIONS times":
-echo "  NodeJS: $total_nodejs_ns ns"
-echo "  JSockD: $total_jsockd_ns ns"
+echo "  NodeJS:       $total_nodejs_ns ns"
+echo "  JSockD:       $total_jsockd_ns ns"
+echo "  JSockD Fil-C: $total_jsockd_ns ns"
