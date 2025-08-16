@@ -650,6 +650,7 @@ static void write_to_stream(ThreadState *ts, const char *buf, size_t len) {
   write_to_stream((ts), (str), sizeof(str) - 1)
 
 static void *reset_thread_state_cleanup_old_runtime_thread(void *data) {
+  // ts->my_replacement now contains the old thread state
   ThreadState *ts = (ThreadState *)data;
   assert(ts->my_replacement);
   cleanup_thread_state(ts->my_replacement);
@@ -692,12 +693,15 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
       return -1;
     }
     ThreadState *r = ts->my_replacement;
+    ts->my_replacement->my_replacement = NULL;
     memswap_small(ts->my_replacement, ts, sizeof(*ts));
+    ts->my_replacement = r;
     atomic_store_explicit(&ts->replacement_thread_state,
                           REPLACEMENT_THREAD_STATE_CLEANUP,
                           memory_order_relaxed);
     if (0 != pthread_create(&ts->replacement_thread, NULL,
-                            reset_thread_state_cleanup_old_runtime_thread, r)) {
+                            reset_thread_state_cleanup_old_runtime_thread,
+                            ts)) {
       release_logf("pthread_create failed: %s\n", strerror(errno));
       ts->replacement_thread_state = REPLACEMENT_THREAD_STATE_NONE;
       return -1;
