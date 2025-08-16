@@ -146,17 +146,13 @@ echo "Regular x86_64 server started for NodeJS bench..."
 rm -f /tmp/jsockd_filc_relative_bench_vs_node_command_input
 i=0
 while [ $i -lt $N_VS_NODE_ITERATIONS ]; do
-   echo "Input loop $i"
    printf "x\nm => m.renderToString(m.createElement(m.AccordionDemo))\n99\n?exectime\n" >> /tmp/jsockd_filc_relative_bench_vs_node_command_input
    i=$(($i + 1))
 done
 echo "?quit" >> /tmp/jsockd_filc_relative_bench_vs_node_command_input
 
-echo "HERE 1"
 total_nodejs_ns=$( ( ( node -e "const m = await import('./tests/e2e/relative_bench/bundle.js'); for (let i = 0; i < 10; ++i) { m.renderToString(m.createElement(m.AccordionDemo)); } /* <-- allow warm up before timing */ console.time('render'); for (let i = 0; i < Number(process.argv[1]); ++i) { m.renderToString(m.createElement(m.AccordionDemo)) } console.timeEnd('render')" $N_VS_NODE_ITERATIONS | grep '^render' | awk '{print $2}' | sed -e s/ms$// | tr -d '\n' ) && echo ' * 1000000' ) | bc )
-echo "HERE2"
 total_jsockd_ns=$(nc -U /tmp/jsockd_filc_relative_bench_sock < /tmp/jsockd_filc_relative_bench_vs_node_command_input | awk '/^[0-9]/ { n+=$1 } END { print n }')
-echo "HERE3"
 
 echo "Time to render React component $N_VS_NODE_ITERATIONS times":
 echo "  NodeJS: $total_nodejs_ns ns"
