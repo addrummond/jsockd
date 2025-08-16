@@ -63,7 +63,7 @@ echo ?quit >> /tmp/jsockd_filc_relative_bench_sock_command_input
 #
 rm -f /tmp/jsockd_filc_relative_bench_regular_server_exit_code
 (
-    ./build_$BUILD/js_server -m tests/e2e/filc_relative_bench/bundle.qjsbc -s /tmp/jsockd_filc_relative_bench_sock ;
+    ./build_$BUILD/js_server -m tests/e2e/relative_bench/bundle.qjsbc -s /tmp/jsockd_filc_relative_bench_sock ;
     echo $? > /tmp/jsockd_filc_relative_bench_regular_server_exit_code
 ) &
 regular_server_pid=$!
@@ -96,7 +96,7 @@ fi
 #
 rm -f /tmp/jsockd_filc_relative_bench_filc_server_exit_code
 (
-    ./build_${BUILD}_TC-fil-c.cmake/js_server -m tests/e2e/filc_relative_bench/bundle.qjsbc -s /tmp/jsockd_filc_relative_bench_sock_filc ;
+    ./build_${BUILD}_TC-fil-c.cmake/js_server -m tests/e2e/relative_bench/bundle.qjsbc -s /tmp/jsockd_filc_relative_bench_sock_filc ;
     echo $? > /tmp/jsockd_filc_relative_bench_filc_server_exit_code
 ) &
 filc_server_pid=$!
@@ -129,10 +129,10 @@ fi
 #
 
 # Time 1000 component renders using node after warmup
-node -e 'const m = await import("./tests/e2e/filc_relative_bench/bundle.js"); for (let i = 0; i < 10; ++i) { m.renderToString(m.createElement(m.AccordionDemo)); } /* <-- allow warm up before timing */ console.time("render"); for (let i = 0; i < 1000; ++i) { JSON.stringify(m.renderToString(m.createElement(m.AccordionDemo))) } console.timeEnd("render")'
+node -e 'const m = await import("./tests/e2e/relative_bench/bundle.js"); for (let i = 0; i < 10; ++i) { m.renderToString(m.createElement(m.AccordionDemo)); } /* <-- allow warm up before timing */ console.time("render"); for (let i = 0; i < 1000; ++i) { JSON.stringify(m.renderToString(m.createElement(m.AccordionDemo))) } console.timeEnd("render")'
 
 # Start the server
-./build_$BUILD/js_server -m tests/e2e/filc_relative_bench/bundle.qjsbc -s /tmp/jsockd_filc_relative_bench_sock &
+./build_$BUILD/js_server -m tests/e2e/relative_bench/bundle.qjsbc -s /tmp/jsockd_filc_relative_bench_sock &
 regular_server_pid=$!
 i=0
 while ! [ -e /tmp/jsockd_filc_relative_bench_sock ] && [ $i -lt 15 ]; do
@@ -150,7 +150,7 @@ while [ $i -lt $N_VS_NODE_ITERATIONS ]; do
    i=$(($i + 1))
 done
 
-total_nodejs_ns=$( ( ( node -e "const m = await import('./tests/e2e/filc_relative_bench/bundle.js'); for (let i = 0; i < 10; ++i) { m.renderToString(m.createElement(m.AccordionDemo)); } /* <-- allow warm up before timing */ console.time('render'); for (let i = 0; i < $N_VS_NODE_ITERATIONS; ++i) { m.renderToString(m.createElement(m.AccordionDemo)) } console.timeEnd('render')" | grep '^render' | awk '{print $2}' | sed -e s/ms$// | tr -d '\n' ) && echo ' * 1000000' ) | bc )
+total_nodejs_ns=$( ( ( node -e "const m = await import('./tests/e2e/relative_bench/bundle.js'); for (let i = 0; i < 10; ++i) { m.renderToString(m.createElement(m.AccordionDemo)); } /* <-- allow warm up before timing */ console.time('render'); for (let i = 0; i < $N_VS_NODE_ITERATIONS; ++i) { m.renderToString(m.createElement(m.AccordionDemo)) } console.timeEnd('render')" | grep '^render' | awk '{print $2}' | sed -e s/ms$// | tr -d '\n' ) && echo ' * 1000000' ) | bc )
 total_jsockd_ns=$(nc -U /tmp/jsockd_filc_relative_bench_sock < /tmp/jsockd_filc_relative_bench_vs_node_command_input | awk '/^[0-9]/ { n+=$1 } END { print n }')
 
 echo "Time to render React component $N_VS_NODE_ITERATIONS times":
