@@ -694,14 +694,14 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
     }
     ThreadState *r = ts->my_replacement;
     memswap_small(ts->my_replacement, ts, sizeof(*ts));
+    atomic_store_explicit(&ts->replacement_thread_state,
+                          REPLACEMENT_THREAD_STATE_CLEANUP,
+                          memory_order_relaxed);
     if (0 != pthread_create(&ts->replacement_thread, NULL,
                             reset_thread_state_cleanup_old_runtime_thread, r)) {
       release_logf("pthread_create failed: %s\n", strerror(errno));
       return -1;
     }
-    atomic_store_explicit(&ts->replacement_thread_state,
-                          REPLACEMENT_THREAD_STATE_CLEANUP,
-                          memory_order_relaxed);
   }
 
   strncpy(ts->current_uuid, line, len);
