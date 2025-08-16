@@ -169,4 +169,4 @@ total_jsockd_filc_ns=$(nc -U /tmp/jsockd_filc_relative_bench_sock < /tmp/jsockd_
 echo "Time to render React component $N_VS_NODE_ITERATIONS times":
 echo "  NodeJS:       $total_nodejs_ns ns"
 echo "  JSockD:       $total_jsockd_ns ns"
-echo "  JSockD Fil-C: $total_jsockd_ns ns"
+echo "  JSockD Fil-C: $total_jsockd_filc_ns ns"
