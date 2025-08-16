@@ -708,7 +708,7 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
     }
     // We now need to reset the JS stack top before continuing to process the
     // command, so return a special value that will cause this function to get
-    // called gain following the stack top reset.
+    // called again following the stack top reset.
     return TRAMPOLINE;
   }
 
