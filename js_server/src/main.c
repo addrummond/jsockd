@@ -331,12 +331,15 @@ static void listen_on_unix_socket(const char *unix_socket_filename,
       int exit_value =
           line_buf_read(&line_buf, g_cmd_args.socket_sep_char, lb_read,
                         &ts->socket_state->streamfd, line_handler, data);
-      if (exit_value == EXIT_ON_QUIT_COMMAND)
+      if (exit_value == EXIT_ON_QUIT_COMMAND) {
         break; // "?quit"
-      else if (exit_value == TRAMPOLINE)
-        ;
-      else if (exit_value < 0)
+      } else if (exit_value == TRAMPOLINE) {
+        debug_log("Trampoline!\n");
+        continue;
+      } else if (exit_value < 0) {
         ts->exit_status = -1;
+      }
+
       if (exit_value <= 0)
         goto error_no_inc; // EOF or error
     }
