@@ -6,8 +6,6 @@
 #endif
 
 #include <stdbool.h>
-#include <stdint.h>
-#include <stdlib.h>
 #include <xxHash/xxhash.h>
 
 typedef XXH128_hash_t HashCacheUid;
