@@ -627,9 +627,9 @@ static void cleanup_thread_state(ThreadState *ts) {
 
   // This could fail, but no useful error handling to be done (we're exiting
   // anyway).
-  fputs("TEMP: Before mutex destroy", stderr);
+  fputs("TEMP: Before mutex destroy\n", stderr);
   pthread_mutex_destroy(&ts->doing_js_stuff_mutex);
-  fputs("TEMP: After mutex destroy", stderr);
+  fputs("TEMP: After mutex destroy\n", stderr);
 }
 
 static void destroy_thread_state(ThreadState *ts) {
@@ -637,7 +637,7 @@ static void destroy_thread_state(ThreadState *ts) {
   // handler.
 
   cleanup_socket_state(ts->socket_state);
-  fputs("TEMP: About to clean up thread state", stderr);
+  fputs("TEMP: About to clean up thread state\n", stderr);
   cleanup_thread_state(ts);
 }
 
@@ -681,7 +681,11 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
     atomic_store_explicit(&ts->replacement_thread_state,
                           REPLACEMENT_THREAD_STATE_NONE, memory_order_relaxed);
     // Reclaim pthread resources
-    pthread_join(ts->replacement_thread, NULL);
+    if (0 != pthread_join(ts->replacement_thread, NULL)) {
+      release_logf("pthread_join failed: %s\n", strerror(errno));
+      return -1;
+    }
+    debug_log("Joined replacement thread [1]\n");
   }
 
   // Check to see if the thread state has been reinitialized (following a memory
@@ -695,6 +699,7 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
       release_logf("pthread_join failed: %s\n", strerror(errno));
       return -1;
     }
+    debug_log("Joined replacement thread [2]\n");
     ThreadState *r = ts->my_replacement;
     ts->my_replacement->my_replacement = NULL;
     memswap_small(ts->my_replacement, ts, sizeof(*ts));
