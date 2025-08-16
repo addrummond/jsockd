@@ -942,6 +942,8 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
           return -1;
         }
 
+        ts->memory_increase_count = 0;
+
 #ifdef CMAKE_BUILD_TYPE_DEBUG
         ts->manually_trigger_thread_state_reset = false;
 #endif
