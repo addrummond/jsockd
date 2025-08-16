@@ -153,11 +153,11 @@ total_nodejs_ns=$( ( ( node -e "const m = await import('./tests/e2e/relative_ben
 total_jsockd_ns=$(nc -U /tmp/jsockd_filc_relative_bench_sock < /tmp/jsockd_relative_bench_vs_node_command_input | awk '/^[0-9]/ { n+=$1 } END { print n }')
 
 # Start the server (Fil-C Linux/x86_64)
-rm -f /tmp/jsockd_relative_bench_vs_node_command_input
+rm -f /tmp/jsockd_filc_relative_bench_sock
 ./build_${BUILD}_TC-fil-c.cmake/js_server -m tests/e2e/relative_bench/bundle.qjsbc -s /tmp/jsockd_filc_relative_bench_sock &
 i=0
 while ! [ -e /tmp/jsockd_filc_relative_bench_sock ] && [ $i -lt 15 ]; do
-  echo "Waiting for regular x86_64 server to start for bench vs. NodeJS"
+  echo "Waiting for Fil-C x86_64 server to start for bench vs. NodeJS"
   sleep 1
   i=$(($i + 1))
 done
