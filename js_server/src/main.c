@@ -627,7 +627,9 @@ static void cleanup_thread_state(ThreadState *ts) {
 
   // This could fail, but no useful error handling to be done (we're exiting
   // anyway).
+  fputs("TEMP: Before mutex destroy", stderr);
   pthread_mutex_destroy(&ts->doing_js_stuff_mutex);
+  fputs("TEMP: After mutex destroy", stderr);
 }
 
 static void destroy_thread_state(ThreadState *ts) {
@@ -635,6 +637,7 @@ static void destroy_thread_state(ThreadState *ts) {
   // handler.
 
   cleanup_socket_state(ts->socket_state);
+  fputs("TEMP: About to clean up thread state", stderr);
   cleanup_thread_state(ts);
 }
 
