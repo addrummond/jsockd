@@ -59,6 +59,10 @@ done
 if ! [ -f /tmp/jsockd_fuzz_test_exit_code ]; then
     echo "Server did not exit gracefully, killing it"
     kill $server_pid || true
+    echo "The random data (base64):"
+    echo "___START___"
+    base64 /tmp/jsockd_fuzz_test_random_data
+    echo "___END___"
     exit 1
 else
     echo "The last 3 lines of the server output:"
