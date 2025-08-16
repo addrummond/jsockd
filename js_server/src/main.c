@@ -161,7 +161,6 @@ typedef struct ThreadState {
   JSRuntime *rt;
   JSContext *ctx;
   int exit_status;
-  pthread_mutex_t doing_js_stuff_mutex;
   int line_n;
   JSValue compiled_module;
   JSValue compiled_query;
@@ -326,9 +325,7 @@ static void listen_on_unix_socket(const char *unix_socket_filename,
     }
 
     for (;;) {
-      mutex_lock(&ts->doing_js_stuff_mutex);
       JS_UpdateStackTop(ts->rt);
-      mutex_unlock(&ts->doing_js_stuff_mutex);
 
       int exit_value =
           line_buf_read(&line_buf, g_cmd_args.socket_sep_char, lb_read,
@@ -581,8 +578,6 @@ static int init_thread_state(ThreadState *ts, SocketState *socket_state) {
     return -1;
   }
 
-  mutex_init(&ts->doing_js_stuff_mutex);
-
   JS_SetInterruptHandler(ts->rt, interrupt_handler, ts);
 
   ts->socket_state = socket_state;
@@ -624,12 +619,6 @@ static void cleanup_thread_state(ThreadState *ts) {
 
   JS_FreeContext(ts->ctx);
   JS_FreeRuntime(ts->rt);
-
-  // This could fail, but no useful error handling to be done (we're exiting
-  // anyway).
-  fputs("TEMP: Before mutex destroy\n", stderr);
-  pthread_mutex_destroy(&ts->doing_js_stuff_mutex);
-  fputs("TEMP: After mutex destroy\n", stderr);
 }
 
 static void destroy_thread_state(ThreadState *ts) {
@@ -732,7 +721,6 @@ static int handle_line_2_query(ThreadState *ts, const char *line, int len) {
   size_t bytecode_size = 0;
   const uint8_t *bytecode = get_cached_function(uid, &bytecode_size);
 
-  mutex_lock(&ts->doing_js_stuff_mutex);
   if (bytecode) {
     debug_log("Found cached function\n");
     ts->compiled_query = func_from_bytecode(ts->ctx, bytecode, bytecode_size);
@@ -749,7 +737,6 @@ static int handle_line_2_query(ThreadState *ts, const char *line, int len) {
       ts->compiled_query = func_from_bytecode(ts->ctx, bytecode, bytecode_size);
     }
   }
-  mutex_unlock(&ts->doing_js_stuff_mutex);
 
   ts->line_n++;
   return 0;
@@ -782,7 +769,6 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
   ts->line_n = 0;
 
   if (JS_IsException(ts->compiled_query)) {
-    mutex_lock(&ts->doing_js_stuff_mutex);
     if (CMAKE_BUILD_TYPE_IS_DEBUG) {
       JS_PrintValue(ts->ctx, js_print_value_debug_write, ts, ts->compiled_query,
                     &js_print_value_options);
@@ -790,17 +776,13 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
     }
     JS_FreeValue(ts->ctx, ts->compiled_query);
     ts->compiled_query = JS_UNDEFINED;
-    mutex_unlock(&ts->doing_js_stuff_mutex);
     write_to_stream(ts, ts->current_uuid, ts->current_uuid_len);
     write_const_to_stream(ts, " exception \"error compiling command\"\n");
     return ts->socket_state->stream_io_err;
   }
 
-  mutex_lock(&ts->doing_js_stuff_mutex);
   if (0 != clock_gettime(CLOCK_MONOTONIC_RAW, &ts->last_js_execution_start)) {
-    mutex_lock(&ts->doing_js_stuff_mutex);
     JS_FreeValue(ts->ctx, ts->compiled_query);
-    mutex_unlock(&ts->doing_js_stuff_mutex);
     release_logf("Error getting time in handle_line_3_parameter [1]\n");
     return -1;
   }
@@ -812,7 +794,6 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
     JS_FreeValue(ts->ctx, parsed_arg);
     JS_FreeValue(ts->ctx, ts->compiled_query);
     ts->compiled_query = JS_UNDEFINED;
-    mutex_unlock(&ts->doing_js_stuff_mutex);
     write_to_stream(ts, ts->current_uuid, ts->current_uuid_len);
     write_const_to_stream(ts, " exception \"JSON input parse error\"\n");
     return ts->socket_state->stream_io_err;
@@ -826,7 +807,6 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
   ts->compiled_query = JS_UNDEFINED;
   if (JS_IsException(ret)) {
     debug_log("Error calling cached function\n");
-    mutex_unlock(&ts->doing_js_stuff_mutex);
     write_to_stream(ts, ts->current_uuid, ts->current_uuid_len);
     write_const_to_stream(ts, " exception ");
     char *error_msg_buf = calloc(ERROR_MSG_MAX_BYTES, sizeof(char));
@@ -862,7 +842,6 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
     JS_FreeValue(ts->ctx, ret);
     JS_FreeValue(ts->ctx, stringified);
     dump_error(ts->ctx);
-    mutex_unlock(&ts->doing_js_stuff_mutex);
     write_to_stream(ts, ts->current_uuid, ts->current_uuid_len);
     write_const_to_stream(
         ts, " exception \"error attempting to JSON serialize return value\"\n");
@@ -875,7 +854,6 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
     JS_FreeValue(ts->ctx, ret);
     write_to_stream(ts, ts->current_uuid, ts->current_uuid_len);
     write_const_to_stream(ts, " exception \"unserializable return value\"\n");
-    mutex_unlock(&ts->doing_js_stuff_mutex);
     return ts->socket_state->stream_io_err;
   }
 
@@ -884,7 +862,6 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
     JS_FreeValue(ts->ctx, parsed_arg);
     JS_FreeValue(ts->ctx, ret);
     JS_FreeValue(ts->ctx, stringified);
-    mutex_unlock(&ts->doing_js_stuff_mutex);
     release_logf("Error getting time in handle_line_3_parameter [2]\n");
     return -1;
   }
@@ -939,7 +916,6 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
                                 reset_thread_state_thread, (void *)ts)) {
           release_logf("pthread_create failed: %s\n", strerror(errno));
           ts->replacement_thread_state = REPLACEMENT_THREAD_STATE_NONE;
-          mutex_unlock(&ts->doing_js_stuff_mutex);
           return -1;
         }
 
@@ -953,8 +929,6 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
       ts->memory_increase_count = 0;
     }
   }
-
-  mutex_unlock(&ts->doing_js_stuff_mutex);
 
   return ts->socket_state->stream_io_err;
 }
@@ -1142,16 +1116,8 @@ static void SIGINT_handler(int sig) {
 
   for (int i = 0; i < atomic_load_explicit(&g_n_threads, memory_order_relaxed);
        ++i)
-    mutex_lock(&g_thread_states[i].doing_js_stuff_mutex);
-
-  for (int i = 0; i < atomic_load_explicit(&g_n_threads, memory_order_relaxed);
-       ++i)
     pthread_join(g_threads[i], NULL); // can fail, but no useful error handling
                                       // to be done
-
-  for (int i = 0; i < atomic_load_explicit(&g_n_threads, memory_order_relaxed);
-       ++i)
-    mutex_unlock(&g_thread_states[i].doing_js_stuff_mutex);
 
   if (atomic_load_explicit(&g_global_init_complete, memory_order_relaxed))
     global_cleanup();
