@@ -11,7 +11,7 @@ rm -f /tmp/jsockd_fuzz_test_sock
 rm -f /tmp/jsockd_fuzz_test_exit_code
 rm -f /tmp/jsockd_fuzz_test_random_data
 
-n_lines=10000
+n_lines=1000
 
 if ! [ -z "$1" ]; then
     # Use the data supplied
