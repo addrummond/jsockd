@@ -1234,9 +1234,7 @@ int main(int argc, char *argv[]) {
     pthread_join(g_threads[i], NULL);
     int rts = atomic_load_explicit(&g_thread_states[i].replacement_thread_state,
                                    memory_order_relaxed);
-    if (rts == REPLACEMENT_THREAD_STATE_INIT ||
-        rts == REPLACEMENT_THREAD_STATE_CLEANUP ||
-        rts == REPLACEMENT_THREAD_STATE_CLEANUP_DONE) {
+    if (rts != REPLACEMENT_THREAD_STATE_NONE) {
       // As we've just joined the thread, we know it won't be concurrently
       // updating replacement_thread.
       pthread_join(g_thread_states[i].replacement_thread, NULL);
