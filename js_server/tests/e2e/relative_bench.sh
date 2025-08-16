@@ -152,8 +152,7 @@ while [ $i -lt $N_VS_NODE_ITERATIONS ]; do
 done
 
 echo "HERE 1"
-export N_VS_NODE_ITERATIONS=$N_VS_NODE_ITERATIONS
-total_nodejs_ns=$( ( ( node -e "const m = await import('./tests/e2e/relative_bench/bundle.js'); for (let i = 0; i < 10; ++i) { m.renderToString(m.createElement(m.AccordionDemo)); } /* <-- allow warm up before timing */ console.time('render'); for (let i = 0; i < $N_VS_NODE_ITERATIONS; ++i) { m.renderToString(m.createElement(m.AccordionDemo)) } console.timeEnd('render')" | grep '^render' | awk '{print $2}' | sed -e s/ms$// | tr -d '\n' ) && echo ' * 1000000' ) | bc )
+total_nodejs_ns=$( ( ( node -e "const m = await import('./tests/e2e/relative_bench/bundle.js'); for (let i = 0; i < 10; ++i) { m.renderToString(m.createElement(m.AccordionDemo)); } /* <-- allow warm up before timing */ console.time('render'); for (let i = 0; i < Number(process.argv[1]); ++i) { m.renderToString(m.createElement(m.AccordionDemo)) } console.timeEnd('render')" $N_VS_NODE_ITERATIONS | grep '^render' | awk '{print $2}' | sed -e s/ms$// | tr -d '\n' ) && echo ' * 1000000' ) | bc )
 echo "HERE2"
 total_jsockd_ns=$(nc -NU /tmp/jsockd_filc_relative_bench_sock < /tmp/jsockd_filc_relative_bench_vs_node_command_input | awk '/^[0-9]/ { n+=$1 } END { print n }')
 echo "HERE3"
