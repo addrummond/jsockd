@@ -200,7 +200,7 @@ typedef enum { READY, SIG_INTERRUPT_OR_ERROR, GO_AROUND } PollFdResult;
 static PollFdResult poll_fd(int fd) {
   struct pollfd pfd = {.fd = fd, .events = POLLIN | POLLPRI};
   if (!poll(&pfd, 1, SOCKET_POLL_TIMEOUT_MS)) {
-    if (atomic_load(&g_interrupted_or_error))
+    if (atomic_load_explicit(&g_interrupted_or_error, memory_order_relaxed))
       return SIG_INTERRUPT_OR_ERROR;
     return GO_AROUND;
   }
