@@ -155,6 +155,17 @@ static void cleanup_socket_state(SocketState *socket_state) {
   unlink(socket_state->unix_socket_filename);
 }
 
+#ifdef CMAKE_BUILD_TYPE_DEBUG
+static atomic_int g_new_thread_state_count;
+#define debug_inc_new_thread_state_count()                                     \
+  atomic_fetch_add_explicit(&g_new_thread_state_count, 1, memory_order_relaxed)
+#define debug_dec_new_thread_state_count()                                     \
+  atomic_fetch_add_explicit(&g_new_thread_state_count, -1, memory_order_relaxed)
+#else
+#define debug_inc_new_thread_state_count()
+#define debug_dec_new_thread_state_count()
+#endif
+
 // The state for each thread which runs a QuickJS VM.
 typedef struct ThreadState {
   SocketState *socket_state;
@@ -651,6 +662,7 @@ static void *reset_thread_state_cleanup_old_runtime_thread(void *data) {
   JS_UpdateStackTop(ts->my_replacement->rt);
   cleanup_thread_state(ts->my_replacement);
   free(ts->my_replacement);
+  debug_dec_new_thread_state_count();
   ts->my_replacement = NULL;
   debug_log("Thread state cleanup complete\n");
   atomic_store_explicit(&ts->replacement_thread_state,
@@ -755,6 +767,7 @@ static int64_t memusage(const JSMemoryUsage *m) {
 static void *reset_thread_state_thread(void *data) {
   ThreadState *ts = (ThreadState *)data;
   ts->my_replacement = (ThreadState *)malloc(sizeof(ThreadState));
+  debug_inc_new_thread_state_count();
   init_thread_state((ThreadState *)ts->my_replacement, ts->socket_state);
   atomic_store_explicit(&ts->replacement_thread_state,
                         REPLACEMENT_THREAD_STATE_INIT_COMPLETE,
@@ -1257,6 +1270,16 @@ int main(int argc, char *argv[]) {
 
   if (CMAKE_BUILD_TYPE_IS_DEBUG)
     fputs("All thread states destroyed\n", stderr);
+
+#ifdef CMAKE_BUILD_TYPE_DEBUG
+  int tsc =
+      atomic_load_explicit(&g_new_thread_state_count, memory_order_relaxed);
+  fprintf(stderr, "DEBUG: g_new_thread_state_count: %i\n", tsc);
+  if (tsc != 0) {
+    fputs("DEBUG: Something's up with g_new_thread_state_count (see above)\n",
+          stderr);
+  }
+#endif
 
   for (int i = 0; i < atomic_load_explicit(&g_n_threads, memory_order_relaxed);
        ++i) {
