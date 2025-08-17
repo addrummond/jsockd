@@ -155,6 +155,9 @@ static void cleanup_socket_state(SocketState *socket_state) {
   unlink(socket_state->unix_socket_filename);
 }
 
+// In debug builds we keep track of how many new thread states we've created vs.
+// how many we've cleaned up and freed. This can give useful additional context
+// for Valgrind errors.
 #ifdef CMAKE_BUILD_TYPE_DEBUG
 static atomic_int g_new_thread_state_count;
 #define debug_inc_new_thread_state_count()                                     \
@@ -162,8 +165,8 @@ static atomic_int g_new_thread_state_count;
 #define debug_dec_new_thread_state_count()                                     \
   atomic_fetch_add_explicit(&g_new_thread_state_count, -1, memory_order_relaxed)
 #else
-#define debug_inc_new_thread_state_count()
-#define debug_dec_new_thread_state_count()
+#define debug_inc_new_thread_state_count() 0
+#define debug_dec_new_thread_state_count() 0
 #endif
 
 // The state for each thread which runs a QuickJS VM.
