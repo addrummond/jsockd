@@ -719,11 +719,9 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
       return -1;
     }
     debug_log("Joined replacement thread [1]\n");
-    // We can now continue to process the line, after going back up the call
-    // stack and resetting the JS stack top.
+    // We can now continue to process the line
     ts->trampoline_line = line;
     ts->trampoline_line_len = len;
-    return TRAMPOLINE;
   }
 
   strncpy(ts->current_uuid, line, len);
