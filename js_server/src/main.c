@@ -888,9 +888,8 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
   if (manually_trigger_thread_state_reset(ts) || 0 == ts->memory_check_count) {
     JSMemoryUsage mu;
     JS_ComputeMemoryUsage(ts->rt, &mu);
-    debug_logf("Memory usage memory_used_size=%" PRId64 "\n",
-               mu.memory_used_size);
     int64_t current_usage = memusage(&mu);
+    debug_logf("Memory usage %" PRId64 "\n", current_usage);
     if (manually_trigger_thread_state_reset(ts) ||
         (atomic_load_explicit(&g_n_cached_functions, memory_order_relaxed) <=
              ts->last_n_cached_functions &&
