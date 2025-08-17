@@ -629,10 +629,6 @@ static void cleanup_thread_state(ThreadState *ts) {
   JS_FreeValue(ts->ctx, ts->sourcemap_str);
 
   // Valgrind seems to correctly have caught a memory leak in quickjs-libc.
-  // It's an inconsequential one, as it's an object that's allocated once at
-  // the start of execution and that lives for the life of the application.
-  // But to keep our valgrind output clean, let's fix it... See
-  // quickjs-libc.c:4086 for the offending allocation.
   js_free(ts->ctx, JS_GetRuntimeOpaque(ts->rt));
 
   JS_FreeContext(ts->ctx);
