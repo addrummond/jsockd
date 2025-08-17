@@ -594,6 +594,7 @@ static int init_thread_state(ThreadState *ts, SocketState *socket_state) {
   ts->memory_increase_count = 0;
   ts->last_memory_usage = 0;
   ts->last_n_cached_functions = 1;
+  ts->truncated = false;
   ts->last_command_exec_time_ns = 0;
   ts->my_replacement = NULL;
   ts->trampoline_line = NULL;
