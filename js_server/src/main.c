@@ -519,8 +519,6 @@ static int init_thread_state(ThreadState *ts, SocketState *socket_state) {
     return -1;
   }
 
-  JS_UpdateStackTop(ts->rt);
-
   js_std_set_worker_new_context_func(JS_NewCustomContext);
   js_std_init_handlers(ts->rt);
   ts->ctx = JS_NewCustomContext(ts->rt);
