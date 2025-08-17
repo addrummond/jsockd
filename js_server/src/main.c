@@ -336,13 +336,12 @@ static void listen_on_unix_socket(const char *unix_socket_filename,
       JS_UpdateStackTop(ts->rt);
       exit_value =
           line_handler(ts->trampoline_line, ts->trampoline_line_len, ts, false);
-      if (exit_value == TRAMPOLINE)
-        continue;
-      if (exit_value < 0 && exit_value != EXIT_ON_QUIT_COMMAND)
-        ts->exit_status = -1;
-      if (exit_value <= 0)
-        goto error_no_inc; // EOF or error
     }
+
+    if (exit_value < 0 && exit_value != EXIT_ON_QUIT_COMMAND)
+      ts->exit_status = -1;
+    if (exit_value <= 0)
+      goto error_no_inc; // EOF or error
   }
 
 error:
