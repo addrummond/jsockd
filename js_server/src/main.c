@@ -707,6 +707,8 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
       ts->replacement_thread_state = REPLACEMENT_THREAD_STATE_NONE;
       return -1;
     }
+    ts->trampoline_line = line;
+    ts->trampoline_line_len = len;
     return TRAMPOLINE;
   }
 
@@ -720,8 +722,6 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
     }
     debug_log("Joined replacement thread [1]\n");
     // We can now continue to process the line
-    ts->trampoline_line = line;
-    ts->trampoline_line_len = len;
   }
 
   strncpy(ts->current_uuid, line, len);
