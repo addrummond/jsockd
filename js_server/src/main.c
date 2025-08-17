@@ -219,7 +219,6 @@ static int lb_read(char *buf, size_t n, void *data) {
 static CmdArgs g_cmd_args;
 
 static const int EXIT_ON_QUIT_COMMAND = -999;
-static const int TRAMPOLINE = -9999;
 
 static void listen_on_unix_socket(const char *unix_socket_filename,
                                   int (*line_handler)(const char *line,
@@ -324,24 +323,15 @@ static void listen_on_unix_socket(const char *unix_socket_filename,
     } break;
     }
 
-    for (;;) {
-      JS_UpdateStackTop(ts->rt);
-
-      int exit_value =
-          line_buf_read(&line_buf, g_cmd_args.socket_sep_char, lb_read,
-                        &ts->socket_state->streamfd, line_handler, data);
-      if (exit_value == EXIT_ON_QUIT_COMMAND)
-        goto error;
-      if (exit_value == TRAMPOLINE) {
-        debug_log("Trampoline!\n");
-        continue;
-      }
-      if (exit_value < 0)
-        ts->exit_status = -1;
-
-      if (exit_value <= 0)
-        goto error_no_inc; // EOF or error
-    }
+    int exit_value =
+        line_buf_read(&line_buf, g_cmd_args.socket_sep_char, lb_read,
+                      &ts->socket_state->streamfd, line_handler, data);
+    if (exit_value == EXIT_ON_QUIT_COMMAND)
+      goto error;
+    if (exit_value < 0)
+      ts->exit_status = -1;
+    if (exit_value <= 0)
+      goto error_no_inc; // EOF or error
   }
 
 error:
@@ -601,7 +591,8 @@ static int init_thread_state(ThreadState *ts, SocketState *socket_state) {
   ts->manually_trigger_thread_state_reset = false
 #endif
 
-      return 0;
+      JS_UpdateStackTop(ts->rt);
+  return 0;
 }
 
 static void cleanup_thread_state(ThreadState *ts) {
@@ -645,6 +636,7 @@ static void *reset_thread_state_cleanup_old_runtime_thread(void *data) {
   // ts->my_replacement now contains the old thread state
   ThreadState *ts = (ThreadState *)data;
   assert(ts->my_replacement);
+  JS_UpdateStackTop(ts->my_replacement->rt);
   cleanup_thread_state(ts->my_replacement);
   free(ts->my_replacement);
   ts->my_replacement = NULL;
@@ -692,10 +684,6 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
       ts->replacement_thread_state = REPLACEMENT_THREAD_STATE_NONE;
       return -1;
     }
-    // We now need to reset the JS stack top before continuing to process the
-    // command, so return a special value that will cause this function to get
-    // called again following the stack top reset.
-    return TRAMPOLINE;
   }
 
   if (rts == REPLACEMENT_THREAD_STATE_CLEANUP_DONE) {
@@ -708,6 +696,7 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
     }
     debug_log("Joined replacement thread [1]\n");
     // we can now continue to process the line...
+    JS_UpdateStackTop(ts->rt);
   }
 
   strncpy(ts->current_uuid, line, len);
@@ -882,9 +871,9 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
   JS_FreeCString(ts->ctx, str);
   JS_FreeValue(ts->ctx, stringified);
 
-  if (manually_trigger_thread_state_reset(ts) ||
-      (0 == (ts->memory_check_count =
-                 ((ts->memory_check_count + 1) % MEMORY_CHECK_INTERVAL)))) {
+  ts->memory_check_count =
+      ((ts->memory_check_count + 1) % MEMORY_CHECK_INTERVAL);
+  if (manually_trigger_thread_state_reset(ts) || 0 == ts->memory_check_count) {
     JSMemoryUsage mu;
     JS_ComputeMemoryUsage(ts->rt, &mu);
     debug_logf("Memory usage memory_used_size=%" PRId64 "\n",
