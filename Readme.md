@@ -214,6 +214,8 @@ asdf install
 
 QuickJS is built by running `./build_quickjs.sh`. This script downloads and builds the QuickJS library. The QuickJS build is kept separate from the main JSockD build because it needs to be run only once, and the QuickJS build system is a bit finicky to configure for different environments.
 
+On systems where `make` is a non-GNU Make, set the `MAKE` env var to `gmake` when running the script.
+
 ### 5.2 Building the JS server
 
 The JS server is built using CMake 4. The `mk.sh` wrapper script invokes CMake with the correct arguments for common use cases.
