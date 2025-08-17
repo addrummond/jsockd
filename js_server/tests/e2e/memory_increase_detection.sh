@@ -36,7 +36,8 @@ done
 sleep 1
 
 echo "Sending output to server..."
-cat /tmp/jsockd_memory_increase_test_input | ( nc -U /tmp/jsockd_memory_increase_test_sock >/dev/null || true )
+# cute little Perl one-liner to insert a short pause between each input line
+perl -e 'use Time::HiRes qw(usleep); while (<>) { print; usleep(50000); }' < /tmp/jsockd_memory_increase_test_input | ( nc -U /tmp/jsockd_memory_increase_test_sock >/dev/null || true )
 
 i=0
 while ! [ -f /tmp/jsockd_memory_increase_test_server_exit_code ] && [ $i -lt 15 ]; do
