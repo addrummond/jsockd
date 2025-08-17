@@ -37,7 +37,7 @@ sleep 1
 
 echo "Sending output to server..."
 # cute little Perl one-liner to insert a short pause between each input line
-perl -e 'use Time::HiRes qw(usleep); while (<>) { print; usleep(10000); }' < /tmp/jsockd_memory_increase_test_input | ( nc -U /tmp/jsockd_memory_increase_test_sock >/dev/null || true )
+perl -e 'use Time::HiRes qw(usleep); while (<>) { print; usleep(2500); }' < /tmp/jsockd_memory_increase_test_input | ( nc -U /tmp/jsockd_memory_increase_test_sock >/dev/null || true )
 
 i=0
 while ! [ -f /tmp/jsockd_memory_increase_test_server_exit_code ] && [ $i -lt 15 ]; do
