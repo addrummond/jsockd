@@ -19,6 +19,7 @@ echo "?quit" >> /tmp/jsockd_memory_increase_test_input
 ./mk.sh Debug
 
 rm -f /tmp/jsockd_memory_increase_test_sock
+rm -f /tmp/jsockd_memory_increase_test_server_exit_code
 # Start the server
 (
     ./build_Debug/js_server -m /tmp/jsockd_memory_increase_test_example_module.qjsb -s /tmp/jsockd_memory_increase_test_sock > /tmp/jsockd_memory_increase_test_output 2>&1
@@ -37,7 +38,10 @@ sleep 1
 echo "Sending output to server..."
 cat /tmp/jsockd_memory_increase_test_input | ( nc -U /tmp/jsockd_memory_increase_test_sock >/dev/null || true )
 
-wait $server_pid
+while [ ! -f /tmp/jsockd_memory_increase_test_server_exit_code ]; do
+  sleep 1
+done
+
 echo "Server has exited, checking exit code..."
 if [ $(cat /tmp/jsockd_memory_increase_test_server_exit_code) -ne 0 ]; then
     echo "Server exited with an error code, which is unexpected."
