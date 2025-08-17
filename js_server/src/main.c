@@ -218,8 +218,8 @@ static int lb_read(char *buf, size_t n, void *data) {
 
 static CmdArgs g_cmd_args;
 
-static const int EXIT_ON_QUIT_COMMAND = 999;
-static const int TRAMPOLINE = 9999;
+static const int EXIT_ON_QUIT_COMMAND = -999;
+static const int TRAMPOLINE = -9999;
 
 static void listen_on_unix_socket(const char *unix_socket_filename,
                                   int (*line_handler)(const char *line,
@@ -331,10 +331,13 @@ static void listen_on_unix_socket(const char *unix_socket_filename,
           line_buf_read(&line_buf, g_cmd_args.socket_sep_char, lb_read,
                         &ts->socket_state->streamfd, line_handler, data);
       if (exit_value == EXIT_ON_QUIT_COMMAND) {
-        break; // "?quit"
-      } else if (exit_value == TRAMPOLINE) {
+        goto error_no_inc;
+      }
+      if (exit_value == TRAMPOLINE) {
         debug_log("Trampoline!\n");
-      } else if (exit_value < 0) {
+        continue;
+      }
+      if (exit_value < 0) {
         ts->exit_status = -1;
       }
 
@@ -1000,6 +1003,24 @@ static int line_handler(const char *line, size_t len, void *data,
     return 0;
   }
 #endif
+
+  if (ts->truncated) {
+    if (ts->line_n == 2) {
+      ts->truncated = false;
+      ts->line_n = 0;
+      if (!JS_IsUndefined(ts->compiled_query)) {
+        JS_FreeValue(ts->ctx, ts->compiled_query);
+        ts->compiled_query = JS_UNDEFINED;
+      }
+      write_to_stream(ts, ts->current_uuid, ts->current_uuid_len);
+      write_const_to_stream(ts, " exception \"js_server command was too long "
+                                "and had to be truncated\"\n");
+    } else {
+      // we'll signal an error once the client has sent the third line
+      ts->line_n++;
+    }
+    return 0;
+  }
 
   if (line[0] == '?') {
     write_const_to_stream(ts, "bad command\n");
