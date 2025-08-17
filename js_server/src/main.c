@@ -219,6 +219,7 @@ static int lb_read(char *buf, size_t n, void *data) {
 static CmdArgs g_cmd_args;
 
 static const int EXIT_ON_QUIT_COMMAND = -999;
+static const int TRAMPOLINE = -9999;
 
 static void listen_on_unix_socket(const char *unix_socket_filename,
                                   int (*line_handler)(const char *line,
@@ -323,15 +324,19 @@ static void listen_on_unix_socket(const char *unix_socket_filename,
     } break;
     }
 
-    int exit_value =
-        line_buf_read(&line_buf, g_cmd_args.socket_sep_char, lb_read,
-                      &ts->socket_state->streamfd, line_handler, data);
-    if (exit_value == EXIT_ON_QUIT_COMMAND)
-      goto error;
-    if (exit_value < 0)
-      ts->exit_status = -1;
-    if (exit_value <= 0)
-      goto error_no_inc; // EOF or error
+    for (;;) {
+      int exit_value =
+          line_buf_read(&line_buf, g_cmd_args.socket_sep_char, lb_read,
+                        &ts->socket_state->streamfd, line_handler, data);
+      if (exit_value == TRAMPOLINE) {
+        JS_UpdateStackTop(ts->rt);
+        continue;
+      }
+      if (exit_value < 0 && exit_value != EXIT_ON_QUIT_COMMAND)
+        ts->exit_status = -1;
+      if (exit_value <= 0)
+        goto error_no_inc; // EOF or error
+    }
   }
 
 error:
@@ -591,8 +596,7 @@ static int init_thread_state(ThreadState *ts, SocketState *socket_state) {
   ts->manually_trigger_thread_state_reset = false
 #endif
 
-      JS_UpdateStackTop(ts->rt);
-  return 0;
+      return 0;
 }
 
 static void cleanup_thread_state(ThreadState *ts) {
@@ -696,7 +700,7 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
     }
     debug_log("Joined replacement thread [1]\n");
     // we can now continue to process the line...
-    JS_UpdateStackTop(ts->rt);
+    return TRAMPOLINE;
   }
 
   strncpy(ts->current_uuid, line, len);
