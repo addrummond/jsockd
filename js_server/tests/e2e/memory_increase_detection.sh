@@ -36,7 +36,9 @@ done
 sleep 1
 
 echo "Sending output to server..."
-# cute little Perl one-liner to insert a short pause between each input line
+# Cute little Perl one-liner to insert a short pause between each input line.
+# We do this so that we don't send the input so quickly that the server doesn't
+# have time to do the expected number of thread state resets.
 perl -e 'use Time::HiRes qw(usleep); while (<>) { print; usleep(2500); }' < /tmp/jsockd_memory_increase_test_input | ( nc -U /tmp/jsockd_memory_increase_test_sock >/dev/null || true )
 
 i=0
