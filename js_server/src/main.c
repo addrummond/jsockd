@@ -178,6 +178,8 @@ typedef struct ThreadState {
   struct ThreadState *my_replacement;
   atomic_int replacement_thread_state;
   pthread_t replacement_thread;
+  const char *trampoline_line;
+  int trampoline_line_len;
 #ifdef CMAKE_BUILD_TYPE_DEBUG
   bool manually_trigger_thread_state_reset;
 #endif
@@ -326,14 +328,16 @@ static void listen_on_unix_socket(const char *unix_socket_filename,
     } break;
     }
 
-    for (;;) {
-      int exit_value =
-          line_buf_read(&line_buf, g_cmd_args.socket_sep_char, lb_read,
-                        &ts->socket_state->streamfd, line_handler, data);
-      if (exit_value == TRAMPOLINE) {
-        JS_UpdateStackTop(ts->rt);
+    int exit_value =
+        line_buf_read(&line_buf, g_cmd_args.socket_sep_char, lb_read,
+                      &ts->socket_state->streamfd, line_handler, data);
+
+    while (exit_value == TRAMPOLINE) {
+      JS_UpdateStackTop(ts->rt);
+      exit_value =
+          line_handler(ts->trampoline_line, ts->trampoline_line_len, ts, false);
+      if (exit_value == TRAMPOLINE)
         continue;
-      }
       if (exit_value < 0 && exit_value != EXIT_ON_QUIT_COMMAND)
         ts->exit_status = -1;
       if (exit_value <= 0)
@@ -592,6 +596,8 @@ static int init_thread_state(ThreadState *ts, SocketState *socket_state) {
   ts->last_n_cached_functions = 1;
   ts->last_command_exec_time_ns = 0;
   ts->my_replacement = NULL;
+  ts->trampoline_line = NULL;
+  ts->trampoline_line_len = 0;
   atomic_init(&ts->replacement_thread_state, REPLACEMENT_THREAD_STATE_NONE);
 
 #ifdef DEBUG
@@ -623,7 +629,6 @@ static void destroy_thread_state(ThreadState *ts) {
   // handler.
 
   cleanup_socket_state(ts->socket_state);
-  fputs("TEMP: About to clean up thread state\n", stderr);
   cleanup_thread_state(ts);
 }
 
@@ -664,7 +669,6 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
 
   int rts =
       atomic_load_explicit(&ts->replacement_thread_state, memory_order_relaxed);
-  debug_logf("TEMP: repl thread state %i\n", rts);
 
   // Check to see if the thread state has been reinitialized (following a memory
   // increase).
@@ -702,6 +706,8 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
     }
     debug_log("Joined replacement thread [1]\n");
     // we can now continue to process the line...
+    ts->trampoline_line = line;
+    ts->trampoline_line_len = len;
     return TRAMPOLINE;
   }
 
