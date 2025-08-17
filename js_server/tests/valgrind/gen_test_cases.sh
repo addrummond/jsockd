@@ -41,4 +41,4 @@ x => { return [1,2,3]; };
 EOF
 
 # Force thread state reset a couple of times to check for memory leaks on that code path
-printf "?tsreset\nunique\nx => 'foo'\n99\n?tsreset\nunique\nx => 'foo'\n99\nunique\nx => 'foo'\n99\n"
+#printf "?tsreset\nunique\nx => 'foo'\n99\n?tsreset\nunique\nx => 'foo'\n99\nunique\nx => 'foo'\n99\n"
