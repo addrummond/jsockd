@@ -254,16 +254,16 @@ static void TEST_line_buf_truncation(void) {
   int r;
   r = line_buf_read(&b, '\n', read_6_from_string, (void *)input,
                     line_handler_never_called, &line_handler_data);
-  TEST_ASSERT(r >= 0);
+  TEST_ASSERT(r == LINE_BUF_READ_EOF || r > 0);
 
   r = line_buf_read(&b, '\n', read_6_from_string, (void *)(input),
                     line_handler_never_called, &line_handler_data);
-  TEST_ASSERT(r >= 0);
+  TEST_ASSERT(r == LINE_BUF_READ_EOF || r > 0);
 
   // Read more than the buffer size, should truncate
   r = line_buf_read(&b, '\n', read_6_from_string, (void *)(input),
                     line_handler_never_called, &line_handler_data);
-  TEST_ASSERT(r >= 0);
+  TEST_ASSERT(r == LINE_BUF_READ_EOF || r > 0);
   TEST_ASSERT(b.truncated == true);
 
   free(b.buf);
@@ -289,19 +289,19 @@ static void TEST_line_buf_truncation_then_normal_read(void) {
   int r;
   r = line_buf_read(&b, '\n', read_6_from_string, (void *)input,
                     line_handler_never_called, &line_handler_data);
-  TEST_ASSERT(r >= 0);
+  TEST_ASSERT(r == LINE_BUF_READ_EOF || r > 0);
 
   r = line_buf_read(&b, '\n', read_6_from_string, (void *)(input + 6),
                     line_handler_never_called, &line_handler_data);
-  TEST_ASSERT(r >= 0);
+  TEST_ASSERT(r == LINE_BUF_READ_EOF || r > 0);
 
   // Read more than the buffer size, should truncate
   r = line_buf_read(&b, '\n', read_6_from_string, (void *)(input + 6),
                     line_handler_trunc_then_not_trunc, &line_handler_data);
-  TEST_ASSERT(r >= 0);
+  TEST_ASSERT(r == LINE_BUF_READ_EOF || r > 0);
   r = line_buf_read(&b, '\n', read_6_from_string, (void *)(input + 6),
                     line_handler_trunc_then_not_trunc, &line_handler_data);
-  TEST_ASSERT(r >= 0);
+  TEST_ASSERT(r == LINE_BUF_READ_EOF || r > 0);
 
   free(b.buf);
 }
@@ -325,7 +325,7 @@ static void TEST_line_buf_one_shot(void) {
   int count = 0;
   r = line_buf_read(&b, '\n', read_all_from_string, (void *)input,
                     line_handler_inc_count, &count);
-  TEST_ASSERT(r >= 0);
+  TEST_ASSERT(r == LINE_BUF_READ_EOF || r > 0);
   TEST_ASSERT(count == 3);
 
   free(b.buf);
