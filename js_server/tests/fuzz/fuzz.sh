@@ -34,9 +34,9 @@ cd js_server
 
 ./mk.sh Debug
 (
-    ./build_Debug/js_server -m /tmp/example_module.qjsb -s /tmp/jsockd_test_sock > /tmp/jsockd_fuzz_test_server_output 2>&1
+    ./build_Debug/js_server -m /tmp/example_module.qjsb -s /tmp/jsockd_test_sock > /tmp/jsockd_fuzz_test_server_output 2>&1 ;
     echo $? > /tmp/jsockd_fuzz_test_exit_code
-) >/dev/null 2>&1 &
+) &
 server_pid=$!
 
 sleep 1
