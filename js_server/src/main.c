@@ -947,7 +947,6 @@ static int line_handler(const char *line, size_t len, void *data,
     ts->truncated = true;
 
   if (!strcmp("?quit", line)) {
-    debug_log("QUIT!\n");
     if (!JS_IsUndefined(ts->compiled_query)) {
       JS_FreeValue(ts->ctx, ts->compiled_query);
       ts->compiled_query = JS_UNDEFINED;
