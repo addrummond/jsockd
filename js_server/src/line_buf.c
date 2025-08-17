@@ -18,7 +18,7 @@ int line_buf_read(LineBuf *b, char sep_char,
   int n = readf(b->buf + b->start, to_read, readf_data);
   if (n == 0)
     return LINE_BUF_READ_EOF;
-  if (n < 0) // 0 is EOF
+  if (n < 0)
     return n;
 
   int i;
