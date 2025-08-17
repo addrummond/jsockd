@@ -704,7 +704,8 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
       return -1;
     }
     debug_log("Joined replacement thread [1]\n");
-    // we can now continue to process the line...
+    // We can now continue to process the line, after going back up the call
+    // stack and resetting the JS stack top.
     ts->trampoline_line = line;
     ts->trampoline_line_len = len;
     return TRAMPOLINE;
@@ -1026,6 +1027,7 @@ static void *listen_thread_func(void *data) {
   ThreadState *ts = (ThreadState *)data;
   listen_on_unix_socket(ts->socket_state->unix_socket_filename, line_handler,
                         (void *)ts);
+  debug_log("Listen thread terminating...\n");
   return NULL;
 }
 
