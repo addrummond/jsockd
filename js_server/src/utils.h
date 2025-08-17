@@ -55,4 +55,10 @@ int write_all(int fd, const char *buf, size_t len);
 #define CMAKE_BUILD_TYPE_IS_DEBUG 0
 #endif
 
+#ifdef CLOCK_MONOTONIC_RAW
+#define MONOTONIC_CLOCK CLOCK_MONOTONIC_RAW
+#else
+#define MONOTONIC_CLOCK CLOCK_MONOTONIC
+#endif
+
 #endif

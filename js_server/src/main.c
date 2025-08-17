@@ -448,7 +448,7 @@ static int interrupt_handler(JSRuntime *rt, void *opaque) {
   struct timespec *start = &state->last_js_execution_start;
   if (start->tv_sec != 0) {
     struct timespec now;
-    if (0 != clock_gettime(CLOCK_MONOTONIC_RAW, &now)) {
+    if (0 != clock_gettime(MONOTONIC_CLOCK, &now)) {
       release_log("Error getting time in interrupt handler\n");
       return 0;
     }
@@ -799,7 +799,7 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
     return ts->socket_state->stream_io_err;
   }
 
-  if (0 != clock_gettime(CLOCK_MONOTONIC_RAW, &ts->last_js_execution_start)) {
+  if (0 != clock_gettime(MONOTONIC_CLOCK, &ts->last_js_execution_start)) {
     JS_FreeValue(ts->ctx, ts->compiled_query);
     release_logf("Error getting time in handle_line_3_parameter [1]\n");
     return -1;
@@ -876,7 +876,7 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
   }
 
   struct timespec now;
-  if (0 != clock_gettime(CLOCK_MONOTONIC_RAW, &now)) {
+  if (0 != clock_gettime(MONOTONIC_CLOCK, &now)) {
     JS_FreeValue(ts->ctx, parsed_arg);
     JS_FreeValue(ts->ctx, ret);
     JS_FreeValue(ts->ctx, stringified);
