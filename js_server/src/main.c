@@ -707,6 +707,7 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
       ts->replacement_thread_state = REPLACEMENT_THREAD_STATE_NONE;
       return -1;
     }
+    return TRAMPOLINE;
   }
 
   if (rts == REPLACEMENT_THREAD_STATE_CLEANUP_COMPLETE) {
