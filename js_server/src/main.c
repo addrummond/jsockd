@@ -336,6 +336,10 @@ static void listen_on_unix_socket(const char *unix_socket_filename,
       JS_UpdateStackTop(ts->rt);
       exit_value =
           line_handler(ts->trampoline_line, ts->trampoline_line_len, ts, false);
+      // 0 return from line_buf_read is EOF, but is success for the line_handler
+      // func itself
+      if (exit_value == 0)
+        ++exit_value;
     }
 
     if (exit_value < 0 && exit_value != EXIT_ON_QUIT_COMMAND)
