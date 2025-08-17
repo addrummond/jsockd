@@ -38,9 +38,18 @@ sleep 1
 echo "Sending output to server..."
 cat /tmp/jsockd_memory_increase_test_input | ( nc -U /tmp/jsockd_memory_increase_test_sock >/dev/null || true )
 
-while [ ! -f /tmp/jsockd_memory_increase_test_server_exit_code ]; do
+i=0
+while ! [ -f /tmp/jsockd_memory_increase_test_server_exit_code ] && [ $i -lt 15 ]; do
+  echo "Waiting for server to exit"
   sleep 1
+  i=$(($i + 1))
 done
+
+if ! [ -f /tmp/jsockd_memory_increase_test_server_exit_code ]; then
+    echo "Server failed to exit"
+    kill -9 $server_pid
+    exit 1
+fi
 
 echo "Server has exited, checking exit code..."
 if [ $(cat /tmp/jsockd_memory_increase_test_server_exit_code) -ne 0 ]; then
