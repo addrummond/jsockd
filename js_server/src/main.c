@@ -125,7 +125,7 @@ enum {
   REPLACEMENT_THREAD_STATE_INIT,
   REPLACEMENT_THREAD_STATE_INIT_COMPLETE,
   REPLACEMENT_THREAD_STATE_CLEANUP,
-  REPLACEMENT_THREAD_STATE_CLEANUP_DONE
+  REPLACEMENT_THREAD_STATE_CLEANUP_COMPLETE
 };
 
 typedef struct {
@@ -653,7 +653,7 @@ static void *reset_thread_state_cleanup_old_runtime_thread(void *data) {
   ts->my_replacement = NULL;
   debug_log("Thread state cleanup complete\n");
   atomic_store_explicit(&ts->replacement_thread_state,
-                        REPLACEMENT_THREAD_STATE_CLEANUP_DONE,
+                        REPLACEMENT_THREAD_STATE_CLEANUP_COMPLETE,
                         memory_order_relaxed);
   return NULL;
 }
@@ -696,7 +696,7 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
     }
   }
 
-  if (rts == REPLACEMENT_THREAD_STATE_CLEANUP_DONE) {
+  if (rts == REPLACEMENT_THREAD_STATE_CLEANUP_COMPLETE) {
     atomic_store_explicit(&ts->replacement_thread_state,
                           REPLACEMENT_THREAD_STATE_NONE, memory_order_relaxed);
     // Reclaim pthread resources
