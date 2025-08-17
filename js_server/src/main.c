@@ -1277,8 +1277,8 @@ int main(int argc, char *argv[]) {
   if (tsc != 0) {
     fputs("DEBUG: Something's up with g_new_thread_state_count (see above)\n",
           stderr);
+    return 1;
   }
-  return 1;
 #endif
 
   for (int i = 0; i < atomic_load_explicit(&g_n_threads, memory_order_relaxed);
