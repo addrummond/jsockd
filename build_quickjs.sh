@@ -87,6 +87,8 @@ OS=$(uname)
 ARCH=$(uname -m)
 if [ "$ARCH" = aarch64 ]; then
     ARCH=arm64
+elif [ "$ARCH" = amd64 ]; then
+    ARCH=x86_64
 fi
 
 # Go through the requested builds
