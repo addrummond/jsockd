@@ -330,16 +330,14 @@ static void listen_on_unix_socket(const char *unix_socket_filename,
       int exit_value =
           line_buf_read(&line_buf, g_cmd_args.socket_sep_char, lb_read,
                         &ts->socket_state->streamfd, line_handler, data);
-      if (exit_value == EXIT_ON_QUIT_COMMAND) {
-        goto error_no_inc;
-      }
+      if (exit_value == EXIT_ON_QUIT_COMMAND)
+        goto error;
       if (exit_value == TRAMPOLINE) {
         debug_log("Trampoline!\n");
         continue;
       }
-      if (exit_value < 0) {
+      if (exit_value < 0)
         ts->exit_status = -1;
-      }
 
       if (exit_value <= 0)
         goto error_no_inc; // EOF or error
@@ -947,25 +945,8 @@ static int line_handler(const char *line, size_t len, void *data,
   if (truncated || (CMAKE_BUILD_TYPE_IS_DEBUG && !strcmp(line, "?truncated")))
     ts->truncated = true;
 
-  if (ts->truncated) {
-    if (ts->line_n == 2) {
-      ts->truncated = false;
-      ts->line_n = 0;
-      if (!JS_IsUndefined(ts->compiled_query)) {
-        JS_FreeValue(ts->ctx, ts->compiled_query);
-        ts->compiled_query = JS_UNDEFINED;
-      }
-      write_to_stream(ts, ts->current_uuid, ts->current_uuid_len);
-      write_const_to_stream(ts, " exception \"js_server command was too long "
-                                "and had to be truncated\"\n");
-    } else {
-      // we'll signal an error once the client has sent the third line
-      ts->line_n++;
-    }
-    return 0;
-  }
-
   if (!strcmp("?quit", line)) {
+    debug_log("QUIT!\n");
     if (!JS_IsUndefined(ts->compiled_query)) {
       JS_FreeValue(ts->ctx, ts->compiled_query);
       ts->compiled_query = JS_UNDEFINED;
