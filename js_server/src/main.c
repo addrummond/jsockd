@@ -311,6 +311,8 @@ static void listen_on_unix_socket(const char *unix_socket_filename,
     break;
   }
 
+  JS_UpdateStackTop(ts->rt);
+
   for (;;) {
   read_loop:
     switch (poll_fd(ts->socket_state->streamfd)) {
