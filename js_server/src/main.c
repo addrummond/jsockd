@@ -917,30 +917,37 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
       ts->memory_increase_count++;
       if (manually_trigger_thread_state_reset(ts) ||
           ts->memory_increase_count > MEMORY_INCREASE_MAX_COUNT) {
-        release_logf("Memory usage has increased over the last %i commands. "
-                     "Resetting interpreter state.\n",
-                     MEMORY_INCREASE_MAX_COUNT * MEMORY_CHECK_INTERVAL);
-        // To avoid latency, we do the following:
-        //   (i)   create a new thread state in a background thread,
-        //   (ii)  swap the old and new thread states the next time we're in
-        //         the line_1 handler and the new thread state has finished
-        //         initializing, and then
-        //   (iii) clean up the old thread state in a background thread.
-        atomic_store_explicit(&ts->replacement_thread_state,
-                              REPLACEMENT_THREAD_STATE_INIT,
-                              memory_order_relaxed);
-        if (0 != pthread_create(&ts->replacement_thread, NULL,
-                                reset_thread_state_thread, (void *)ts)) {
-          release_logf("pthread_create failed: %s\n", strerror(errno));
-          ts->replacement_thread_state = REPLACEMENT_THREAD_STATE_NONE;
-          return -1;
-        }
+        if (REPLACEMENT_THREAD_STATE_NONE !=
+            atomic_load_explicit(&ts->replacement_thread_state,
+                                 memory_order_relaxed)) {
+          release_log(
+              "Thread state reset canceled because reset already ongoing\n");
+        } else {
+          release_logf("Memory usage has increased over the last %i commands. "
+                       "Resetting interpreter state.\n",
+                       MEMORY_INCREASE_MAX_COUNT * MEMORY_CHECK_INTERVAL);
+          // To avoid latency, we do the following:
+          //   (i)   create a new thread state in a background thread,
+          //   (ii)  swap the old and new thread states the next time we're in
+          //         the line_1 handler and the new thread state has finished
+          //         initializing, and then
+          //   (iii) clean up the old thread state in a background thread.
+          atomic_store_explicit(&ts->replacement_thread_state,
+                                REPLACEMENT_THREAD_STATE_INIT,
+                                memory_order_relaxed);
+          if (0 != pthread_create(&ts->replacement_thread, NULL,
+                                  reset_thread_state_thread, (void *)ts)) {
+            release_logf("pthread_create failed: %s\n", strerror(errno));
+            ts->replacement_thread_state = REPLACEMENT_THREAD_STATE_NONE;
+            return -1;
+          }
 
-        ts->memory_increase_count = 0;
+          ts->memory_increase_count = 0;
 
 #ifdef CMAKE_BUILD_TYPE_DEBUG
-        ts->manually_trigger_thread_state_reset = false;
+          ts->manually_trigger_thread_state_reset = false;
 #endif
+        }
       }
     } else {
       ts->memory_increase_count = 0;
