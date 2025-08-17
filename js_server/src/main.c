@@ -218,8 +218,8 @@ static int lb_read(char *buf, size_t n, void *data) {
 
 static CmdArgs g_cmd_args;
 
-static const int EXIT_ON_QUIT_COMMAND = -999;
-static const int TRAMPOLINE = -9999;
+static const int EXIT_ON_QUIT_COMMAND = 999;
+static const int TRAMPOLINE = 9999;
 
 static void listen_on_unix_socket(const char *unix_socket_filename,
                                   int (*line_handler)(const char *line,
@@ -334,7 +334,6 @@ static void listen_on_unix_socket(const char *unix_socket_filename,
         break; // "?quit"
       } else if (exit_value == TRAMPOLINE) {
         debug_log("Trampoline!\n");
-        continue;
       } else if (exit_value < 0) {
         ts->exit_status = -1;
       }

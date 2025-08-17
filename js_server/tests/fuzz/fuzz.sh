@@ -57,7 +57,7 @@ sleep 1
 client_pid=$!
 
 wait $client_pid
-wait $server_pid
+#wait $server_pid
 
 i=0
 while [ ! -f /tmp/jsockd_fuzz_test_exit_code ] && [ $i -lt 30 ]; do
