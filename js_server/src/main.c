@@ -86,7 +86,6 @@ static atomic_int g_n_cached_functions;
 
 static void add_cached_function(HashCacheUid uid, const uint8_t *bytecode,
                                 size_t bytecode_size) {
-  assert(0 != JS_TAG_FUNCTION_BYTECODE);
   assert(bytecode);
 
   mutex_lock(&g_cached_functions_mutex);
