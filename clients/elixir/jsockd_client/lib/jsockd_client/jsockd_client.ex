@@ -41,4 +41,6 @@ defmodule JSockDClient do
       {:ok, Jason.decode!(response)}
     end
   end
+
+  def jsockd_version, do: "0.0.51"
 end
