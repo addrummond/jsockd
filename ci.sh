@@ -40,9 +40,6 @@ case $1 in
         cmake --version
         node --version
         clang-format --version
-
-        echo "Searching for ASAN dylib..."
-        find / -name '*asan*.dylib'
         ;;
 
     build_quickjs)
