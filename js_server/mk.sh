@@ -2,10 +2,10 @@
 set -e
 
 if [ ! -d ../.scratch/quickjs ] || [ -z "$(find ../.scratch/quickjs -type f -name 'libquickjs_*.a')" ]; then
-    echo
-    echo "*** It looks like you haven't built the QuickJS library yet.     ***"
-    echo "*** Go to the parent directory and run ./build_quickjs.sh first. ***"
-    echo "*** You only have to do this once. Exiting.                      ***"
+    echo >&2
+    echo "*** It looks like you haven't built the QuickJS library yet.     ***" >&2
+    echo "*** Go to the parent directory and run ./build_quickjs.sh first. ***" >&2
+    echo "*** You only have to do this once. Exiting.                      ***" >&2
     exit 1
 fi
 
