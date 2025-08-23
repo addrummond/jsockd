@@ -10,6 +10,11 @@ if [ ! -d ../.scratch/quickjs ] || [ -z "$(find ../.scratch/quickjs -type f -nam
 fi
 
 BUILD_TYPE=${1:-Debug}
+if [ "$BUILD_TYPE" != "Release" ] && [ "$BUILD_TYPE" != "Debug" ]; then
+    echo "Expected first argument to be the build type (either Release or Debug)" &1>2
+    exit 1
+fi
+
 BUILD_DIR="build_$BUILD_TYPE"
 
 cmake_cross_opts=""
