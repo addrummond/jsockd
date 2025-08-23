@@ -48,7 +48,8 @@ if(CMAKE_BUILD_TYPE STREQUAL Debug)
     if (CMAKE_C_COMPILER_ID MATCHES "Clang")
         add_compile_options(-O0 -Wall -Wextra -Wpedantic -Werror
           -Wno-unused-parameter -Wno-unused-function -Wno-unused-variable
-          -Wno-missing-field-initializers)
+          -Wno-missing-field-initializers -fsanitize=address)
+        add_link_options(-fsanitize=address)
     endif()
     if (CMAKE_C_COMPILER_ID MATCHES "GNU")
         add_compile_options(-O0 -Wall -Wextra -Wpedantic -Werror -Wno-unused-parameter)
