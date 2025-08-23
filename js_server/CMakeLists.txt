@@ -48,8 +48,13 @@ if(CMAKE_BUILD_TYPE STREQUAL Debug)
     if (CMAKE_C_COMPILER_ID MATCHES "Clang")
         add_compile_options(-O0 -Wall -Wextra -Wpedantic -Werror
           -Wno-unused-parameter -Wno-unused-function -Wno-unused-variable
-          -Wno-missing-field-initializers -fsanitize=address)
-        add_link_options(-fsanitize=address)
+          -Wno-missing-field-initializers)
+        # Address santizer doesn't seem to work with OS X cross, so turn it on
+        # only for regular clang Debug builds.
+        if (NOT (CMAKE_TOOLCHAIN_FILE MATCHES "oa64"))
+            add_compile_options(-fsanitize=address)
+            add_link_options(-fsanitize=address)
+        endif()
     endif()
     if (CMAKE_C_COMPILER_ID MATCHES "GNU")
         add_compile_options(-O0 -Wall -Wextra -Wpedantic -Werror -Wno-unused-parameter)
