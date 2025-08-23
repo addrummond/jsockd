@@ -51,7 +51,8 @@ if(CMAKE_BUILD_TYPE STREQUAL Debug)
           -Wno-missing-field-initializers)
         # Address santizer doesn't seem to work with OS X cross, so turn it on
         # only for regular clang Debug builds.
-        if (NOT (${CMAKE_TOOLCHAIN_FILE} MATCHES "oa64"))
+        if (NOT (CMAKE_TOOLCHAIN_FILE MATCHES "oa64"))
+            MESSAGE(STATUS "Toolchain file is ......: '${CMAKE_TOOLCHAIN_FILE}'")
             add_compile_options(-fsanitize=address)
             add_link_options(-fsanitize=address)
         endif()
