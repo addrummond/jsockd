@@ -154,6 +154,7 @@ The `?quit` command causes the server to exit immediately (closing all sockets, 
 ```jsonb
 {
   "raw": "Error: foo\n  at <anonymous> (<buffer>:1:26)" // the raw QuickJS error message + stack trace
+  "pretty": "..." // The formatted backtrace with sourcemap info (if sourcemap provided)
   "errorMessage": "Error: foo", // the error message
   "trace": [
      {
@@ -161,6 +162,9 @@ The `?quit` command causes the server to exit immediately (closing all sockets, 
         "source": "foo.js",        // the source file (null if unavailable)
         "line": 1,                 // the line number (null if unavailable)
         "column": 26,              // the column number (null if unavailable)
+        "mapped": {                // null if no sourcemap available
+          // the fields above for the function/location in the original source file
+        }
      },
      ...
   ]
@@ -172,7 +176,7 @@ The `?quit` command causes the server to exit immediately (closing all sockets, 
 JSockD supports source maps for error backtrace reporting. Use the `-sm <source_map.js.map>`
 command line option to specify the path to a source map file for the bundle.
 
-When a source map is provided, each entry in the `"trace"` array (see previous section) includes a `"mapped"` property which is either `null` or an object with `"functionName"`, `"source"`, `"line"`, and `"column"` properties. These properties correspond to the original source code location of the error, as determined by the source map.
+When a source map is provided, each entry in the `"trace"` array (see previous section) includes a `"mapped"` property with `"functionName"`, `"source"`, `"line"`, and `"column"` properties. These properties correspond to the original source code location of the error, as determined by the source map.
 
 It is recommended to specify a source map only for development and testing purposes, as the code for computing source mapped back traces is not optimized for performance. As long as you have a source map for your bundle, you always have the option of manually resolving the backtrace entries when looking at errors in production.
 

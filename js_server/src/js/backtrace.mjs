@@ -3,7 +3,9 @@ let parsedSourcemap = null;
 // Bellard's QuickJS doesn't expose structured backtraces via the public API,
 // so we need to parse the backtrace's string representation.
 export function parseBacktrace(sourcemap, backtrace) {
-  return JSON.stringify(parseBacktraceHelper(sourcemap, backtrace));
+  const bt = parseBacktraceHelper(sourcemap, backtrace);
+  bt.pretty = formatParsedBacktrace(bt);
+  return JSON.stringify(bt);
 }
 
 function parseBacktraceHelper(sourcemap, backtrace) {
@@ -43,6 +45,10 @@ function parseBacktraceHelper(sourcemap, backtrace) {
 
 export function formatBacktrace(sourcemap, backtrace) {
   backtrace = parseBacktraceHelper(sourcemap, backtrace);
+  return formatParsedBacktrace(backtrace);
+}
+
+function formatParsedBacktrace(backtrace) {
   return `
 ${backtrace.errorMessage}:
   ${backtrace.trace.map((entry) => {
