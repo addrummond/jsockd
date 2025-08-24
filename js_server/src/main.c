@@ -629,7 +629,20 @@ static int init_thread_state(ThreadState *ts, SocketState *socket_state) {
       return 0;
 }
 
+static void *reset_thread_state_cleanup_old_runtime_thread(void *);
+
 static void cleanup_thread_state(ThreadState *ts) {
+  // We know that any running instance of
+  // reset_thread_state_cleanup_old_runtime_thread or reset_thread_state_thread
+  // has now been joined, so if we're in one of the following states, that means
+  // that a new thread state was created but we never got round to using it and
+  // initiating cleanup of the old one before exiting.
+  if (ts->replacement_thread_state == REPLACEMENT_THREAD_STATE_INIT_COMPLETE ||
+      ts->replacement_thread_state == REPLACEMENT_THREAD_STATE_CLEANUP) {
+    debug_log("Doing delayed cleanup of old thread state\n");
+    reset_thread_state_cleanup_old_runtime_thread((void *)ts);
+  }
+
   JS_FreeValue(ts->ctx, ts->backtrace_module);
   JS_FreeValue(ts->ctx, ts->compiled_query);
   JS_FreeValue(ts->ctx, ts->compiled_module);
