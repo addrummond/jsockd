@@ -96,15 +96,15 @@ When the server is ready to start accepting commands on the specified UNIX domai
 
 ### 3.2 Command line options
 
-| Option      | Argument(s)                | Description                                                                                   | Repeatable | Required |
-|-------------|----------------------------|-----------------------------------------------------------------------------------------------|------------|----------|
-| `-v`        | *(none)*                   | Print version and exit. Cannot be used with other flags.                                      | No         | No       |
-| `-m`        | `<module_bytecode_file>`   | Path to ES6 module bytecode file.                                                             | No         | No       |
-| `-sm`       | `<source_map_file>`        | Path to source map file (e.g. `foo.js.map`). Can only be used with `-m`.                      | No         | No       |
-| `-t`        | `<microseconds>`           | Maximum command runtime in microseconds (must be integer > 0).                                | No         | No       |
-| `-b`        | `<XX>`                     | Separator byte as two hex digits (e.g. `0A`).                                                 | No         | No       |
-| `-s`        | `<socket1> [socket2 ...]`  | One or more socket file paths.                                                                | Yes        | Yes      |
-| `--`        | *(none)*                   | Indicates end of options for `-s` (allows socket paths starting with `-`).                    | N/A        | No       |
+| Option      | Argument(s)                | Description                                                                  | Default       | Repeatable | Required |
+|-------------|----------------------------|------------------------------------------------------------------------------|---------------|------------|----------|
+| `-v`        | *(none)*                   | Print version and exit. Cannot be used with other flags.                     |               | No         | No       |
+| `-m`        | `<module_bytecode_file>`   | Path to ES6 module bytecode file.                                            |               | No         | No       |
+| `-sm`       | `<source_map_file>`        | Path to source map file (e.g. `foo.js.map`). Can only be used with `-m`.     |               | No         | No       |
+| `-t`        | `<microseconds>`           | Maximum command runtime in microseconds (must be integer > 0).               | 250000        | No         | No       |
+| `-b`        | `<XX>`                     | Separator byte as two hex digits (e.g. `0A`).                                | `0A` (= `\n`) | No         | No       |
+| `-s`        | `<socket1> [socket2 ...]`  | One or more socket file paths.                                               |               | Yes        | Yes      |
+| `--`        | *(none)*                   | Indicates end of options for `-s` (allows socket paths starting with `-`).   |               | N/A        | No       |
 
 ### 3.3 The socket protocol
 
@@ -154,7 +154,7 @@ The `?quit` command causes the server to exit immediately (closing all sockets, 
 ```javascript
 {
   "raw": "..." // the raw QuickJS error message + stack trace
-  "pretty": "..." // The formatted backtrace with sourcemap info (if sourcemap provided)
+  "pretty": "..." // The formatted backtrace with source map info (if sourcemap provided)
   "errorMessage": "Error: foo", // the error message
   "trace": [
      {
@@ -162,7 +162,7 @@ The `?quit` command causes the server to exit immediately (closing all sockets, 
         "source": "foo.js",        // the source file (null if unavailable)
         "line": 1,                 // the line number (null if unavailable)
         "column": 26,              // the column number (null if unavailable)
-        "mapped": {                // null if no sourcemap available
+        "mapped": {                // null if no source map available
           // the fields above for the function/location in the original source file
         }
      },
