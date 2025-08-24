@@ -10,7 +10,11 @@ case $1 in
     setup)
         sudo apt-get update
         sudo apt-get install -y unzip libncurses-dev valgrind gcc-aarch64-linux-gnu patchelf
-        curl -L https://github.com/jdx/mise/releases/download/v2025.5.17/mise-v2025.5.17-linux-x64 --output - | sudo tee -a /usr/local/bin/mise > /dev/null
+        curl -L https://github.com/jdx/mise/releases/download/v2025.8.18/mise-v2025.8.18-linux-x64 --output - | sudo tee -a /usr/local/bin/mise > /dev/null
+        if [ $(sha256sum /usr/local/bin/mise | awk '{ print $1 }') != "7265c5f8099bec212009fcd05bdb786423e9a06e316eddb4362a9869a1950c57" ]; then
+            echo "Bad checksum for mise"
+            exit 1
+        fi
         sudo chmod +x /usr/local/bin/mise
         # mise takes ages to install CMake, so use a binary distribution
         # instead (still taking the version from .tool-versions).
