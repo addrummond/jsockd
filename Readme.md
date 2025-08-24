@@ -133,7 +133,7 @@ The third field is the JSON-encoded parameter value.
 
 The server responds with a single line (terminated with `\n`) consisting of the command ID followed by a space and then either
 * the JSON-encoded result of the command, if successful; or
-* the string `exception` followed by a JSON-encoded error message and backtrace (see next subsection).
+* the string `exception` followed by a space and then a JSON-encoded error message and backtrace (see next subsection).
 
 As the protocol is synchronous, command IDs are not strictly necessary. However, it is recommended to check that responses have the expected
 command ID as a means of ensuring that the client code is working correctly.
@@ -182,7 +182,7 @@ It is recommended to specify a source map only for development and testing purpo
 
 ## 4. Bundling your JavaScript code
 
-JSockD can be used with any bundler that can output an ES6 module (or with no bundler at all if your JS code is contained in a single file). The following is an example of how to bundle you code using [esbuild](https://esbuild.github.io/). The `root_module.mjs` module should contain all the code that you want to execute in the JSockD server. It can import other modules as needed.
+JSockD can be used with any bundler that can output an ES6 module (or with no bundler at all if your JS code is contained in a single file). The following is an example of how to bundle you code using [esbuild](https://esbuild.github.io/). The `root_module.mjs` module should contain all the code that you want to execute in the JSockD server. It can import other modules as needed.=
 
 ```
 esbuild root_module.mjs --bundle --outfile=bundle.mjs --sourcemap --format=esm
