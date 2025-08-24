@@ -149,7 +149,7 @@ done
 sleep 1
 echo "Regular x86_64 server started for NodeJS bench..."
 
-total_nodejs_ns=$( node -e "const m = await import('./tests/e2e/relative_bench/bundle.js'); for (let i = 0; i < 10; ++i) { console.log('OUT', m.renderToString(m.createElement(m.AccordionDemo))); } /* <-- allow warm up before timing */ console.time('render'); for (let i = 0; i < Number(process.argv[1]); ++i) { m.renderToString(m.createElement(m.AccordionDemo, JSON.parse('{}'))) } console.timeEnd('render')" $N_VS_NODE_ITERATIONS | grep '^render' | awk '{print $2}' | perl -e 'use Math::Round; $line = <>; $_ =~ s/ms$//; print round($line * 1000000)' )
+total_nodejs_ns=$( node -e "const m = await import('./tests/e2e/relative_bench/bundle.js'); for (let i = 0; i < 10; ++i) { console.log('OUT', m.renderToString(m.createElement(m.AccordionDemo))); } /* <-- allow warm up before timing */ console.time('render'); for (let i = 0; i < Number(process.argv[1]); ++i) { m.renderToString(m.createElement(m.AccordionDemo, JSON.parse('{}'))) } console.timeEnd('render')" $N_VS_NODE_ITERATIONS | grep '^render' | awk '{print $2}' | perl -e '$line = <>; $_ =~ s/ms$//; print int(($line * 1000000) + 0.5)' )
 total_jsockd_ns=$(nc -U /tmp/jsockd_filc_relative_bench_sock < /tmp/jsockd_relative_bench_vs_node_command_input | awk '/^[0-9]/ { n+=$1 } END { print n }')
 
 # Start the server (Fil-C Linux/x86_64)
