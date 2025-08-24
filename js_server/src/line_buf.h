@@ -5,7 +5,6 @@
 #define _REENTRANT
 #endif
 
-#include <limits.h>
 #include <stdbool.h>
 #include <stdlib.h>
 
@@ -16,7 +15,7 @@ typedef struct {
   bool truncated;
 } LineBuf;
 
-#define LINE_BUF_READ_EOF INT_MIN
+#define LINE_BUF_READ_EOF -99999
 
 int line_buf_read(LineBuf *b, char sep_char,
                   int (*readf)(char *buf, size_t n, void *data),
