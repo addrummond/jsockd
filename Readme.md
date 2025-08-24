@@ -127,7 +127,7 @@ A useful value is `00`, as the null byte cannot be present in valid JSON or Java
 A unique command ID is any non-empty sequence of 32 or fewer bytes that does not contain a space character or a separator byte.
 
 The second field, the command, is a JavaScript expression evaluating to a function. The function is called with two arguments.
-The first is the module that was loaded from the bytecode file; the second is the parameter passed as the third field.
+The first is the module that was loaded from the bytecode file (or `undefined` if none was given); the second is the parameter passed as the third field.
 
 The third field is the JSON-encoded parameter value.
 
