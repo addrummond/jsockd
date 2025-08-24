@@ -151,9 +151,9 @@ The `?quit` command causes the server to exit immediately (closing all sockets, 
 
 ### 3.4 Error message and backtrace format
 
-```jsonb
+```javascript
 {
-  "raw": "Error: foo\n  at <anonymous> (<buffer>:1:26)" // the raw QuickJS error message + stack trace
+  "raw": "..." // the raw QuickJS error message + stack trace
   "pretty": "..." // The formatted backtrace with sourcemap info (if sourcemap provided)
   "errorMessage": "Error: foo", // the error message
   "trace": [
