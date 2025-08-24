@@ -1,6 +1,7 @@
 #include "utils.h"
 #include <errno.h>
 #include <stdarg.h>
+#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,32 +9,38 @@
 #include <unistd.h>
 
 pthread_mutex_t g_log_mutex;
+extern atomic_bool g_in_signal_handler;
 
 void mutex_lock_(pthread_mutex_t *m, const char *file, int line) {
   if (0 != pthread_mutex_lock(m)) {
-    fprintf(stderr, "Failed to lock mutex at %s:%i: %s\n", file, line,
-            strerror(errno));
+    if (!atomic_load_explicit(&g_in_signal_handler, memory_order_relaxed))
+      fprintf(stderr, "Failed to lock mutex at %s:%i: %s\n", file, line,
+              strerror(errno));
     exit(1);
   }
 }
 
 void mutex_unlock_(pthread_mutex_t *m, const char *file, int line) {
   if (0 != pthread_mutex_unlock(m)) {
-    fprintf(stderr, "Failed to unlock mutex at %s:%i: %s\n", file, line,
-            strerror(errno));
+    if (!atomic_load_explicit(&g_in_signal_handler, memory_order_relaxed))
+      fprintf(stderr, "Failed to unlock mutex at %s:%i: %s\n", file, line,
+              strerror(errno));
     exit(1);
   }
 }
 
 void mutex_init_(pthread_mutex_t *m, const char *file, int line) {
   if (0 != pthread_mutex_init(m, NULL)) {
-    fprintf(stderr, "Failed to initialized mutex at %s:%i: %s\n", file, line,
-            strerror(errno));
+    if (!atomic_load_explicit(&g_in_signal_handler, memory_order_relaxed))
+      fprintf(stderr, "Failed to initialized mutex at %s:%i: %s\n", file, line,
+              strerror(errno));
     exit(1);
   }
 }
 
 void release_logf(const char *fmt, ...) {
+  if (atomic_load_explicit(&g_in_signal_handler, memory_order_relaxed))
+    return;
   va_list args;
   va_start(args, fmt);
 

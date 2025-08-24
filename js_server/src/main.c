@@ -52,6 +52,8 @@ static size_t g_source_map_size;
 static atomic_int g_source_map_load_count; // once all threads have loaded the
 // source map, we can munmap the file
 
+atomic_bool g_in_signal_handler;
+
 // Testing scenarios with collisions is less labor intensive if we use a smaller
 // number of bits in the debug build.
 #define CACHED_FUNCTION_HASH_BITS                                              \
@@ -631,18 +633,8 @@ static int init_thread_state(ThreadState *ts, SocketState *socket_state) {
 
 static void *reset_thread_state_cleanup_old_runtime_thread(void *);
 
+// called whenever we want to clean a thread a state up
 static void cleanup_thread_state(ThreadState *ts) {
-  // We know that any running instance of
-  // reset_thread_state_cleanup_old_runtime_thread or reset_thread_state_thread
-  // has now been joined, so if we're in one of the following states, that means
-  // that a new thread state was created but we never got round to using it and
-  // initiating cleanup of the old one before exiting.
-  if (ts->replacement_thread_state == REPLACEMENT_THREAD_STATE_INIT_COMPLETE ||
-      ts->replacement_thread_state == REPLACEMENT_THREAD_STATE_CLEANUP) {
-    debug_log("Doing delayed cleanup of old thread state\n");
-    reset_thread_state_cleanup_old_runtime_thread((void *)ts);
-  }
-
   JS_FreeValue(ts->ctx, ts->backtrace_module);
   JS_FreeValue(ts->ctx, ts->compiled_query);
   JS_FreeValue(ts->ctx, ts->compiled_module);
@@ -655,9 +647,17 @@ static void cleanup_thread_state(ThreadState *ts) {
   JS_FreeRuntime(ts->rt);
 }
 
+// called only when destroying a thread state before program exit
 static void destroy_thread_state(ThreadState *ts) {
-  // Don't add logs to this function as it may be called from a signal
-  // handler.
+  // We know that any running instance of
+  // reset_thread_state_cleanup_old_runtime_thread or reset_thread_state_thread
+  // has now been joined, so if we're in one of the following states, that means
+  // that a new thread state was created but we never got round to using it and
+  // initiating cleanup of the old one before exiting.
+  if (ts->replacement_thread_state == REPLACEMENT_THREAD_STATE_INIT_COMPLETE ||
+      ts->replacement_thread_state == REPLACEMENT_THREAD_STATE_CLEANUP) {
+    reset_thread_state_cleanup_old_runtime_thread((void *)ts);
+  }
 
   cleanup_socket_state(ts->socket_state);
   cleanup_thread_state(ts);
@@ -1143,6 +1143,7 @@ static void global_cleanup(void) {
 }
 
 static void SIGINT_handler(int sig) {
+  atomic_store_explicit(&g_in_signal_handler, true, memory_order_relaxed);
   atomic_store_explicit(&g_interrupted_or_error, true, memory_order_relaxed);
 
   // Using stdio inside an interrupt handler is not safe, but calls to write
