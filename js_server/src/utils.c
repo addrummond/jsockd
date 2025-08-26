@@ -2,14 +2,36 @@
 #include <errno.h>
 #include <stdarg.h>
 #include <stdatomic.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
 #include <unistd.h>
 
-pthread_mutex_t g_log_mutex;
 extern atomic_bool g_in_signal_handler;
+
+static pthread_mutex_t g_log_mutex;
+static atomic_bool g_log_mutex_initialized;
+
+void init_log_mutex() {
+  int r = pthread_mutex_init(&g_log_mutex, NULL);
+  if (r != 0) {
+    if (!g_in_signal_handler)
+      fprintf(stderr, "Failed to initalize log mutex\n");
+    exit(1);
+  }
+  atomic_store_explicit(&g_log_mutex_initialized, true, memory_order_relaxed);
+}
+
+void destroy_log_mutex() {
+  atomic_store_explicit(&g_log_mutex_initialized, false, memory_order_relaxed);
+  if (0 != pthread_mutex_destroy(&g_log_mutex)) {
+    if (!g_in_signal_handler)
+      fprintf(stderr, "Unable to destroy log mutex (continuing execution)\n");
+    exit(1);
+  }
+}
 
 void mutex_lock_(pthread_mutex_t *m, const char *file, int line) {
   if (0 != pthread_mutex_lock(m)) {
@@ -44,9 +66,11 @@ void release_logf(const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
 
-  mutex_lock(&g_log_mutex);
+  if (g_log_mutex_initialized)
+    mutex_lock(&g_log_mutex);
   vfprintf(stderr, fmt, args);
-  mutex_unlock(&g_log_mutex);
+  if (g_log_mutex_initialized)
+    mutex_unlock(&g_log_mutex);
 }
 
 void release_log(const char *s) { release_logf("%s", s); }

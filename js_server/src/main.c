@@ -1132,8 +1132,9 @@ static void global_cleanup(void) {
   // These can fail, but we're calling this when we're about to exit, so there
   // is no useful error handling to be done.
   pthread_mutex_destroy(&g_cached_functions_mutex);
-  pthread_mutex_destroy(&g_log_mutex);
   wait_group_destroy(&g_thread_ready_wait_group);
+
+  destroy_log_mutex();
 
   if (g_module_bytecode_size != 0 && g_module_bytecode)
     munmap_or_warn((void *)g_module_bytecode,
@@ -1179,18 +1180,18 @@ int main(int argc, char *argv[]) {
   struct sigaction sa = {.sa_handler = SIGINT_handler};
   sigaction(SIGINT, &sa, NULL);
 
-  mutex_init(&g_log_mutex);
+  init_log_mutex();
   mutex_init(&g_cached_functions_mutex);
 
   if (0 != parse_cmd_args(argc, argv, release_logf, &g_cmd_args)) {
-    pthread_mutex_destroy(&g_log_mutex);
+    destroy_log_mutex();
     pthread_mutex_destroy(&g_cached_functions_mutex);
     return 1;
   }
 
   if (g_cmd_args.version) {
     printf("JSockD js_server %s", STRINGIFY(VERSION));
-    pthread_mutex_destroy(&g_log_mutex);
+    destroy_log_mutex();
     pthread_mutex_destroy(&g_cached_functions_mutex);
     return 0;
   }
@@ -1201,7 +1202,7 @@ int main(int argc, char *argv[]) {
     if (g_module_bytecode == NULL) {
       release_logf("Error loading module bytecode from %s: %s\n",
                    g_cmd_args.es6_module_bytecode_file, strerror(errno));
-      pthread_mutex_destroy(&g_log_mutex);
+      destroy_log_mutex();
       pthread_mutex_destroy(&g_cached_functions_mutex);
       return 1;
     }
@@ -1224,7 +1225,7 @@ int main(int argc, char *argv[]) {
     if (g_module_bytecode_size != 0 && g_module_bytecode)
       munmap_or_warn((void *)g_module_bytecode,
                      g_module_bytecode_size + ED25519_SIGNATURE_SIZE);
-    pthread_mutex_destroy(&g_log_mutex);
+    destroy_log_mutex();
     pthread_mutex_destroy(&g_cached_functions_mutex);
     return 1;
   }
@@ -1237,7 +1238,7 @@ int main(int argc, char *argv[]) {
       release_logf("Error initializing thread %i\n", n);
       if (g_module_bytecode_size != 0 && g_module_bytecode)
         munmap_or_warn((void *)g_module_bytecode, g_module_bytecode_size);
-      pthread_mutex_destroy(&g_log_mutex);
+      destroy_log_mutex();
       pthread_mutex_destroy(&g_cached_functions_mutex);
       for (int i = n - 1; i >= 0; --i)
         destroy_thread_state(&g_thread_states[i]);

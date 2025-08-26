@@ -9,8 +9,8 @@
 #include <stdint.h>
 #include <time.h>
 
-extern pthread_mutex_t g_log_mutex;
-
+void init_log_mutex(void);
+void destroy_log_mutex(void);
 void mutex_lock_(pthread_mutex_t *m, const char *file, int line);
 void mutex_unlock_(pthread_mutex_t *m, const char *file, int line);
 void mutex_init_(pthread_mutex_t *m, const char *file, int line);
