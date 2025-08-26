@@ -28,7 +28,7 @@ void destroy_log_mutex(void) {
   atomic_store_explicit(&g_log_mutex_initialized, false, memory_order_relaxed);
   if (0 != pthread_mutex_destroy(&g_log_mutex)) {
     if (!g_in_signal_handler)
-      fprintf(stderr, "Unable to destroy log mutex (continuing execution)\n");
+      fprintf(stderr, "Unable to destroy log mutex\n");
     exit(1);
   }
 }
