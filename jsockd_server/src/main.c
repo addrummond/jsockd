@@ -70,13 +70,6 @@ static pthread_mutex_t g_cached_functions_mutex;
 
 static atomic_bool g_global_init_complete;
 
-static void dump_error(JSContext *ctx) {
-  if (CMAKE_BUILD_TYPE_IS_DEBUG)
-    js_std_dump_error(ctx);
-  else
-    JS_FreeValue(ctx, JS_GetException(ctx));
-}
-
 typedef struct {
   const uint8_t *bytecode;
   size_t bytecode_size;
@@ -85,6 +78,13 @@ typedef struct {
 static HashCacheBucket g_cached_function_buckets[CACHED_FUNCTIONS_N_BUCKETS];
 static cached_function_t g_cached_functions[CACHED_FUNCTIONS_N_BUCKETS];
 static atomic_int g_n_cached_functions;
+
+static void dump_error(JSContext *ctx) {
+  if (CMAKE_BUILD_TYPE_IS_DEBUG)
+    js_std_dump_error(ctx);
+  else
+    JS_FreeValue(ctx, JS_GetException(ctx));
+}
 
 static void add_cached_function(HashCacheUid uid, const uint8_t *bytecode,
                                 size_t bytecode_size) {
@@ -628,8 +628,6 @@ static int init_thread_state(ThreadState *ts, SocketState *socket_state) {
       return 0;
 }
 
-static void *reset_thread_state_cleanup_old_runtime_thread(void *);
-
 // called whenever we want to clean a thread a state up
 static void cleanup_thread_state(ThreadState *ts) {
   JS_FreeValue(ts->ctx, ts->backtrace_module);
@@ -644,36 +642,7 @@ static void cleanup_thread_state(ThreadState *ts) {
   JS_FreeRuntime(ts->rt);
 }
 
-// called only when destroying a thread state before program exit
-static void destroy_thread_state(ThreadState *ts) {
-  // We know that any running instance of
-  // reset_thread_state_cleanup_old_runtime_thread or reset_thread_state_thread
-  // has now been joined, so if we're in one of the following states, that means
-  // that a new thread state was created but we never got round to using it and
-  // initiating cleanup of the old one before exiting.
-  if (ts->replacement_thread_state == REPLACEMENT_THREAD_STATE_INIT_COMPLETE ||
-      ts->replacement_thread_state == REPLACEMENT_THREAD_STATE_CLEANUP) {
-    reset_thread_state_cleanup_old_runtime_thread((void *)ts);
-  }
-
-  cleanup_socket_state(ts->socket_state);
-  cleanup_thread_state(ts);
-}
-
-static void write_to_stream(ThreadState *ts, const char *buf, size_t len) {
-  if (0 != write_all(ts->socket_state->streamfd, buf, len)) {
-    ts->socket_state->stream_io_err = -1;
-    release_logf("Error writing to socket: %s\n", strerror(errno));
-    return;
-  }
-}
-
-#define write_const_to_stream(ts, str)                                         \
-  write_to_stream((ts), (str), sizeof(str) - 1)
-
-static void *reset_thread_state_cleanup_old_runtime_thread(void *data) {
-  // ts->my_replacement now contains the old thread state
-  ThreadState *ts = (ThreadState *)data;
+static void cleanup_old_runtime(ThreadState *ts) {
   assert(ts->my_replacement);
   JS_UpdateStackTop(ts->my_replacement->rt);
   cleanup_thread_state(ts->my_replacement);
@@ -684,6 +653,26 @@ static void *reset_thread_state_cleanup_old_runtime_thread(void *data) {
   atomic_store_explicit(&ts->replacement_thread_state,
                         REPLACEMENT_THREAD_STATE_CLEANUP_COMPLETE,
                         memory_order_relaxed);
+}
+
+// called only when destroying a thread state before program exit
+static void destroy_thread_state(ThreadState *ts) {
+  // We know that any running instance of
+  // reset_thread_state_cleanup_old_runtime_thread or reset_thread_state_thread
+  // has now been joined, so if we're in one of the following states, that means
+  // that a new thread state was created but we never got round to using it and
+  // then initiating cleanup of the old one before exiting.
+  if (ts->replacement_thread_state == REPLACEMENT_THREAD_STATE_INIT_COMPLETE ||
+      ts->replacement_thread_state == REPLACEMENT_THREAD_STATE_CLEANUP) {
+    cleanup_old_runtime(ts);
+  }
+
+  cleanup_socket_state(ts->socket_state);
+  cleanup_thread_state(ts);
+}
+
+static void *reset_thread_state_cleanup_old_runtime_thread(void *data) {
+  cleanup_old_runtime((ThreadState *)data);
   return NULL;
 }
 
@@ -789,6 +778,17 @@ static void *reset_thread_state_thread(void *data) {
                         memory_order_relaxed);
   return NULL;
 }
+
+static void write_to_stream(ThreadState *ts, const char *buf, size_t len) {
+  if (0 != write_all(ts->socket_state->streamfd, buf, len)) {
+    ts->socket_state->stream_io_err = -1;
+    release_logf("Error writing to socket: %s\n", strerror(errno));
+    return;
+  }
+}
+
+#define write_const_to_stream(ts, str)                                         \
+  write_to_stream((ts), (str), sizeof(str) - 1)
 
 static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
   const JSPrintValueOptions js_print_value_options = {.show_hidden = false,
