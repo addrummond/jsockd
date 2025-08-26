@@ -14,7 +14,7 @@ extern atomic_bool g_in_signal_handler;
 static pthread_mutex_t g_log_mutex;
 static atomic_bool g_log_mutex_initialized;
 
-void init_log_mutex() {
+void init_log_mutex(void) {
   int r = pthread_mutex_init(&g_log_mutex, NULL);
   if (r != 0) {
     if (!g_in_signal_handler)
@@ -24,7 +24,7 @@ void init_log_mutex() {
   atomic_store_explicit(&g_log_mutex_initialized, true, memory_order_relaxed);
 }
 
-void destroy_log_mutex() {
+void destroy_log_mutex(void) {
   atomic_store_explicit(&g_log_mutex_initialized, false, memory_order_relaxed);
   if (0 != pthread_mutex_destroy(&g_log_mutex)) {
     if (!g_in_signal_handler)
