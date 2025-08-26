@@ -36,6 +36,8 @@
 #include <time.h>
 #include <unistd.h>
 
+atomic_bool g_in_signal_handler;
+
 extern const uint32_t g_backtrace_module_bytecode_size;
 extern const uint8_t g_backtrace_module_bytecode[];
 
@@ -51,8 +53,6 @@ static const uint8_t *g_source_map;
 static size_t g_source_map_size;
 static atomic_int g_source_map_load_count; // once all threads have loaded the
 // source map, we can munmap the file
-
-atomic_bool g_in_signal_handler;
 
 // Testing scenarios with collisions is less labor intensive if we use a smaller
 // number of bits in the debug build.
