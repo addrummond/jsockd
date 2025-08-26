@@ -145,9 +145,6 @@ static void init_socket_state(SocketState *ss,
 }
 
 static void cleanup_socket_state(SocketState *socket_state) {
-  // Don't add logs to this function as it may be called from a signal
-  // handler.
-
   // We're about to exit, so we don't need to check for errors.
   if (socket_state->streamfd != -1)
     close(socket_state->streamfd);
