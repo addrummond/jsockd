@@ -7,7 +7,7 @@ export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=dangerously_allow_invalid_signatures
 # Compile the example module to QuickJS bytecode.
 ./tools-bin/compile_es6_module example_module.mjs /tmp/jsockd_memory_increase_test_example_module.qjsb
 
-cd js_server
+cd jsockd_server
 
 # Generate input for a series of commands/param pairs like
 #   (m, p) => { (global_var=(globalThis.global_var ?? { })); globalVar[p] = { }; return "foo"; }
@@ -22,7 +22,7 @@ rm -f /tmp/jsockd_memory_increase_test_sock
 rm -f /tmp/jsockd_memory_increase_test_server_exit_code
 # Start the server
 (
-    ./build_Debug/js_server -m /tmp/jsockd_memory_increase_test_example_module.qjsb -s /tmp/jsockd_memory_increase_test_sock > /tmp/jsockd_memory_increase_test_output 2>&1
+    ./build_Debug/jsockd_server -m /tmp/jsockd_memory_increase_test_example_module.qjsb -s /tmp/jsockd_memory_increase_test_sock > /tmp/jsockd_memory_increase_test_output 2>&1
     echo $? > /tmp/jsockd_memory_increase_test_server_exit_code
 ) &
 server_pid=$!

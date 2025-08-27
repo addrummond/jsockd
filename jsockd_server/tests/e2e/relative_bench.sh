@@ -18,13 +18,13 @@ N_ITERATIONS=100
 N_VS_NODE_ITERATIONS=100
 BUILD="${BUILD:-Release}"
 
-cd js_server
+cd jsockd_server
 
 ./mk.sh $BUILD
 TOOLCHAIN_FILE=TC-fil-c.cmake ./mk.sh $BUILD
 
-JS_SERVER=build_$BUILD/js_server
-FILC_JS_SERVER=build_${BUILD}_TC-fil-c.cmake/js_server
+JS_SERVER=build_$BUILD/jsockd
+FILC_JS_SERVER=build_${BUILD}_TC-fil-c.cmake/jsockd
 
 npm install
 
@@ -62,7 +62,7 @@ echo ?quit >> /tmp/jsockd_filc_relative_bench_sock_command_input
 #
 rm -f /tmp/jsockd_filc_relative_bench_regular_server_exit_code
 (
-    ./build_$BUILD/js_server -m tests/e2e/relative_bench/bundle.qjsbc -s /tmp/jsockd_filc_relative_bench_sock ;
+    ./build_$BUILD/jsockd -m tests/e2e/relative_bench/bundle.qjsbc -s /tmp/jsockd_filc_relative_bench_sock ;
     echo $? > /tmp/jsockd_filc_relative_bench_regular_server_exit_code
 ) &
 regular_server_pid=$!
@@ -95,7 +95,7 @@ fi
 #
 rm -f /tmp/jsockd_filc_relative_bench_filc_server_exit_code
 (
-    ./build_${BUILD}_TC-fil-c.cmake/js_server -m tests/e2e/relative_bench/bundle.qjsbc -s /tmp/jsockd_filc_relative_bench_sock_filc ;
+    ./build_${BUILD}_TC-fil-c.cmake/jsockd -m tests/e2e/relative_bench/bundle.qjsbc -s /tmp/jsockd_filc_relative_bench_sock_filc ;
     echo $? > /tmp/jsockd_filc_relative_bench_filc_server_exit_code
 ) &
 filc_server_pid=$!
@@ -139,7 +139,7 @@ done
 echo "?quit" >> /tmp/jsockd_relative_bench_vs_node_command_input
 
 # Start the server (regular Linux/x86_64)
-./build_$BUILD/js_server -m tests/e2e/relative_bench/bundle.qjsbc -s /tmp/jsockd_filc_relative_bench_sock &
+./build_$BUILD/jsockd -m tests/e2e/relative_bench/bundle.qjsbc -s /tmp/jsockd_filc_relative_bench_sock &
 i=0
 while ! [ -e /tmp/jsockd_filc_relative_bench_sock ] && [ $i -lt 15 ]; do
   echo "Waiting for regular x86_64 server to start for bench vs. NodeJS"
@@ -154,7 +154,7 @@ total_jsockd_ns=$(nc -U /tmp/jsockd_filc_relative_bench_sock < /tmp/jsockd_relat
 
 # Start the server (Fil-C Linux/x86_64)
 rm -f /tmp/jsockd_filc_relative_bench_sock
-./build_${BUILD}_TC-fil-c.cmake/js_server -m tests/e2e/relative_bench/bundle.qjsbc -s /tmp/jsockd_filc_relative_bench_sock &
+./build_${BUILD}_TC-fil-c.cmake/jsockd -m tests/e2e/relative_bench/bundle.qjsbc -s /tmp/jsockd_filc_relative_bench_sock &
 i=0
 while ! [ -e /tmp/jsockd_filc_relative_bench_sock ] && [ $i -lt 15 ]; do
   echo "Waiting for Fil-C x86_64 server to start for bench vs. NodeJS"

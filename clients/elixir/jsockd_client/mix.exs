@@ -27,7 +27,7 @@ defmodule JsockdClient.MixProject do
         n_threads: nil,
         bytecode_module_file: "",
         bytecode_module_public_key: "",
-        js_server_exec: nil,
+        jsockd_exec: nil,
         source_map: nil,
         max_command_runtime_us: nil,
         use_filc_when_available?: false
@@ -60,17 +60,17 @@ defmodule JsockdClient.MixProject do
         priv_dir,
         "jsockd-release-artifacts",
         String.replace(release_filename, ".tar.gz", ""),
-        "js_server"
+        "jsockd"
       ])
 
     filc? =
       String.contains?(platform, "x86_64") and String.contains?(platform, "linux") and
         use_filc_when_available?
 
-    # The Fil-C build is tucked away inside a js_server folder with its .so friends.
+    # The Fil-C build is tucked away inside a jsockd folder with its .so friends.
     js_server_binary_filename =
       if filc? do
-        Path.join(js_server_binary_filename, "js_server")
+        Path.join(js_server_binary_filename, "jsockd")
       else
         js_server_binary_filename
       end
@@ -131,9 +131,9 @@ defmodule JsockdClient.MixProject do
         }
         | if filc? do
             [
-              with_sig(Path.join([release_dir, "js_server", "ld-yolo-x86_64.so"])),
-              with_sig(Path.join([release_dir, "js_server", "libc.so"])),
-              with_sig(Path.join([release_dir, "js_server", "libpizlo.so"]))
+              with_sig(Path.join([release_dir, "jsockd", "ld-yolo-x86_64.so"])),
+              with_sig(Path.join([release_dir, "jsockd", "libc.so"])),
+              with_sig(Path.join([release_dir, "jsockd", "libpizlo.so"]))
             ]
           else
             []

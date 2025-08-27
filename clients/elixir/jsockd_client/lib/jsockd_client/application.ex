@@ -17,8 +17,8 @@ defmodule JSockDClient.Application do
     bytecode_module_public_key =
       Application.get_env(:jsockd_client, :bytecode_module_public_key)
 
-    js_server_exec =
-      Application.get_env(:jsockd_client, :js_server_exec)
+    jsockd_exec =
+      Application.get_env(:jsockd_client, :jsockd_exec)
 
     source_map =
       Application.get_env(:jsockd_client, :source_map)
@@ -32,7 +32,7 @@ defmodule JSockDClient.Application do
          n_threads: n_threads,
          bytecode_module_file: bytecode_module_file,
          bytecode_module_public_key: bytecode_module_public_key,
-         js_server_exec: js_server_exec,
+         jsockd_exec: jsockd_exec,
          source_map: source_map,
          max_command_runtime_us: max_command_runtime_us
        }}

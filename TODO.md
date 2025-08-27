@@ -1,2 +1,2 @@
-- Turn js_server/tests/e2e/sourcemaps/todo_not_yet_a_test.sh into a proper test
+- Turn jsockd_server/tests/e2e/sourcemaps/todo_not_yet_a_test.sh into a proper test
 - CMakeLists.txts isn't completely "modern CMake". It still uses non-target-specific directives like 'add_compile_options'.

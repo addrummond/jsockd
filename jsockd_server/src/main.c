@@ -1033,7 +1033,7 @@ static int line_handler(const char *line, size_t len, void *data,
         ts->compiled_query = JS_UNDEFINED;
       }
       write_to_stream(ts, ts->current_uuid, ts->current_uuid_len);
-      write_const_to_stream(ts, " exception \"js_server command was too long "
+      write_const_to_stream(ts, " exception \"jsockd command was too long "
                                 "and had to be truncated\"\n");
     } else {
       // we'll signal an error once the client has sent the third line
@@ -1189,7 +1189,7 @@ int main(int argc, char *argv[]) {
   }
 
   if (g_cmd_args.version) {
-    printf("JSockD js_server %s", STRINGIFY(VERSION));
+    printf("jsockd %s", STRINGIFY(VERSION));
     pthread_mutex_destroy(&g_log_mutex);
     pthread_mutex_destroy(&g_cached_functions_mutex);
     return 0;

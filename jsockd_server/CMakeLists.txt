@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 4.0)
 
 project(
-  js_server
+  jsockd_js_server
   VERSION 1.0
   LANGUAGES C)
 
@@ -105,7 +105,7 @@ set(ED25519_LIB_SOURCES
   src/lib/ed25519/verify.c
 )
 
-set(JS_SERVER_SOURCES
+set(JSOCKD_SERVER_SOURCES
   src/custom_module_loader.c
   src/wait_group.c
   src/hash_cache.c
@@ -122,16 +122,16 @@ set(JS_SERVER_SOURCES
 
 # This lib is just here to stop CMake building most of the sources twice, once
 # for the main executable and once for the tests.
-add_library(js_server_lib STATIC ${JS_SERVER_SOURCES})
-target_compile_features(js_server_lib PUBLIC c_std_11)
+add_library(jsockd_lib STATIC ${JSOCKD_SERVER_SOURCES})
+target_compile_features(jsockd_lib PUBLIC c_std_11)
 
-add_executable(js_server src/main.c)
-target_link_libraries(js_server js_server_lib xxHash::xxhash)
-target_compile_features(js_server PUBLIC c_std_11)
+add_executable(jsockd src/main.c)
+target_link_libraries(jsockd jsockd_lib xxHash::xxhash)
+target_compile_features(jsockd PUBLIC c_std_11)
 
-add_executable(js_server_tests tests/unit/tests.c tests/unit/lib/pcg.c)
-target_link_libraries(js_server_tests js_server_lib xxHash::xxhash)
-target_compile_features(js_server_tests PUBLIC c_std_11)
+add_executable(jsockd_tests tests/unit/tests.c tests/unit/lib/pcg.c)
+target_link_libraries(jsockd_tests jsockd_lib xxHash::xxhash)
+target_compile_features(jsockd_tests PUBLIC c_std_11)
 
 if (CMAKE_SIZEOF_VOID_P EQUAL 8 AND (CMAKE_SYSTEM_PROCESSOR MATCHES "arm" OR CMAKE_SYSTEM_PROCESSOR MATCHES "aarch"))
     set(QUICKJS_LIB_ARCH "arm64")
@@ -148,4 +148,4 @@ set_target_properties(qjs PROPERTIES
   INTERFACE_INCLUDE_DIRECTORIES
     "${CMAKE_SOURCE_DIR}/../.scratch/quickjs;${CMAKE_SOURCE_DIR}/src/lib"
 )
-target_link_libraries(js_server_lib qjs m xxHash::xxhash)
+target_link_libraries(jsockd_lib qjs m xxHash::xxhash)

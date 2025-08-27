@@ -23,9 +23,9 @@ jobs:
       - name: Log versions
         run: ./ci.sh log_versions
 
-      - name: Check js_server formatting
+      - name: Check jsockd_server formatting
         run: |
-          ./ci.sh check_js_server_formatting
+          ./ci.sh check_jsockd_server_formatting
 
       - name: Cache QuickJS build output
         id: cache-quickjs-build-output
@@ -42,36 +42,36 @@ jobs:
         if: steps.cache-quickjs-build-output.outputs.cache-hit != 'true'
         run: ./ci.sh build_quickjs
 
-      - name: Build js_server
+      - name: Build jsockd_server
         run: |
-          ./ci.sh build_js_server
+          ./ci.sh build_jsockd_server
 
-      - name: Run js_server tests
-        run: ./ci.sh run_js_server_tests
+      - name: Run jsockd_server tests
+        run: ./ci.sh run_jsockd_server_tests
 
-      - name: Cross-compile js_server for Linux/ARM64
+      - name: Cross-compile jsockd_server for Linux/ARM64
         run: |
-          ./ci.sh build_js_server_linux_arm64
+          ./ci.sh build_jsockd_server_linux_arm64
 
-      - name: Cross-compile js_server for MacOS/ARM64
+      - name: Cross-compile jsockd_server for MacOS/ARM64
         run: |
-          ./ci.sh build_js_server_darwin_aarch64
+          ./ci.sh build_jsockd_server_darwin_aarch64
 
-      - name: Compile js_server with Fil-C for Linux/x86_64
+      - name: Compile jsockd_server with Fil-C for Linux/x86_64
         run: |
-          ./ci.sh build_js_server_linux_x86_64_filc
+          ./ci.sh build_jsockd_server_linux_x86_64_filc
 
-      - name: Run js_server Valgrind tests
-        run: ./ci.sh run_js_server_valgrind_tests
+      - name: Run jsockd_server Valgrind tests
+        run: ./ci.sh run_jsockd_server_valgrind_tests
 
-      - name: Run js_server Valgrind tests with non-newline sep
-        run: ./ci.sh run_js_server_valgrind_tests_with_non_newline_sep
+      - name: Run jsockd_server Valgrind tests with non-newline sep
+        run: ./ci.sh run_jsockd_server_valgrind_tests_with_non_newline_sep
 
-      - name: Run js_server fuzz tests
-        run: ./ci.sh run_js_server_fuzz_tests
+      - name: Run jsockd_server fuzz tests
+        run: ./ci.sh run_jsockd_server_fuzz_tests
 
-      - name: Run js_server E2E tests
-        run: ./ci.sh run_js_server_e2e_tests
+      - name: Run jsockd_server E2E tests
+        run: ./ci.sh run_jsockd_server_e2e_tests
 
       - name: Package binaries
         env:
@@ -83,8 +83,8 @@ jobs:
         with:
           name: jsockd-release-artifacts
           path: |
-            ${{ github.workspace }}/js_server/jsockd-release-artifacts/*.tar.gz
-            ${{ github.workspace }}/js_server/jsockd-release-artifacts/*.txt
+            ${{ github.workspace }}/jsockd_server/jsockd-release-artifacts/*.tar.gz
+            ${{ github.workspace }}/jsockd_server/jsockd-release-artifacts/*.txt
   release:
     runs-on: ubuntu-24.04
     needs: CI
@@ -98,7 +98,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: jsockd-release-artifacts
-          path: js_server/jsockd-release-artifacts
+          path: jsockd_server/jsockd-release-artifacts
       - name: Create release
         env:
           GITHUB_TOKEN: ${{ github.TOKEN }}

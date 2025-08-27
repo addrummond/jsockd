@@ -378,7 +378,7 @@ static void TEST_cmdargs_returns_error_for_no_args(void) {
 
 static void TEST_cmdargs_returns_error_for_one_arg(void) {
   CmdArgs cmdargs = {0};
-  char *argv[] = {"js_server"};
+  char *argv[] = {"jsockd"};
   int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
                          &cmdargs);
   TEST_ASSERT(r == -1);
@@ -386,7 +386,7 @@ static void TEST_cmdargs_returns_error_for_one_arg(void) {
 
 static void TEST_cmdargs_returns_success_for_just_one_socket(void) {
   CmdArgs cmdargs = {0};
-  char *argv[] = {"js_server", "-s", "my_socket"};
+  char *argv[] = {"jsockd", "-s", "my_socket"};
   int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
                          &cmdargs);
   TEST_ASSERT(r == 0);
@@ -396,9 +396,9 @@ static void TEST_cmdargs_returns_success_for_just_one_socket(void) {
 
 static void TEST_cmdargs_returns_success_for_multiple_sockets(void) {
   CmdArgs cmdargs = {0};
-  char *argv[] = {"js_server", "-s", "my_socket1", "-b",
-                  "1F",        "-s", "my_socket2", "my_socket3",
-                  "-s",        "--", "my_socket4", "-my_socket5"};
+  char *argv[] = {"jsockd", "-s", "my_socket1", "-b",
+                  "1F",     "-s", "my_socket2", "my_socket3",
+                  "-s",     "--", "my_socket4", "-my_socket5"};
   int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
                          &cmdargs);
   TEST_ASSERT(r == 0);
@@ -412,7 +412,7 @@ static void TEST_cmdargs_returns_success_for_multiple_sockets(void) {
 
 static void TEST_cmdargs_returns_error_for_multiple_dash_b(void) {
   CmdArgs cmdargs = {0};
-  char *argv[] = {"js_server", "-s", "my_socket1", "-b", "FF", "-b", "00"};
+  char *argv[] = {"jsockd", "-s", "my_socket1", "-b", "FF", "-b", "00"};
   int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
                          &cmdargs);
   TEST_ASSERT(r != 0);
@@ -422,7 +422,7 @@ static void TEST_cmdargs_returns_error_for_multiple_dash_b(void) {
 
 static void TEST_cmdargs_returns_error_for_multiple_dash_m(void) {
   CmdArgs cmdargs = {0};
-  char *argv[] = {"js_server",  "-s", "my_socket1", "-m",
+  char *argv[] = {"jsockd",     "-s", "my_socket1", "-m",
                   "mod1.qjsbc", "-m", "mod2.qjsbc"};
   int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
                          &cmdargs);
@@ -433,7 +433,7 @@ static void TEST_cmdargs_returns_error_for_multiple_dash_m(void) {
 
 static void TEST_cmdargs_returns_success_for_full_set_of_options(void) {
   CmdArgs cmdargs = {0};
-  char *argv[] = {"js_server",      "-s", "my_socket1", "-s",
+  char *argv[] = {"jsockd",         "-s", "my_socket1", "-s",
                   "my_socket2",     "-s", "my_socket3", "-m",
                   "my_module.qjsc", "-b", "1F"};
   int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
@@ -449,7 +449,7 @@ static void TEST_cmdargs_returns_success_for_full_set_of_options(void) {
 
 static void TEST_cmdargs_returns_error_if_no_sockets_specified(void) {
   CmdArgs cmdargs = {0};
-  char *argv[] = {"js_server", "-m", "my_module.qjsc", "-b", "1F"};
+  char *argv[] = {"jsockd", "-m", "my_module.qjsc", "-b", "1F"};
   int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
                          &cmdargs);
   TEST_ASSERT(r != 0);
@@ -458,7 +458,7 @@ static void TEST_cmdargs_returns_error_if_no_sockets_specified(void) {
 
 static void TEST_cmdargs_returns_error_if_s_has_no_arg(void) {
   CmdArgs cmdargs = {0};
-  char *argv[] = {"js_server", "-m", "my_module.qjsc", "-s", "-b", "1F"};
+  char *argv[] = {"jsockd", "-m", "my_module.qjsc", "-s", "-b", "1F"};
   int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
                          &cmdargs);
   TEST_ASSERT(r != 0);
@@ -468,7 +468,7 @@ static void TEST_cmdargs_returns_error_if_s_has_no_arg(void) {
 static void TEST_cmdargs_handles_more_sockets_than_MAX_THREADS(void) {
   CmdArgs cmdargs = {0};
   char *argv[MAX_THREADS + 2 + 10];
-  argv[0] = "js_server";
+  argv[0] = "jsockd";
   argv[1] = "-s";
   for (int i = 2; i < (int)(sizeof(argv) / sizeof(argv[0])); ++i)
     argv[i] = "mysocket";
@@ -479,7 +479,7 @@ static void TEST_cmdargs_handles_more_sockets_than_MAX_THREADS(void) {
 
 static void TEST_cmdargs_dash_v(void) {
   CmdArgs cmdargs = {0};
-  char *argv[] = {"js_server", "-v"};
+  char *argv[] = {"jsockd", "-v"};
   int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
                          &cmdargs);
   TEST_ASSERT(r == 0);
@@ -487,7 +487,7 @@ static void TEST_cmdargs_dash_v(void) {
 
 static void TEST_cmdargs_dash_sm(void) {
   CmdArgs cmdargs = {0};
-  char *argv[] = {"js_server", "-s",  "/tmp/sock",           "-m",
+  char *argv[] = {"jsockd",    "-s",  "/tmp/sock",           "-m",
                   "foo.qjsbc", "-sm", "my_source_map.js.map"};
   int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
                          &cmdargs);
@@ -497,8 +497,7 @@ static void TEST_cmdargs_dash_sm(void) {
 
 static void TEST_cmdargs_dash_sm_returns_error_if_dash_m_not_present(void) {
   CmdArgs cmdargs = {0};
-  char *argv[] = {"js_server", "-s", "/tmp/sock", "-sm",
-                  "my_source_map.js.map"};
+  char *argv[] = {"jsockd", "-s", "/tmp/sock", "-sm", "my_source_map.js.map"};
   int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
                          &cmdargs);
   TEST_ASSERT(r != 0);
@@ -508,7 +507,7 @@ static void TEST_cmdargs_dash_sm_returns_error_if_dash_m_not_present(void) {
 static void
 TEST_cmdargs_returns_error_if_dash_v_combined_with_other_opts(void) {
   CmdArgs cmdargs = {0};
-  char *argv[] = {"js_server", "-v", "-s", "my_socket"};
+  char *argv[] = {"jsockd", "-v", "-s", "my_socket"};
   int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
                          &cmdargs);
   TEST_ASSERT(r != 0);
@@ -516,7 +515,7 @@ TEST_cmdargs_returns_error_if_dash_v_combined_with_other_opts(void) {
 
 static void TEST_cmdargs_returns_error_if_dash_v_has_arg(void) {
   CmdArgs cmdargs = {0};
-  char *argv[] = {"js_server", "-v", "spurious_arg"};
+  char *argv[] = {"jsockd", "-v", "spurious_arg"};
   int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
                          &cmdargs);
   TEST_ASSERT(r != 0);
@@ -524,8 +523,7 @@ static void TEST_cmdargs_returns_error_if_dash_v_has_arg(void) {
 
 static void TEST_cmdargs_dash_t(void) {
   CmdArgs cmdargs = {0};
-  char *argv[] = {"js_server", "-s", "/tmp/sock", "-m",
-                  "foo.qjsbc", "-t", "500"};
+  char *argv[] = {"jsockd", "-s", "/tmp/sock", "-m", "foo.qjsbc", "-t", "500"};
   int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
                          &cmdargs);
   TEST_ASSERT(r == 0);
@@ -534,7 +532,7 @@ static void TEST_cmdargs_dash_t(void) {
 
 static void TEST_cmdargs_dash_t_error_on_0(void) {
   CmdArgs cmdargs = {0};
-  char *argv[] = {"js_server", "-s", "/tmp/sock", "-m", "foo.qjsbc", "-t", "0"};
+  char *argv[] = {"jsockd", "-s", "/tmp/sock", "-m", "foo.qjsbc", "-t", "0"};
   int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
                          &cmdargs);
   TEST_ASSERT(r != 0);
@@ -543,8 +541,7 @@ static void TEST_cmdargs_dash_t_error_on_0(void) {
 
 static void TEST_cmdargs_dash_t_error_on_negative(void) {
   CmdArgs cmdargs = {0};
-  char *argv[] = {"js_server", "-s", "/tmp/sock", "-m",
-                  "foo.qjsbc", "-t", "-1"};
+  char *argv[] = {"jsockd", "-s", "/tmp/sock", "-m", "foo.qjsbc", "-t", "-1"};
   int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
                          &cmdargs);
   TEST_ASSERT(r != 0);
@@ -553,7 +550,7 @@ static void TEST_cmdargs_dash_t_error_on_negative(void) {
 
 static void TEST_cmdargs_dash_t_error_on_non_numeric(void) {
   CmdArgs cmdargs = {0};
-  char *argv[] = {"js_server", "-s", "/tmp/sock", "-m",
+  char *argv[] = {"jsockd",    "-s", "/tmp/sock", "-m",
                   "foo.qjsbc", "-t", "sfdsff"};
   int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
                          &cmdargs);
@@ -563,8 +560,8 @@ static void TEST_cmdargs_dash_t_error_on_non_numeric(void) {
 
 static void TEST_cmdargs_dash_t_error_on_double_flag(void) {
   CmdArgs cmdargs = {0};
-  char *argv[] = {"js_server", "-t",        "500", "-s", "/tmp/sock",
-                  "-m",        "foo.qjsbc", "-t",  "50"};
+  char *argv[] = {"jsockd", "-t",        "500", "-s", "/tmp/sock",
+                  "-m",     "foo.qjsbc", "-t",  "50"};
   int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
                          &cmdargs);
   TEST_ASSERT(r != 0);
@@ -575,7 +572,8 @@ static void TEST_cmdargs_dash_t_error_on_double_flag(void) {
     Add all tests to the list below.
 ******************************************************************************/
 
-#define T(name) {#name, TEST_##name}
+#define T(name)                                                                \
+  { #name, TEST_##name }
 
 TEST_LIST = {T(wait_group_inc_and_wait_basic_use_case),
              T(hash_cache_add_and_retrieve),

@@ -50,34 +50,36 @@ case $1 in
         ./build_quickjs.sh native linux_arm64 mac_arm64 linux_x86_64_filc
         ;;
 
-    check_js_server_formatting)
+    check_jsockd_server_formatting)
         (
             set -e
-            cd js_server
+            cd jsockd_server
+            echo "TEMP DIR LISTING"
+            ls -l
             npm i # clang-format is installed via npm
             format_errors=$(CLANG_FORMAT_COMMAND="./node_modules/.bin/clang-format --dry-run --Werror" ./format.sh 2>&1)
             if [ ! -z "$format_errors" ]; then
-                echo "js_server code formatting errors found:"
+                echo "jsockd_server code formatting errors found:"
                 echo "$format_errors"
                 exit 1
             fi
         )
         ;;
 
-    build_js_server)
+    build_jsockd_server)
         (
             set -e
-            cd js_server
+            cd jsockd_server
             npm i
             ./mk.sh Debug
             ./mk.sh Release
         )
         ;;
 
-    run_js_server_tests)
+    run_jsockd_server_tests)
         (
             set -e
-            cd js_server
+            cd jsockd_server
 
             # Check that all tests are included in the list of tests.
             test_list=$(awk '/^ *TEST_LIST *=/ { found = 1 } found { print $0 }' tests/unit/tests.c)
@@ -98,50 +100,50 @@ case $1 in
         )
         ;;
 
-    build_js_server_linux_arm64)
+    build_jsockd_server_linux_arm64)
         (
             set -e
             export TOOLCHAIN_FILE=TC-gcc-arm64.cmake
-            cd js_server
+            cd jsockd_server
             ./mk.sh Debug
             ./mk.sh Release
         )
         ;;
 
-    build_js_server_darwin_aarch64)
+    build_jsockd_server_darwin_aarch64)
         (
             set -e
             export TOOLCHAIN_FILE=TC-oa64.cmake
-            cd js_server
+            cd jsockd_server
             ./mk.sh Debug
             ./mk.sh Release
         )
         ;;
 
-    build_js_server_linux_x86_64_filc)
+    build_jsockd_server_linux_x86_64_filc)
         (
             set -e
             export TOOLCHAIN_FILE=TC-fil-c-CI.cmake
-            cd js_server
+            cd jsockd_server
             ./mk.sh Debug
             ./mk.sh Release
         )
         ;;
 
-    run_js_server_valgrind_tests)
-        ./js_server/tests/valgrind/run.sh
+    run_jsockd_server_valgrind_tests)
+        ./jsockd_server/tests/valgrind/run.sh
         ;;
 
-    run_js_server_valgrind_tests_with_non_newline_sep)
+    run_jsockd_server_valgrind_tests_with_non_newline_sep)
         (
             set -e
             export JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX="7C" # '|'
-            ./js_server/tests/valgrind/run.sh
+            ./jsockd_server/tests/valgrind/run.sh
         )
         ;;
 
-    run_js_server_e2e_tests)
-        for test_script in js_server/tests/e2e/*.sh; do
+    run_jsockd_server_e2e_tests)
+        for test_script in jsockd_server/tests/e2e/*.sh; do
             if [ -f "$test_script" ]; then
                 printf "\n\nRunning E2E test script %s\n\n" "$test_script"
                 $test_script
@@ -149,61 +151,67 @@ case $1 in
         done
         ;;
 
-    run_js_server_fuzz_tests)
-        ./js_server/tests/fuzz/fuzz.sh
+    run_jsockd_server_fuzz_tests)
+        ./jsockd_server/tests/fuzz/fuzz.sh
         ;;
 
     package_binaries)
         (
             set -e
-            cd js_server
+
+            VERSION=$(git describe --exact-match --tags | sed -e 's/^v//')
+            if [ -z "$VERSION" ]; then
+                echo "Could not determine version from git tags."
+                exit 1
+            fi
+
+            cd jsockd_server
             mkdir -p jsockd-release-artifacts
 
-            echo "$JSOCKD_RELEASE_ARTEFACT_PRIVATE_SIGNING_KEY" | sed 's/[[:space:]]//g' | base64 -d > jsockd_binary_private_signing_key.pem
-
             # Package Linux x86_64
-            mkdir jsockd-release-artifacts/jsockd-linux-x86_64
-            cp build_Release/js_server jsockd-release-artifacts/jsockd-linux-x86_64
-            cp ../tools-bin/compile_es6_module_Linux_x86_64 jsockd-release-artifacts/jsockd-linux-x86_64/compile_es6_module
-            openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out jsockd-release-artifacts/jsockd-linux-x86_64/js_server_signature.bin -rawin -in jsockd-release-artifacts/jsockd-linux-x86_64/js_server
-            openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out jsockd-release-artifacts/jsockd-linux-x86_64/compile_es6_module_signature.bin -rawin -in jsockd-release-artifacts/jsockd-linux-x86_64/compile_es6_module
-            tar -czf jsockd-release-artifacts/jsockd-linux-x86_64.tar.gz jsockd-release-artifacts/jsockd-linux-x86_64
+            D="jsockd-${VERSION}-linux-x86_64"
+            mkdir jsockd-release-artifacts/$D
+            cp build_Release/jsockd jsockd-release-artifacts/$D
+            cp ../tools-bin/jsockd_compile_es6_module_Linux_x86_64 jsockd-release-artifacts/$D/jsockd_compile_es6_module
+            tar -C jsockd-release-artifacts -czf $D.tar.gz $D
 
-            # Package Linux x86_64 Fil-C. For now we include the regular x86_64 build of compile_es6_module.
-            mkdir -p jsockd-release-artifacts/jsockd-linux-x86_64_filc/js_server
-            patchelf --set-rpath '$ORIGIN' build_Release_TC-fil-c-CI.cmake/js_server
-            patchelf --set-interpreter ld-yolo-x86_64.so build_Release_TC-fil-c-CI.cmake/js_server
-            cp build_Release_TC-fil-c-CI.cmake/js_server jsockd-release-artifacts/jsockd-linux-x86_64_filc/js_server/
-            cp -L /home/runner/filc-0.668.8-linux-x86_64/pizfix/lib/ld-yolo-x86_64.so jsockd-release-artifacts/jsockd-linux-x86_64_filc/js_server/ld-yolo-x86_64.so
-            cp -L /home/runner/filc-0.668.8-linux-x86_64/pizfix/lib/libc.so jsockd-release-artifacts/jsockd-linux-x86_64_filc/js_server/libc.so
-            cp -L /home/runner/filc-0.668.8-linux-x86_64/pizfix/lib/libpizlo.so jsockd-release-artifacts/jsockd-linux-x86_64_filc/js_server/libpizlo.so
-            cp ../tools-bin/compile_es6_module_Linux_x86_64 jsockd-release-artifacts/jsockd-linux-x86_64_filc/compile_es6_module
-            openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out jsockd-release-artifacts/jsockd-linux-x86_64_filc/js_server_signature.bin -rawin -in jsockd-release-artifacts/jsockd-linux-x86_64_filc/js_server/js_server
-            openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out jsockd-release-artifacts/jsockd-linux-x86_64_filc/ld-yolo-x86_64.so_signature.bin -rawin -in jsockd-release-artifacts/jsockd-linux-x86_64_filc/js_server/ld-yolo-x86_64.so
-            openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out jsockd-release-artifacts/jsockd-linux-x86_64_filc/libc.so_signature.bin -rawin -in jsockd-release-artifacts/jsockd-linux-x86_64_filc/js_server/libc.so
-            openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out jsockd-release-artifacts/jsockd-linux-x86_64_filc/libpizlo.so_signature.bin -rawin -in jsockd-release-artifacts/jsockd-linux-x86_64_filc/js_server/libpizlo.so
-            openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out jsockd-release-artifacts/jsockd-linux-x86_64_filc/compile_es6_module_signature.bin -rawin -in jsockd-release-artifacts/jsockd-linux-x86_64_filc/compile_es6_module
-            tar -czf jsockd-release-artifacts/jsockd-linux-x86_64_filc.tar.gz jsockd-release-artifacts/jsockd-linux-x86_64_filc
+            # Package Linux x86_64 Fil-C. For now we include the regular x86_64 build of jsockd_compile_es6_module.
+            D="jsockd-${VERSION}-linux-x86_64_filc"
+            mkdir -p jsockd-release-artifacts/$D/jsockd
+            patchelf --set-rpath '$ORIGIN' build_Release_TC-fil-c-CI.cmake/jsockd
+            patchelf --set-interpreter ld-yolo-x86_64.so build_Release_TC-fil-c-CI.cmake/jsockd
+            cp build_Release_TC-fil-c-CI.cmake/jsockd jsockd-release-artifacts/$D/jsockd/
+            cp -L /home/runner/filc-0.668.8-linux-x86_64/pizfix/lib/ld-yolo-x86_64.so jsockd-release-artifacts/$D/jsockd/ld-yolo-x86_64.so
+            cp -L /home/runner/filc-0.668.8-linux-x86_64/pizfix/lib/libc.so jsockd-release-artifacts/$D/jsockd/libc.so
+            cp -L /home/runner/filc-0.668.8-linux-x86_64/pizfix/lib/libpizlo.so jsockd-release-artifacts/$D/jsockd/libpizlo.so
+            cp ../tools-bin/jsockd_compile_es6_module_Linux_x86_64 jsockd-release-artifacts/$D/jsockd_compile_es6_module
+            tar -C jsockd-release-artifacts -czf jsockd-release-artifacts/$D.tar.gz jsockd-release-artifacts/$D
 
             # Package Linux ARM64
-            mkdir jsockd-release-artifacts/jsockd-linux-arm64
-            cp build_Release_TC-gcc-arm64.cmake/js_server jsockd-release-artifacts/jsockd-linux-arm64
-            cp ../tools-bin/compile_es6_module_Linux_arm64 jsockd-release-artifacts/jsockd-linux-arm64/compile_es6_module
-            openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out jsockd-release-artifacts/jsockd-linux-arm64/js_server_signature.bin -rawin -in jsockd-release-artifacts/jsockd-linux-arm64/js_server
-            openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out jsockd-release-artifacts/jsockd-linux-arm64/compile_es6_module_signature.bin -rawin -in jsockd-release-artifacts/jsockd-linux-arm64/compile_es6_module
-            tar -czf jsockd-release-artifacts/jsockd-linux-arm64.tar.gz jsockd-release-artifacts/jsockd-linux-arm64
+            D="jsockd-${VERSION}-linux-arm64"
+            mkdir jsockd-release-artifacts/$D
+            cp build_Release_TC-gcc-arm64.cmake/jsockd jsockd-release-artifacts/$D
+            cp ../tools-bin/jsockd_compile_es6_module_Linux_arm64 jsockd-release-artifacts/$D/jsockd_compile_es6_module
+            tar -C jsockd-release-artifacts -czf jsockd-release-artifacts/$D.tar.gz jsockd-release-artifacts/$D
 
             # Package MacOS ARM64
-            mkdir jsockd-release-artifacts/jsockd-macos-arm64
-            cp build_Release_TC-oa64.cmake/js_server jsockd-release-artifacts/jsockd-macos-arm64
-            cp ../tools-bin/compile_es6_module_Darwin_arm64 jsockd-release-artifacts/jsockd-macos-arm64/compile_es6_module
-            openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out jsockd-release-artifacts/jsockd-macos-arm64/js_server_signature.bin -rawin -in jsockd-release-artifacts/jsockd-macos-arm64/js_server
-            openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out jsockd-release-artifacts/jsockd-macos-arm64/compile_es6_module_signature.bin -rawin -in jsockd-release-artifacts/jsockd-macos-arm64/compile_es6_module
-            tar -czf jsockd-release-artifacts/jsockd-macos-arm64.tar.gz jsockd-release-artifacts/jsockd-macos-arm64
+            D="jsockd-${VERSION}-macos-arm64"
+            mkdir jsockd-release-artifacts/$D
+            cp build_Release_TC-oa64.cmake/jsockd jsockd-release-artifacts/$D
+            cp ../tools-bin/jsockd_compile_es6_module_Darwin_arm64 jsockd-release-artifacts/$D/jsockd_compile_es6_module
+            tar -C jsockd-release-artifacts -czf jsockd-release-artifacts/jsockd-macos-arm64.tar.gz jsockd-release-artifacts/$D
 
             # Create checksums
             cd jsockd-release-artifacts
             sha256sum *.tar.gz > checksums.txt
+
+            # Sign archives with ED25519 private key.
+            echo "$JSOCKD_RELEASE_ARTEFACT_PRIVATE_SIGNING_KEY" | sed 's/[[:space:]]//g' | base64 -d > jsockd_binary_private_signing_key.pem
+            for f in *.tar.gz; do
+               printf "$f\t" >> ed25519_signatures.txt
+               openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out /dev/stdout -rawin -in $f | base64 | tr -d '\n' >> ed25519_signatures.txt
+               printf "\n" >> ed25519_signatures.txt
+            done
         )
         ;;
 
@@ -211,7 +219,7 @@ case $1 in
         if [ ! -z "$2" ]; then
             (
                 set -e
-                cd js_server
+                cd jsockd_server
                 gh release create $2 --title $2
                 gh release upload $2 jsockd-release-artifacts/*.tar.gz jsockd-release-artifacts/*.txt
             )

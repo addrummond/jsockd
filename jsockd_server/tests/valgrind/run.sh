@@ -27,9 +27,9 @@ END
 
 
 # Compile the example module to QuickJS bytecode.
-./tools-bin/compile_es6_module js_server/tests/valgrind/bundle.mjs /tmp/bundle.qjsb private_signing_key.pem
+./tools-bin/compile_es6_module jsockd/tests/valgrind/bundle.mjs /tmp/bundle.qjsb private_signing_key.pem
 
-cd js_server
+cd jsockd_server
 
 DASH_B_ARG=""
 if [ ! -z "$JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX" ]; then
@@ -40,7 +40,7 @@ fi
 ./mk.sh Debug
 (
     valgrind --error-exitcode=1 --leak-check=full --track-origins=yes -- \
-        ./build_Debug/js_server $DASH_B_ARG -m /tmp/bundle.qjsb -s /tmp/jsockd_test_sock -sm tests/valgrind/bundle.mjs.map
+        ./build_Debug/jsockd $DASH_B_ARG -m /tmp/bundle.qjsb -s /tmp/jsockd_test_sock -sm tests/valgrind/bundle.mjs.map
     echo $? > /tmp/jsockd_test_valgrind_exit_code
 ) &
 server_pid=$!

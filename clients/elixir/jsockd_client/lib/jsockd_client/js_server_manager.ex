@@ -1,6 +1,6 @@
 defmodule JSockDClient.JsServerManager do
   @moduledoc """
-  This module creates and manages the JSockD js_server process.
+  This module creates and manages the jsockd process.
   """
 
   use GenServer
@@ -12,7 +12,7 @@ defmodule JSockDClient.JsServerManager do
           n_threads: n_threads,
           bytecode_module_file: bytecode_module_file,
           bytecode_module_public_key: bytecode_module_public_key,
-          js_server_exec: js_server_exec,
+          jsockd_exec: jsockd_exec,
           source_map: source_map,
           max_command_runtime_us: max_command_runtime_us
         }
@@ -29,8 +29,8 @@ defmodule JSockDClient.JsServerManager do
       end)
 
     exec =
-      js_server_exec ||
-        Path.join([:code.priv_dir(:jsockd_client), "jsockd-release-artifacts/jsockd/js_server"])
+      jsockd_exec ||
+        Path.join([:code.priv_dir(:jsockd_client), "jsockd-release-artifacts/jsockd/jsockd"])
 
     port_id =
       Port.open({:spawn_executable, exec}, [
@@ -93,14 +93,14 @@ defmodule JSockDClient.JsServerManager do
   @impl true
   def handle_info({_port, {:data, {_, msg}}}, state) do
     if state.unix_sockets_with_threads != [] do
-      raise "Unexpected message received from js_server_exec: #{inspect(msg)}"
+      raise "Unexpected message received from jsockd: #{inspect(msg)}"
     end
 
     msg = List.to_string(msg)
 
     case Regex.run(~r/^READY (\d+)/, msg) do
       nil ->
-        raise "Bad message received from js_server_exec: #{msg}"
+        raise "Bad message received from jsockd: #{msg}"
 
       [_, n_threads] ->
         n_threads = String.to_integer(n_threads)
@@ -144,7 +144,7 @@ defmodule JSockDClient.JsServerManager do
 
   @impl true
   def handle_info({_port, {:exit_status, status}}, _state) do
-    raise "js_server_exec unexpectedly exited with status #{status}"
+    raise "jsockd unexpectedly exited with status #{status}"
   end
 
   @impl true
