@@ -159,11 +159,12 @@ case $1 in
         (
             set -e
 
-            VERSION=$(git describe --exact-match --tags | sed -e 's/^v//')
+            VERSION=$(git describe --match "v*.*.*" --exact-match --tags)
             if [ -z "$VERSION" ]; then
                 echo "Could not determine version from git tags."
                 exit 1
             fi
+            VERSION=$(echo $VERSION | sed -e 's/^v//')
 
             cd jsockd_server
             mkdir -p jsockd-release-artifacts
