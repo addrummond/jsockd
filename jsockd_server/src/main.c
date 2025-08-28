@@ -1183,14 +1183,14 @@ int main(int argc, char *argv[]) {
   if (0 != parse_cmd_args(argc, argv, release_logf, &g_cmd_args)) {
     destroy_log_mutex();
     pthread_mutex_destroy(&g_cached_functions_mutex);
-    return 1;
+    return EXIT_FAILURE;
   }
 
   if (g_cmd_args.version) {
     printf("jsockd %s", STRINGIFY(VERSION));
     destroy_log_mutex();
     pthread_mutex_destroy(&g_cached_functions_mutex);
-    return 0;
+    return EXIT_SUCCESS;
   }
 
   if (g_cmd_args.es6_module_bytecode_file) {
@@ -1201,7 +1201,7 @@ int main(int argc, char *argv[]) {
                    g_cmd_args.es6_module_bytecode_file, strerror(errno));
       destroy_log_mutex();
       pthread_mutex_destroy(&g_cached_functions_mutex);
-      return 1;
+      return EXIT_FAILURE;
     }
   }
 
@@ -1224,7 +1224,7 @@ int main(int argc, char *argv[]) {
                      g_module_bytecode_size + ED25519_SIGNATURE_SIZE);
     destroy_log_mutex();
     pthread_mutex_destroy(&g_cached_functions_mutex);
-    return 1;
+    return EXIT_FAILURE;
   }
   atomic_init(&g_global_init_complete, true);
 
@@ -1240,7 +1240,7 @@ int main(int argc, char *argv[]) {
       for (int i = n - 1; i >= 0; --i)
         destroy_thread_state(&g_thread_states[i]);
       wait_group_destroy(&g_thread_ready_wait_group);
-      return 1;
+      return EXIT_FAILURE;
     }
     if (0 != pthread_create(&g_threads[n], NULL, listen_thread_func,
                             &g_thread_states[n])) {
@@ -1248,7 +1248,7 @@ int main(int argc, char *argv[]) {
       for (int i = 0; i <= n; ++i)
         destroy_thread_state(&g_thread_states[i]);
       global_cleanup();
-      exit(1);
+      return EXIT_FAILURE;
     }
   }
 
@@ -1259,7 +1259,7 @@ int main(int argc, char *argv[]) {
         "Error waiting for threads to be ready, or timeout; n_remaining=%i\n",
         wait_group_n_remaining(&g_thread_ready_wait_group));
     global_cleanup();
-    return 1;
+    return EXIT_FAILURE;
   }
 
   printf("READY %i\n", n_threads);
@@ -1302,17 +1302,17 @@ int main(int argc, char *argv[]) {
   if (tsc != 0) {
     fputs("DEBUG: Something's up with g_new_thread_state_count (see above)\n",
           stderr);
-    return 1;
+    return EXIT_FAILURE;
   }
 #endif
 
   for (int i = 0; i < atomic_load_explicit(&g_n_threads, memory_order_relaxed);
        ++i) {
     if (g_thread_states[i].exit_status != 0)
-      return 1;
+      return EXIT_FAILURE;
   }
 
-  return 0;
+  return EXIT_SUCCESS;
 }
 
 // supress the annoying warning that inttypes.h is not used directly
