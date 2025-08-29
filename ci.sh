@@ -3,6 +3,7 @@
 set -e
 
 FILC_VERSION=0.670
+FILC_CHECKSUM=a34a836aaa824e8cd5c495489b8eafaafbdb24f16d3e05e874ee42527c065a8b
 
 if [ "$1" != "setup" ] && [ "$1" != "github_actions_create_release" ]; then
     eval $(mise env)
@@ -34,7 +35,7 @@ case $1 in
         cat /tmp/ghp >> $GITHUB_PATH
         mise install node
         curl -L https://github.com/pizlonator/llvm-project-deluge/releases/download/v${FILC_VERSION}/filc-${FILC_VERSION}-linux-x86_64.tar.xz -o ~/filc-${FILC_VERSION}-linux-x86_64.tar.xz
-        if [ $(sha256sum ~/filc-${FILC_VERSION}-linux-x86_64.tar.xz | awk '{ print $1 }') != "562e00b64634fc8c21804616d03a4210cec26751733104f9f49627f2363a3859" ]; then
+        if [ $(sha256sum ~/filc-${FILC_VERSION}-linux-x86_64.tar.xz | awk '{ print $1 }') != "$FILC_CHECKSUM" ]; then
             echo "SHA256 checksum of filc-${FILC_VERSION}-linux-x86_64.tar.xz does not match expected value."
             exit 1
         fi
