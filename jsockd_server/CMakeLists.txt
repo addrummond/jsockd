@@ -35,11 +35,7 @@ endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL Release)
     add_compile_definitions(CMAKE_BUILD_TYPE_RELEASE)
-    if (CMAKE_C_COMPILER_ID MATCHES "filc")
-        add_compile_options(-O)
-    else()
-        add_compile_options(-O2)
-    endif()
+    add_compile_options(-O2)
 endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
