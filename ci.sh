@@ -2,6 +2,8 @@
 
 set -e
 
+FILC_VERSION=0.670
+
 if [ "$1" != "setup" ] && [ "$1" != "github_actions_create_release" ]; then
     eval $(mise env)
 fi
@@ -31,12 +33,12 @@ case $1 in
         echo "$HOME/bin" >> $GITHUB_PATH
         cat /tmp/ghp >> $GITHUB_PATH
         mise install node
-        curl -L https://github.com/pizlonator/llvm-project-deluge/releases/download/v0.668.8/filc-0.668.8-linux-x86_64.tar.xz -o ~/filc-0.668.8-linux-x86_64.tar.xz
-        if [ $(sha256sum ~/filc-0.668.8-linux-x86_64.tar.xz | awk '{ print $1 }') != "562e00b64634fc8c21804616d03a4210cec26751733104f9f49627f2363a3859" ]; then
-            echo "SHA256 checksum of filc-0.668.8-linux-x86_64.tar.xz does not match expected value."
+        curl -L https://github.com/pizlonator/llvm-project-deluge/releases/download/v${FILC_VERSION}/filc-${FILC_VERSION}-linux-x86_64.tar.xz -o ~/filc-${FILC_VERSION}-linux-x86_64.tar.xz
+        if [ $(sha256sum ~/filc-${FILC_VERSION}-linux-x86_64.tar.xz | awk '{ print $1 }') != "562e00b64634fc8c21804616d03a4210cec26751733104f9f49627f2363a3859" ]; then
+            echo "SHA256 checksum of filc-${FILC_VERSION}-linux-x86_64.tar.xz does not match expected value."
             exit 1
         fi
-        ( cd ~ && tar -xf ~/filc-0.668.8-linux-x86_64.tar.xz && cd filc-0.668.8-linux-x86_64 && ./setup.sh )
+        ( cd ~ && tar -xf ~/filc-${FILC_VERSION}-linux-x86_64.tar.xz && cd filc-${FILC_VERSION}-linux-x86_64 && ./setup.sh )
         ;;
 
     log_versions)
@@ -180,9 +182,9 @@ case $1 in
             patchelf --set-rpath '$ORIGIN' build_Release_TC-fil-c-CI.cmake/jsockd
             patchelf --set-interpreter ld-yolo-x86_64.so build_Release_TC-fil-c-CI.cmake/jsockd
             cp build_Release_TC-fil-c-CI.cmake/jsockd jsockd-release-artifacts/$D/jsockd/
-            cp -L /home/runner/filc-0.668.8-linux-x86_64/pizfix/lib/ld-yolo-x86_64.so jsockd-release-artifacts/$D/jsockd/ld-yolo-x86_64.so
-            cp -L /home/runner/filc-0.668.8-linux-x86_64/pizfix/lib/libc.so jsockd-release-artifacts/$D/jsockd/libc.so
-            cp -L /home/runner/filc-0.668.8-linux-x86_64/pizfix/lib/libpizlo.so jsockd-release-artifacts/$D/jsockd/libpizlo.so
+            cp -L /home/runner/filc-${FILC_VERSION}-linux-x86_64/pizfix/lib/ld-yolo-x86_64.so jsockd-release-artifacts/$D/jsockd/ld-yolo-x86_64.so
+            cp -L /home/runner/filc-${FILC_VERSION}-linux-x86_64/pizfix/lib/libc.so jsockd-release-artifacts/$D/jsockd/libc.so
+            cp -L /home/runner/filc-${FILC_VERSION}-linux-x86_64/pizfix/lib/libpizlo.so jsockd-release-artifacts/$D/jsockd/libpizlo.so
             cp ../tools-bin/jsockd_compile_es6_module_Linux_x86_64 jsockd-release-artifacts/$D/jsockd_compile_es6_module
             tar -C jsockd-release-artifacts -czf $D.tar.gz $D
 

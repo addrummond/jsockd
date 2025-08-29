@@ -8,6 +8,8 @@ __BUST_CACHE=1 # increment to bust QuickJS build cache manually if needed
 
 QUICKJS_COMMIT=1fdc768fdc8571300755cdd3e4654ce99c0255ce
 
+FILC_VERSION=0.670
+
 # The qjsc tool in Bellard's QuickJS repo doesn't support binary output.
 # This is because QuickJS doesn't do bytecode verification, so it is unsafe to
 # load bytecode from untrusted sources. To get around this, we add a signature
@@ -180,12 +182,12 @@ for platform in $platforms; do
             # Debug
             # See https://github.com/pizlonator/pizlonated-quickjs/commit/258a4a291fd0f080614e5b345528478c31e51705#diff-45f1ae674139f993bf8a99c382c1ba4863272a6fec2f492d76d7ff1b2cfcfbe2R56-R5187 for diff the patch is based on
             git apply ../../fil-c-quickjs.patch
-            CFLAGS="$DEBUG_CFLAGS" $MAKE CC=~/filc-0.668.8-linux-x86_64/build/bin/clang CONFIG_LTO= CONFIG_CLANG=y
+            CFLAGS="$DEBUG_CFLAGS" $MAKE CC=~/filc-${FILC_VERSION}-linux-x86_64/build/bin/clang CONFIG_LTO= CONFIG_CLANG=y
             generate_qjsc_wrapper qjsc > ../../tools-bin/jsockd_compile_es6_module_Linux_x86_64_filc
             mv libquickjs.a /tmp/libquickjs_Linux_x86_64_filc_Debug.a
             # Release
             $MAKE clean
-            CFLAGS="$FILC_RELEASE_CFLAGS" $MAKE CC=~/filc-0.668.8-linux-x86_64/build/bin/clang CONFIG_LTO= CONFIG_CLANG=y
+            CFLAGS="$FILC_RELEASE_CFLAGS" $MAKE CC=~/filc-${FILC_VERSION}-linux-x86_64/build/bin/clang CONFIG_LTO= CONFIG_CLANG=y
             git apply -R ../../fil-c-quickjs.patch
             mv libquickjs.a /tmp/libquickjs_Linux_x86_64_filc_Release.a
             ;;
