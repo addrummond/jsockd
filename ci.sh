@@ -162,9 +162,10 @@ case $1 in
 
             VERSION=$(git describe --match "v*.*.*" --exact-match --tags || true)
             if [ -z "$VERSION" ]; then
-                echo "Could not determine version from git tags."
-                exit 1
+                echo "Could not determine version from git tags; won't package binaries..."
+                exit 0
             fi
+
             VERSION=$(echo $VERSION | sed -e 's/^v//')
 
             cd jsockd_server
