@@ -152,7 +152,7 @@ for platform in $platforms; do
             # Debug
             CFLAGS="$DEBUG_CFLAGS" $MAKE CONFIG_LTO=n
             generate_qjsc_wrapper qjsc > ../../tools-bin/jsockd_compile_es6_module_Linux_x86_64
-            cp ../../tools-bin/compile_es6_module_Linux_x86_64 ../../tools-bin/jsockd_compile_es6_module_x86_64
+            cp ../../tools-bin/jsockd_compile_es6_module_Linux_x86_64 ../../tools-bin/jsockd_compile_es6_module_x86_64
             chmod +x ../../tools-bin/jsockd_compile_es6_module_Linux_x86_64
             chmod +x ../../tools-bin/jsockd_compile_es6_module
             mv libquickjs.a /tmp/libquickjs_Linux_x86_64_Debug.a # this will get killed by make clean

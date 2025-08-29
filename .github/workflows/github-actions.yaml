@@ -83,8 +83,9 @@ jobs:
         with:
           name: jsockd-release-artifacts
           path: |
-            ${{ github.workspace }}/jsockd_server/jsockd-release-artifacts/*.tar.gz
-            ${{ github.workspace }}/jsockd_server/jsockd-release-artifacts/*.txt
+            ${{ github.workspace }}/jsockd_server/jsockd-*.tar.gz
+            ${{ github.workspace }}/jsockd_server/checksums.txt
+            ${{ github.workspace }}/jsockd_server/ed25519_signatures.txt
   release:
     runs-on: ubuntu-24.04
     needs: CI
@@ -98,7 +99,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: jsockd-release-artifacts
-          path: jsockd_server/jsockd-release-artifacts
+          path: jsockd_server
       - name: Create release
         env:
           GITHUB_TOKEN: ${{ github.TOKEN }}

@@ -27,7 +27,7 @@ END
 
 
 # Compile the example module to QuickJS bytecode.
-./tools-bin/compile_es6_module jsockd/tests/valgrind/bundle.mjs /tmp/bundle.qjsb private_signing_key.pem
+./tools-bin/jsockd_compile_es6_module jsockd_server/tests/valgrind/bundle.mjs /tmp/bundle.qjsb private_signing_key.pem
 
 cd jsockd_server
 

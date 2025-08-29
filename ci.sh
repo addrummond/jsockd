@@ -2,7 +2,7 @@
 
 set -e
 
-if [ "$1" != "setup" ]; then
+if [ "$1" != "setup" ] && [ "$1" != "github_actions_create_release" ]; then
     eval $(mise env)
 fi
 
@@ -54,8 +54,6 @@ case $1 in
         (
             set -e
             cd jsockd_server
-            echo "TEMP DIR LISTING"
-            ls -l
             npm i # clang-format is installed via npm
             format_errors=$(CLANG_FORMAT_COMMAND="./node_modules/.bin/clang-format --dry-run --Werror" ./format.sh 2>&1)
             if [ ! -z "$format_errors" ]; then
@@ -186,31 +184,30 @@ case $1 in
             cp -L /home/runner/filc-0.668.8-linux-x86_64/pizfix/lib/libc.so jsockd-release-artifacts/$D/jsockd/libc.so
             cp -L /home/runner/filc-0.668.8-linux-x86_64/pizfix/lib/libpizlo.so jsockd-release-artifacts/$D/jsockd/libpizlo.so
             cp ../tools-bin/jsockd_compile_es6_module_Linux_x86_64 jsockd-release-artifacts/$D/jsockd_compile_es6_module
-            tar -C jsockd-release-artifacts -czf jsockd-release-artifacts/$D.tar.gz jsockd-release-artifacts/$D
+            tar -C jsockd-release-artifacts -czf $D.tar.gz $D
 
             # Package Linux ARM64
             D="jsockd-${VERSION}-linux-arm64"
             mkdir jsockd-release-artifacts/$D
             cp build_Release_TC-gcc-arm64.cmake/jsockd jsockd-release-artifacts/$D
             cp ../tools-bin/jsockd_compile_es6_module_Linux_arm64 jsockd-release-artifacts/$D/jsockd_compile_es6_module
-            tar -C jsockd-release-artifacts -czf jsockd-release-artifacts/$D.tar.gz jsockd-release-artifacts/$D
+            tar -C jsockd-release-artifacts -czf $D.tar.gz $D
 
             # Package MacOS ARM64
             D="jsockd-${VERSION}-macos-arm64"
             mkdir jsockd-release-artifacts/$D
             cp build_Release_TC-oa64.cmake/jsockd jsockd-release-artifacts/$D
             cp ../tools-bin/jsockd_compile_es6_module_Darwin_arm64 jsockd-release-artifacts/$D/jsockd_compile_es6_module
-            tar -C jsockd-release-artifacts -czf jsockd-release-artifacts/jsockd-macos-arm64.tar.gz jsockd-release-artifacts/$D
+            tar -C jsockd-release-artifacts -czf $D.tar.gz $D
 
             # Create checksums
-            cd jsockd-release-artifacts
             sha256sum *.tar.gz > checksums.txt
 
             # Sign archives with ED25519 private key.
             echo "$JSOCKD_RELEASE_ARTEFACT_PRIVATE_SIGNING_KEY" | sed 's/[[:space:]]//g' | base64 -d > jsockd_binary_private_signing_key.pem
-            for f in *.tar.gz; do
-               printf "$f\t" >> ed25519_signatures.txt
+            for f in jsockd-*.tar.gz; do
                openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out /dev/stdout -rawin -in $f | base64 | tr -d '\n' >> ed25519_signatures.txt
+               printf "\t$f" >> ed25519_signatures.txt
                printf "\n" >> ed25519_signatures.txt
             done
         )
@@ -222,7 +219,7 @@ case $1 in
                 set -e
                 cd jsockd_server
                 gh release create $2 --title $2
-                gh release upload $2 jsockd-release-artifacts/*.tar.gz jsockd-release-artifacts/*.txt
+                gh release upload $2 jsockd-*.tar.gz checksums.txt ed25519_signatures.txt
             )
         fi
         ;;

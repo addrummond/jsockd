@@ -35,7 +35,7 @@ openssl pkey -inform pem -pubout -outform der -in filc_bench_private_signing_key
 
 export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=$(cat filc_bench_public_signing_key)
 
-../tools-bin/compile_es6_module tests/e2e/relative_bench/bundle.js tests/e2e/relative_bench/bundle.qjsbc filc_bench_private_signing_key.pem
+../tools-bin/jsockd_compile_es6_module tests/e2e/relative_bench/bundle.js tests/e2e/relative_bench/bundle.qjsbc filc_bench_private_signing_key.pem
 
 #
 # Build benchmark command input
