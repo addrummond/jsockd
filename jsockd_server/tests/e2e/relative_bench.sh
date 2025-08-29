@@ -95,7 +95,7 @@ fi
 #
 rm -f /tmp/jsockd_filc_relative_bench_filc_server_exit_code
 (
-    ./build_${BUILD}_TC-fil-c.cmake/jsockd -m tests/e2e/relative_bench/bundle.qjsbc -s /tmp/jsockd_filc_relative_bench_sock_filc ;
+    ./build_${BUILD}_TC-fil-c.cmake/jsockd -t 2000000 -m tests/e2e/relative_bench/bundle.qjsbc -s /tmp/jsockd_filc_relative_bench_sock_filc ;
     echo $? > /tmp/jsockd_filc_relative_bench_filc_server_exit_code
 ) &
 filc_server_pid=$!
