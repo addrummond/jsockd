@@ -154,7 +154,7 @@ total_jsockd_ns=$(nc -U /tmp/jsockd_filc_relative_bench_sock < /tmp/jsockd_relat
 
 # Start the server (Fil-C Linux/x86_64)
 rm -f /tmp/jsockd_filc_relative_bench_sock
-./build_${BUILD}_TC-fil-c.cmake/jsockd -m tests/e2e/relative_bench/bundle.qjsbc -s /tmp/jsockd_filc_relative_bench_sock &
+./build_${BUILD}_TC-fil-c.cmake/jsockd -t 2000000 -m tests/e2e/relative_bench/bundle.qjsbc -s /tmp/jsockd_filc_relative_bench_sock &
 i=0
 while ! [ -e /tmp/jsockd_filc_relative_bench_sock ] && [ $i -lt 15 ]; do
   echo "Waiting for Fil-C x86_64 server to start for bench vs. NodeJS"
