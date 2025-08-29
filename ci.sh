@@ -160,7 +160,7 @@ case $1 in
         (
             set -e
 
-            VERSION=$(git describe --match "v*.*.*" --exact-match --tags)
+            VERSION=$(git describe --match "v*.*.*" --exact-match --tags || true)
             if [ -z "$VERSION" ]; then
                 echo "Could not determine version from git tags."
                 exit 1

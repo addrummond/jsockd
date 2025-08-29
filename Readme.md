@@ -248,7 +248,7 @@ Run unit tests can be as follows:
 
 **TODO: rough notes**
 
-* `JSOCKD_FILC=1 ./build_quickjs.sh`
+* `./build_quickjs.sh linux_x86_64_filc`
 * [In `jsockd_server`] `TOOLCHAIN_FILE=TC-fil-c.cmake ./mk.sh Debug`
 
 ## 6. Releases
