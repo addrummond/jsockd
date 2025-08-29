@@ -12,9 +12,6 @@
 #   Linux/x86_64 build when rendering some React components.
 # * The performance of Node vs. JSockD for rendering some React components.
 
-# TEMP
-exit 0
-
 set -e
 
 N_ITERATIONS=100
