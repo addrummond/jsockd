@@ -1,7 +1,7 @@
 defmodule JsockdClient.MixProject do
   use Mix.Project
 
-  @jsockd_version "0.0.55"
+  @jsockd_version "0.0.56"
   @jsockd_binary_public_key "b136fca8fbfc42fe6dc95dedd035b0b50ad93b6a5d6fcaf8fc0552e9d29ee406"
 
   def project do
@@ -48,18 +48,19 @@ defmodule JsockdClient.MixProject do
     platform = :erlang.system_info(:system_architecture) |> to_string()
     use_filc_when_available? = Application.get_env(:jsockd_client, :use_filc_when_available?)
 
-    release_url = get_release_url(platform, use_filc_when_available?)
+    {release_url, signature_file_url} = get_release_urls(platform, use_filc_when_available?)
+    IO.inspect({release_url, signature_file_url}, label: "Release URLs")
 
     priv_dir = Path.join(__DIR__, "priv")
     File.mkdir_p!(priv_dir)
     release_filename = Path.basename(release_url)
     release_path = Path.join(priv_dir, release_filename)
+    release_extracted_dirname = String.replace(release_filename, ".tar.gz", "")
 
     js_server_binary_filename =
       Path.join([
         priv_dir,
-        "jsockd-release-artifacts",
-        String.replace(release_filename, ".tar.gz", ""),
+        release_extracted_dirname,
         "jsockd"
       ])
 
@@ -103,8 +104,32 @@ defmodule JsockdClient.MixProject do
         :httpc.request(:get, {release_url, []}, http_options, body_format: :binary)
 
       File.write!(release_path, body)
+      IO.puts("RELEASE PATH: #{release_path}")
 
-      File.rm_rf!(Path.join([priv_dir, "jsockd-release-artifacts"]))
+      {:ok, {_, _, signature_body}} =
+        :httpc.request(:get, {signature_file_url, []}, http_options, body_format: :binary)
+
+      IO.puts("HERE\n#{signature_body}\n")
+
+      sigs =
+        signature_body |> String.trim() |> String.split("\n") |> Enum.map(&String.split(&1, "\t"))
+
+      IO.inspect(sigs)
+      sig_base64 = Enum.find(sigs, fn [_, f] -> f == Path.basename(release_filename) end)
+      IO.puts("SIG BASE64: #{inspect(sig_base64)}")
+
+      if sig_base64 == nil do
+        raise "Could not find signature for #{release_filename} in #{signature_file_url}"
+      end
+
+      unless verify_signature(
+               Base.decode64!(Enum.at(sig_base64, 0)),
+               File.read!(release_path)
+             ) do
+        raise "Signature verification failed for JSockD server binary."
+      end
+
+      IO.puts("EXTRACT #{release_path}")
 
       :ok =
         :erl_tar.extract(String.to_charlist(release_path), [
@@ -112,55 +137,15 @@ defmodule JsockdClient.MixProject do
           :compressed
         ])
 
+      IO.puts("AFTER EXRTRACTION")
+
       File.rm!(release_path)
 
-      release_dir =
-        Path.join([
-          priv_dir,
-          "jsockd-release-artifacts",
-          String.replace(release_filename, ".tar.gz", "")
-        ])
-
-      signature_verifications = [
-        {
-          js_server_binary_filename,
-          Path.join(
-            release_dir,
-            "js_server_signature.bin"
-          )
-        }
-        | if filc? do
-            [
-              with_sig(Path.join([release_dir, "jsockd", "ld-yolo-x86_64.so"])),
-              with_sig(Path.join([release_dir, "jsockd", "libc.so"])),
-              with_sig(Path.join([release_dir, "jsockd", "libpizlo.so"]))
-            ]
-          else
-            []
-          end
-      ]
-
-      Enum.each(signature_verifications, fn {filename, sigfilename} ->
-        unless verify_signature(
-                 File.read!(sigfilename),
-                 File.read!(filename)
-               ) do
-          raise "Signature verification failed for JSockD server binary."
-        end
-      end)
+      IO.puts("CHMOD #{js_server_binary_filename}")
 
       File.chmod!(
         js_server_binary_filename,
         0o500
-      )
-
-      File.rename!(
-        Path.dirname(js_server_binary_filename),
-        Path.join([
-          priv_dir,
-          "jsockd-release-artifacts",
-          "jsockd"
-        ])
       )
 
       File.touch!(Path.join([priv_dir, "jsockd_js_server_version_tag_#{@jsockd_version}"]))
@@ -169,27 +154,30 @@ defmodule JsockdClient.MixProject do
     :ok
   end
 
-  defp get_release_url(platform, use_filc_when_available?) do
+  defp get_release_urls(platform, use_filc_when_available?) do
     release_file =
       cond do
         String.contains?(platform, "x86_64") and String.contains?(platform, "linux") ->
           if use_filc_when_available? do
-            "jsockd-linux-x86_64_filc.tar.gz"
+            "jsockd-#{@jsockd_version}-linux-x86_64_filc.tar.gz"
           else
-            "jsockd-linux-x86_64.tar.gz"
+            "jsockd-#{@jsockd_version}-linux-x86_64.tar.gz"
           end
 
         String.contains?(platform, "aarch64") and String.contains?(platform, "linux") ->
-          "jsockd-linux-arm64.tar.gz"
+          "jsockd-#{@jsockd_version}-linux-arm64.tar.gz"
 
         String.contains?(platform, "apple-darwin") and String.contains?(platform, "aarch64") ->
-          "jsockd-macos-arm64.tar.gz"
+          "jsockd-#{@jsockd_version}-macos-arm64.tar.gz"
 
         true ->
           raise "Unsupported platform: #{platform}. Supported platforms are x86_64 and arm64 on Linux, and arm64 on MacOS."
       end
 
-    "https://github.com/addrummond/jsockd/releases/download/v#{@jsockd_version}/#{release_file}"
+    signature_file = "ed25519_signatures.txt"
+
+    {"https://github.com/addrummond/jsockd/releases/download/v#{@jsockd_version}/#{release_file}",
+     "https://github.com/addrummond/jsockd/releases/download/v#{@jsockd_version}/#{signature_file}"}
   end
 
   # https://github.com/phoenixframework/phoenix/blob/a106791ea9ee94b4f1e9286e45a319794b3838e2/lib/mix/tasks/phx.gen.release.ex#L308C1-L314C6
@@ -210,10 +198,5 @@ defmodule JsockdClient.MixProject do
   defp verify_signature(signature, challenge) do
     public_key = Base.decode16!(@jsockd_binary_public_key, case: :mixed)
     :crypto.verify(:eddsa, :none, challenge, signature, [public_key, :ed25519])
-  end
-
-  defp with_sig(filename) do
-    {filename,
-     Path.join(Path.dirname(Path.dirname(filename)), "#{Path.basename(filename)}_signature.bin")}
   end
 end
