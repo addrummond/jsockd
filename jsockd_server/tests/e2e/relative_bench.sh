@@ -57,78 +57,8 @@ EOF
 done
 echo ?quit >> /tmp/jsockd_filc_relative_bench_sock_command_input
 
-#
-# Benchark the server (regular x86_64 build)
-#
-rm -f /tmp/jsockd_filc_relative_bench_regular_server_exit_code
-(
-    ./build_$BUILD/jsockd -m tests/e2e/relative_bench/bundle.qjsbc -s /tmp/jsockd_filc_relative_bench_sock ;
-    echo $? > /tmp/jsockd_filc_relative_bench_regular_server_exit_code
-) &
-regular_server_pid=$!
-i=0
-while ! [ -e /tmp/jsockd_filc_relative_bench_sock ] && [ $i -lt 15 ]; do
-  echo "Waiting for regular x86_64 server to start"
-  sleep 1
-  i=$(($i + 1))
-done
-sleep 1
-echo "Regular x86_64 server started..."
-
-# Send a bunch of React SSR rendering commands to the regular x86_64 server
-time ( nc -U /tmp/jsockd_filc_relative_bench_sock < /tmp/jsockd_filc_relative_bench_sock_command_input > /tmp/jsockd_filc_relative_bench_sock_command_output_regular )
-
-wait $regular_server_pid
-
-n_good_responses=$( fgrep AccordionRoot /tmp/jsockd_filc_relative_bench_sock_command_output_regular | wc -l )
-if ! [ "$n_good_responses" -eq $N_ITERATIONS ]; then
-    echo "Output sanity check failed for regular x86_64 server, got $n_good_responses responses, expected $N_ITERATIONS"
-    exit 1
-fi
-if ! [ 0 -eq $(cat /tmp/jsockd_filc_relative_bench_regular_server_exit_code) ]; then
-    echo "Regular x86_64 server did not exit cleanly"
-    exit 1
-fi
-
-#
-# Benchark the server (Fil-C x86_64 build)
-#
-rm -f /tmp/jsockd_filc_relative_bench_filc_server_exit_code
-(
-    ./build_${BUILD}_TC-fil-c.cmake/jsockd -t 2000000 -m tests/e2e/relative_bench/bundle.qjsbc -s /tmp/jsockd_filc_relative_bench_sock_filc ;
-    echo $? > /tmp/jsockd_filc_relative_bench_filc_server_exit_code
-) &
-filc_server_pid=$!
-i=0
-while ! [ -e /tmp/jsockd_filc_relative_bench_sock_filc ] && [ $i -lt 15 ]; do
-  echo "Waiting for Fil-C x86_64 server to start"
-  sleep 1
-  i=$(($i + 1))
-done
-sleep 1
-echo "Fil-C x86_64 server started..."
-
-# Send a bunch of React SSR rendering commands to the Fil-C x86_64 server
-time ( nc -U /tmp/jsockd_filc_relative_bench_sock_filc < /tmp/jsockd_filc_relative_bench_sock_command_input > /tmp/jsockd_filc_relative_bench_sock_command_output_filc )
-
-wait $filc_server_pid
-
-n_good_responses=$( fgrep AccordionRoot /tmp/jsockd_filc_relative_bench_sock_command_output_filc | wc -l )
-if ! [ "$n_good_responses" -eq $N_ITERATIONS ]; then
-    echo "Output sanity check failed for Fil-C x86_64 server, got $n_good_responses responses, expected $N_ITERATIONS"
-    exit 1
-fi
-if ! [ 0 -eq $(cat /tmp/jsockd_filc_relative_bench_filc_server_exit_code) ]; then
-    echo "Fil-C x86_64 server did not exit cleanly"
-    exit 1
-fi
-
-#
-# See how long NodeJS takes to render the components
-#
-
-# Time 1000 component renders using node after warmup
-node -e 'const m = await import("./tests/e2e/relative_bench/bundle.js"); for (let i = 0; i < 10; ++i) { m.renderToString(m.createElement(m.AccordionDemo)); } /* <-- allow warm up before timing */ console.time("render"); for (let i = 0; i < 1000; ++i) { JSON.stringify(m.renderToString(m.createElement(m.AccordionDemo))) } console.timeEnd("render")'
+# Time n component renders using node after warmup
+total_nodejs_ns=$( node -e "const m = await import('./tests/e2e/relative_bench/bundle.js'); for (let i = 0; i < 10; ++i) { console.log('OUT', m.renderToString(m.createElement(m.AccordionDemo))); } /* <-- allow warm up before timing */ console.time('render'); for (let i = 0; i < Number(process.argv[1]); ++i) { m.renderToString(m.createElement(m.AccordionDemo, JSON.parse('{}'))) } console.timeEnd('render')" $N_VS_NODE_ITERATIONS | grep '^render' | awk '{print $2}' | perl -e '$line = <>; $_ =~ s/ms$//; print int(($line * 1000000) + 0.5)' )
 
 rm -f /tmp/jsockd_relative_bench_vs_node_command_input
 i=0
@@ -149,7 +79,7 @@ done
 sleep 1
 echo "Regular x86_64 server started for NodeJS bench..."
 
-total_nodejs_ns=$( node -e "const m = await import('./tests/e2e/relative_bench/bundle.js'); for (let i = 0; i < 10; ++i) { console.log('OUT', m.renderToString(m.createElement(m.AccordionDemo))); } /* <-- allow warm up before timing */ console.time('render'); for (let i = 0; i < Number(process.argv[1]); ++i) { m.renderToString(m.createElement(m.AccordionDemo, JSON.parse('{}'))) } console.timeEnd('render')" $N_VS_NODE_ITERATIONS | grep '^render' | awk '{print $2}' | perl -e '$line = <>; $_ =~ s/ms$//; print int(($line * 1000000) + 0.5)' )
+# Time n component renders using JSockD Linux/x86_64.
 total_jsockd_ns=$(nc -U /tmp/jsockd_filc_relative_bench_sock < /tmp/jsockd_relative_bench_vs_node_command_input | awk '/^[0-9]/ { n+=$1 } END { print n }')
 
 # Start the server (Fil-C Linux/x86_64)
@@ -164,6 +94,7 @@ done
 sleep 1
 echo "Fil-C x86_64 server started for NodeJS bench..."
 
+# Time n component renders using JSockD Fil-C Linux/x86_64.
 total_jsockd_filc_ns=$(nc -U /tmp/jsockd_filc_relative_bench_sock < /tmp/jsockd_relative_bench_vs_node_command_input | awk '/^[0-9]/ { n+=$1 } END { print n }')
 
 echo "Time to render React component $N_VS_NODE_ITERATIONS times":
