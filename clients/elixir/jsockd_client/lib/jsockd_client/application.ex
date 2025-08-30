@@ -26,6 +26,9 @@ defmodule JSockDClient.Application do
     max_command_runtime_us =
       Application.get_env(:jsockd_client, :max_command_runtime_us)
 
+    use_filc_when_available? =
+      Application.get_env(:jsockd_client, :use_filc_when_available?, false)
+
     children = [
       {JSockDClient.JsServerManager,
        %{
@@ -34,7 +37,8 @@ defmodule JSockDClient.Application do
          bytecode_module_public_key: bytecode_module_public_key,
          jsockd_exec: jsockd_exec,
          source_map: source_map,
-         max_command_runtime_us: max_command_runtime_us
+         max_command_runtime_us: max_command_runtime_us,
+         use_filc_when_available?: use_filc_when_available?
        }}
     ]
 
@@ -46,11 +50,15 @@ defmodule JSockDClient.Application do
   end
 
   defp get_bytecode_module_file do
-    :jsockd_client
-    |> Application.fetch_env!(:bytecode_module_file)
+    fetch_bytecode_module_file_from_config()
     |> case do
       {:priv, application, file} -> Path.join([:code.priv_dir(application), file])
       file -> file
     end
+  end
+
+  defp fetch_bytecode_module_file_from_config do
+    mf = Application.fetch_env!(:jsockd_client, :bytecode_module_file)
+    if mf == "", do: nil, else: mf
   end
 end

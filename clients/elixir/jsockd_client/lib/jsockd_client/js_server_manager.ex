@@ -14,7 +14,8 @@ defmodule JSockDClient.JsServerManager do
           bytecode_module_public_key: bytecode_module_public_key,
           jsockd_exec: jsockd_exec,
           source_map: source_map,
-          max_command_runtime_us: max_command_runtime_us
+          max_command_runtime_us: max_command_runtime_us,
+          use_filc_when_available?: use_filc_when_available?
         }
       ) do
     n_threads = n_threads || :erlang.system_info(:logical_processors_online)
@@ -30,7 +31,12 @@ defmodule JSockDClient.JsServerManager do
 
     exec =
       jsockd_exec ||
-        Path.join([:code.priv_dir(:jsockd_client), "jsockd-release-artifacts/jsockd/jsockd"])
+        Path.join([
+          :code.priv_dir(:jsockd_client),
+          "jsockd-release-artifacts/jsockd#{if use_filc_when_available?, do: "/jsockd", else: ""}"
+        ])
+
+    IO.inspect(bytecode_module_file, label: "MBF")
 
     port_id =
       Port.open({:spawn_executable, exec}, [
@@ -51,11 +57,14 @@ defmodule JSockDClient.JsServerManager do
             else
               []
             end ++
+            if bytecode_module_file do
+              ["-m", bytecode_module_file]
+            else
+              []
+            end ++
             [
               "-b",
               "00",
-              "-m",
-              bytecode_module_file,
               "-s",
               "--"
               | unix_socket_paths

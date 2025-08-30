@@ -25,7 +25,7 @@ defmodule JsockdClient.MixProject do
       mod: {JSockDClient.Application, []},
       env: [
         n_threads: nil,
-        bytecode_module_file: "",
+        bytecode_module_file: nil,
         bytecode_module_public_key: "",
         jsockd_exec: nil,
         source_map: nil,
@@ -49,7 +49,6 @@ defmodule JsockdClient.MixProject do
     use_filc_when_available? = Application.get_env(:jsockd_client, :use_filc_when_available?)
 
     {release_url, signature_file_url} = get_release_urls(platform, use_filc_when_available?)
-    IO.inspect({release_url, signature_file_url}, label: "Release URLs")
 
     priv_dir = Path.join(__DIR__, "priv")
     File.mkdir_p!(priv_dir)
@@ -104,19 +103,14 @@ defmodule JsockdClient.MixProject do
         :httpc.request(:get, {release_url, []}, http_options, body_format: :binary)
 
       File.write!(release_path, body)
-      IO.puts("RELEASE PATH: #{release_path}")
 
       {:ok, {_, _, signature_body}} =
         :httpc.request(:get, {signature_file_url, []}, http_options, body_format: :binary)
 
-      IO.puts("HERE\n#{signature_body}\n")
-
       sigs =
         signature_body |> String.trim() |> String.split("\n") |> Enum.map(&String.split(&1, "\t"))
 
-      IO.inspect(sigs)
       sig_base64 = Enum.find(sigs, fn [_, f] -> f == Path.basename(release_filename) end)
-      IO.puts("SIG BASE64: #{inspect(sig_base64)}")
 
       if sig_base64 == nil do
         raise "Could not find signature for #{release_filename} in #{signature_file_url}"
@@ -129,19 +123,13 @@ defmodule JsockdClient.MixProject do
         raise "Signature verification failed for JSockD server binary."
       end
 
-      IO.puts("EXTRACT #{release_path}")
-
       :ok =
         :erl_tar.extract(String.to_charlist(release_path), [
           {:cwd, String.to_charlist(priv_dir)},
           :compressed
         ])
 
-      IO.puts("AFTER EXRTRACTION")
-
       File.rm!(release_path)
-
-      IO.puts("CHMOD #{js_server_binary_filename}")
 
       File.chmod!(
         js_server_binary_filename,
@@ -149,6 +137,11 @@ defmodule JsockdClient.MixProject do
       )
 
       File.touch!(Path.join([priv_dir, "jsockd_js_server_version_tag_#{@jsockd_version}"]))
+
+      File.rename(
+        Path.join([priv_dir, release_extracted_dirname]),
+        Path.join([priv_dir, "jsockd-release-artifacts"])
+      )
     end
 
     :ok
