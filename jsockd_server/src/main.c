@@ -179,7 +179,7 @@ static atomic_int g_new_thread_state_count;
 
 // The state for each thread which runs a QuickJS VM.
 typedef struct ThreadState {
-  SocketState *socket_state;
+  SocketState *socket_states[MAX_THREADS]; // NULL terminated
   JSRuntime *rt;
   JSContext *ctx;
   int exit_status;
@@ -309,7 +309,7 @@ static void listen_on_unix_socket(ThreadState *ts,
   char *line_buf_buffer = calloc(LINE_BUF_BYTES, sizeof(char));
   LineBuf line_buf = {.buf = line_buf_buffer, .size = LINE_BUF_BYTES};
 
-  if (0 != initialize_and_listen_on_unix_socket(ts->socket_state)) {
+  if (0 != initialize_and_listen_on_unix_socket(ts->socket_states[0])) {
     ts->exit_status = -1;
     goto error;
   }
@@ -320,10 +320,10 @@ static void listen_on_unix_socket(ThreadState *ts,
     goto error_no_inc;
   }
 
-  ts->socket_state->streamfd = -1;
+  ts->socket_states[0]->streamfd = -1;
   for (;;) {
   accept_loop:
-    switch (poll_fd(ts->socket_state->sockfd)) {
+    switch (poll_fd(ts->socket_states[0]->sockfd)) {
     case READY:
       break;
     case GO_AROUND:
@@ -335,11 +335,11 @@ static void listen_on_unix_socket(ThreadState *ts,
     }
 
     socklen_t streamfd_size = sizeof(struct sockaddr);
-    ts->socket_state->streamfd =
-        accept(ts->socket_state->sockfd,
-               (struct sockaddr *)&ts->socket_state->addr, &streamfd_size);
+    ts->socket_states[0]->streamfd =
+        accept(ts->socket_states[0]->sockfd,
+               (struct sockaddr *)&ts->socket_states[0]->addr, &streamfd_size);
     debug_log("Accepted on ts->socket\n");
-    if (ts->socket_state->streamfd < 0) {
+    if (ts->socket_states[0]->streamfd < 0) {
       ts->exit_status = -1;
       goto error_no_inc;
     }
@@ -350,7 +350,7 @@ static void listen_on_unix_socket(ThreadState *ts,
 
   for (;;) {
   read_loop:
-    switch (poll_fd(ts->socket_state->streamfd)) {
+    switch (poll_fd(ts->socket_states[0]->streamfd)) {
     case READY:
       break;
     case GO_AROUND:
@@ -361,9 +361,9 @@ static void listen_on_unix_socket(ThreadState *ts,
     } break;
     }
 
-    int exit_value =
-        line_buf_read(&line_buf, g_cmd_args.socket_sep_char, lb_read,
-                      &ts->socket_state->streamfd, line_handler, (void *)ts);
+    int exit_value = line_buf_read(&line_buf, g_cmd_args.socket_sep_char,
+                                   lb_read, &ts->socket_states[0]->streamfd,
+                                   line_handler, (void *)ts);
 
     while (exit_value == TRAMPOLINE) {
       JS_UpdateStackTop(ts->rt);
