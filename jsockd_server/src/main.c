@@ -243,13 +243,10 @@ static CmdArgs g_cmd_args;
 static const int EXIT_ON_QUIT_COMMAND = -999;
 static const int TRAMPOLINE = -9999;
 
-static void listen_on_unix_socket(const SocketState *socket_state,
+static void listen_on_unix_socket(ThreadState *ts,
                                   int (*line_handler)(const char *line,
                                                       size_t len, void *data,
-                                                      bool truncated),
-                                  void *data) {
-  ThreadState *ts = (ThreadState *)data;
-
+                                                      bool truncated)) {
   char *line_buf_buffer = calloc(LINE_BUF_BYTES, sizeof(char));
   LineBuf line_buf = {.buf = line_buf_buffer, .size = LINE_BUF_BYTES};
 
@@ -261,7 +258,7 @@ static void listen_on_unix_socket(const SocketState *socket_state,
 
   if (0 != socket_fchmod(ts->socket_state->sockfd, 0600)) {
     release_logf("Error setting permissions 0600 on socket %s: %s\n",
-                 socket_state->unix_socket_filename, strerror(errno));
+                 ts->socket_state->unix_socket_filename, strerror(errno));
     ts->exit_status = -1;
     goto error;
   }
@@ -269,17 +266,17 @@ static void listen_on_unix_socket(const SocketState *socket_state,
   struct sockaddr_un addr = {0};
   addr.sun_family = AF_UNIX;
   if (sizeof(addr.sun_path) / sizeof(addr.sun_path[0]) <
-      strlen(socket_state->unix_socket_filename) + 1 /* zeroterm */) {
+      strlen(ts->socket_state->unix_socket_filename) + 1 /* zeroterm */) {
     release_logf("Error: unix socket filename %s is too long\n",
-                 socket_state->unix_socket_filename);
+                 ts->socket_state->unix_socket_filename);
     ts->exit_status = -1;
     goto error;
   }
-  strncpy(addr.sun_path, socket_state->unix_socket_filename,
+  strncpy(addr.sun_path, ts->socket_state->unix_socket_filename,
           sizeof(addr.sun_path) - 1);
-  if (-1 == unlink(socket_state->unix_socket_filename) && errno != ENOENT) {
+  if (-1 == unlink(ts->socket_state->unix_socket_filename) && errno != ENOENT) {
     release_logf("Error attempting to unlink %s\n",
-                 socket_state->unix_socket_filename);
+                 ts->socket_state->unix_socket_filename);
     ts->exit_status = -1;
     goto error;
   }
@@ -296,10 +293,10 @@ static void listen_on_unix_socket(const SocketState *socket_state,
   // On Mac the call to socket_fchmod above is a no-op, so call chmod on the
   // UNIX socket filename. This is theoretically less good, because there's a
   // tiny window where the socket file exists but is not yet chmodded.
-  if (0 != chmod(socket_state->unix_socket_filename, 0600)) {
+  if (0 != chmod(ts->socket_state->unix_socket_filename, 0600)) {
     release_logf(
         "Error setting permissions 0600 on socket %s via filename: %s\n",
-        socket_state->unix_socket_filename, strerror(errno));
+        ts->socket_state->unix_socket_filename, strerror(errno));
     ts->exit_status = -1;
     goto error;
   }
@@ -352,7 +349,7 @@ static void listen_on_unix_socket(const SocketState *socket_state,
 
     int exit_value =
         line_buf_read(&line_buf, g_cmd_args.socket_sep_char, lb_read,
-                      &ts->socket_state->streamfd, line_handler, data);
+                      &ts->socket_state->streamfd, line_handler, (void *)ts);
 
     while (exit_value == TRAMPOLINE) {
       JS_UpdateStackTop(ts->rt);
@@ -1062,7 +1059,7 @@ static int line_handler(const char *line, size_t len, void *data,
 
 static void *listen_thread_func(void *data) {
   ThreadState *ts = (ThreadState *)data;
-  listen_on_unix_socket(ts->socket_state, line_handler, (void *)ts);
+  listen_on_unix_socket(ts, line_handler);
   debug_log("Listen thread terminating...\n");
   return NULL;
 }
