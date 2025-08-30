@@ -253,7 +253,7 @@ static int initialize_and_listen_on_unix_socket(SocketState *socket_state) {
     return -1;
   }
 
-  if (0 != socket_fchmod(ts->socket_state->sockfd, 0600)) {
+  if (0 != socket_fchmod(socket_state->sockfd, 0600)) {
     release_logf("Error setting permissions 0600 on socket %s: %s\n",
                  socket_state->unix_socket_filename, strerror(errno));
     return -1;
