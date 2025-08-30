@@ -134,6 +134,7 @@ typedef struct {
   int sockfd;
   int streamfd;
   int stream_io_err;
+  struct sockaddr_un addr;
 } SocketState;
 
 static void init_socket_state(SocketState *ss,
@@ -142,6 +143,7 @@ static void init_socket_state(SocketState *ss,
   ss->sockfd = -1;
   ss->streamfd = -1;
   ss->stream_io_err = 0;
+  memset(&ss->addr, 0, sizeof(ss->addr));
 }
 
 static void cleanup_socket_state(SocketState *socket_state) {
@@ -243,6 +245,63 @@ static CmdArgs g_cmd_args;
 static const int EXIT_ON_QUIT_COMMAND = -999;
 static const int TRAMPOLINE = -9999;
 
+static int initialize_and_listen_on_unix_socket(SocketState *socket_state) {
+  socket_state->sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
+  if (socket_state->sockfd < 0) {
+    release_logf("Error creating socket %s: %s\n",
+                 socket_state->unix_socket_filename, strerror(errno));
+    return -1;
+  }
+
+  if (0 != socket_fchmod(ts->socket_state->sockfd, 0600)) {
+    release_logf("Error setting permissions 0600 on socket %s: %s\n",
+                 socket_state->unix_socket_filename, strerror(errno));
+    return -1;
+  }
+
+  socket_state->addr.sun_family = AF_UNIX;
+  if (sizeof(socket_state->addr.sun_path) /
+          sizeof(socket_state->addr.sun_path[0]) <
+      strlen(socket_state->unix_socket_filename) + 1 /* zeroterm */) {
+    release_logf("Error: unix socket filename %s is too long\n",
+                 socket_state->unix_socket_filename);
+
+    return -1;
+  }
+
+  strncpy(socket_state->addr.sun_path, socket_state->unix_socket_filename,
+          sizeof(socket_state->addr.sun_path) - 1);
+  if (-1 == unlink(socket_state->unix_socket_filename) && errno != ENOENT) {
+    release_logf("Error attempting to unlink %s\n",
+                 socket_state->unix_socket_filename);
+    return -1;
+  }
+
+  if (0 != bind(socket_state->sockfd, (struct sockaddr *)&socket_state->addr,
+                sizeof(socket_state->addr))) {
+    release_logf("Error binding socket %s: %s\n",
+                 socket_state->unix_socket_filename, strerror(errno));
+    return -1;
+  }
+  if (0 != listen(socket_state->sockfd, SOMAXCONN)) {
+    release_logf("Error listening on socket %s: %s\n",
+                 socket_state->unix_socket_filename, strerror(errno));
+    return -1;
+  }
+
+  // On Mac the call to socket_fchmod above is a no-op, so call chmod on the
+  // UNIX socket filename. This is theoretically less good, because there's a
+  // tiny window where the socket file exists but is not yet chmodded.
+  if (0 != chmod(socket_state->unix_socket_filename, 0600)) {
+    release_logf(
+        "Error setting permissions 0600 on socket %s via filename: %s\n",
+        socket_state->unix_socket_filename, strerror(errno));
+    return -1;
+  }
+
+  return 0;
+}
+
 static void listen_on_unix_socket(ThreadState *ts,
                                   int (*line_handler)(const char *line,
                                                       size_t len, void *data,
@@ -250,53 +309,7 @@ static void listen_on_unix_socket(ThreadState *ts,
   char *line_buf_buffer = calloc(LINE_BUF_BYTES, sizeof(char));
   LineBuf line_buf = {.buf = line_buf_buffer, .size = LINE_BUF_BYTES};
 
-  ts->socket_state->sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
-  if (ts->socket_state->sockfd < 0) {
-    ts->exit_status = -1;
-    goto error;
-  }
-
-  if (0 != socket_fchmod(ts->socket_state->sockfd, 0600)) {
-    release_logf("Error setting permissions 0600 on socket %s: %s\n",
-                 ts->socket_state->unix_socket_filename, strerror(errno));
-    ts->exit_status = -1;
-    goto error;
-  }
-
-  struct sockaddr_un addr = {0};
-  addr.sun_family = AF_UNIX;
-  if (sizeof(addr.sun_path) / sizeof(addr.sun_path[0]) <
-      strlen(ts->socket_state->unix_socket_filename) + 1 /* zeroterm */) {
-    release_logf("Error: unix socket filename %s is too long\n",
-                 ts->socket_state->unix_socket_filename);
-    ts->exit_status = -1;
-    goto error;
-  }
-  strncpy(addr.sun_path, ts->socket_state->unix_socket_filename,
-          sizeof(addr.sun_path) - 1);
-  if (-1 == unlink(ts->socket_state->unix_socket_filename) && errno != ENOENT) {
-    release_logf("Error attempting to unlink %s\n",
-                 ts->socket_state->unix_socket_filename);
-    ts->exit_status = -1;
-    goto error;
-  }
-  if (0 !=
-      bind(ts->socket_state->sockfd, (struct sockaddr *)&addr, sizeof(addr))) {
-    ts->exit_status = -1;
-    goto error;
-  }
-  if (0 != listen(ts->socket_state->sockfd, SOMAXCONN)) {
-    ts->exit_status = -1;
-    goto error;
-  }
-
-  // On Mac the call to socket_fchmod above is a no-op, so call chmod on the
-  // UNIX socket filename. This is theoretically less good, because there's a
-  // tiny window where the socket file exists but is not yet chmodded.
-  if (0 != chmod(ts->socket_state->unix_socket_filename, 0600)) {
-    release_logf(
-        "Error setting permissions 0600 on socket %s via filename: %s\n",
-        ts->socket_state->unix_socket_filename, strerror(errno));
+  if (0 != initialize_and_listen_on_unix_socket(ts->socket_state)) {
     ts->exit_status = -1;
     goto error;
   }
@@ -322,8 +335,9 @@ static void listen_on_unix_socket(ThreadState *ts,
     }
 
     socklen_t streamfd_size = sizeof(struct sockaddr);
-    ts->socket_state->streamfd = accept(
-        ts->socket_state->sockfd, (struct sockaddr *)&addr, &streamfd_size);
+    ts->socket_state->streamfd =
+        accept(ts->socket_state->sockfd,
+               (struct sockaddr *)&ts->socket_state->addr, &streamfd_size);
     debug_log("Accepted on ts->socket\n");
     if (ts->socket_state->streamfd < 0) {
       ts->exit_status = -1;
