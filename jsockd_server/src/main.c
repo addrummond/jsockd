@@ -10,10 +10,12 @@
 #include "hex.h"
 #include "line_buf.h"
 #include "mmap_file.h"
+#include "modcompiler.h"
 #include "quickjs-libc.h"
 #include "quickjs.h"
 #include "utils.h"
 #include "verify_bytecode.h"
+#include "version.h"
 #include "wait_group.h"
 #include <assert.h>
 #include <err.h>
@@ -36,7 +38,7 @@
 #include <time.h>
 #include <unistd.h>
 
-atomic_bool g_in_signal_handler;
+extern atomic_bool g_in_signal_handler;
 
 extern const uint32_t g_backtrace_module_bytecode_size;
 extern const uint8_t g_backtrace_module_bytecode[];
@@ -1087,9 +1089,26 @@ static const uint8_t *load_module_bytecode(const char *filename,
   const uint8_t *module_bytecode = mmap_file(filename, out_size);
   if (!module_bytecode)
     return NULL;
-  if (*out_size < ED25519_SIGNATURE_SIZE + 1) {
+  if (*out_size < VERSION_STRING_SIZE + ED25519_SIGNATURE_SIZE + 1) {
     release_logf("Module bytecode file is only %zu bytes. Too small!",
                  *out_size);
+    munmap_or_warn((void *)module_bytecode, *out_size);
+    return NULL;
+  }
+
+  char version_string[VERSION_STRING_SIZE];
+  memcpy(version_string,
+         module_bytecode + *out_size - ED25519_SIGNATURE_SIZE -
+             VERSION_STRING_SIZE,
+         VERSION_STRING_SIZE);
+  version_string[VERSION_STRING_SIZE - 1] = '\0';
+  if (strcmp(version_string, STRINGIFY(VERSION)) &&
+      (!(!strcmp(version_string, "unknown_version") &&
+         !strcmp(STRINGIFY(VERSION), "unknown_version") &&
+         CMAKE_BUILD_TYPE_IS_DEBUG))) {
+    release_logf(
+        "Module bytecode version string '%s' does not match expected '%s'\n",
+        version_string, STRINGIFY(VERSION));
     munmap_or_warn((void *)module_bytecode, *out_size);
     return NULL;
   }
@@ -1098,11 +1117,9 @@ static const uint8_t *load_module_bytecode(const char *filename,
   if (!pubkey)
     pubkey = "";
 
-  // Not documented because we allow this in Debug builds only, and binaries
-  // uploaded to the GitHub release are Release builds.
   if (CMAKE_BUILD_TYPE_IS_DEBUG &&
       !strcmp(pubkey, "dangerously_allow_invalid_signatures")) {
-    *out_size = *out_size - ED25519_SIGNATURE_SIZE;
+    *out_size = *out_size - VERSION_STRING_SIZE - ED25519_SIGNATURE_SIZE;
     return module_bytecode;
   }
 
@@ -1123,7 +1140,7 @@ static const uint8_t *load_module_bytecode(const char *filename,
     return NULL;
   }
 
-  *out_size = *out_size - ED25519_SIGNATURE_SIZE;
+  *out_size = *out_size - VERSION_STRING_SIZE - ED25519_SIGNATURE_SIZE;
 
   return module_bytecode;
 }
@@ -1181,10 +1198,6 @@ static void SIGINT_handler(int sig) {
   exit(1);
 }
 
-#ifndef VERSION
-#define VERSION unknown_version
-#endif
-
 int main(int argc, char *argv[]) {
   struct sigaction sa = {.sa_handler = SIGINT_handler};
   sigaction(SIGINT, &sa, NULL);
@@ -1205,12 +1218,19 @@ int main(int argc, char *argv[]) {
     return EXIT_SUCCESS;
   }
 
+  if (g_cmd_args.mod_to_compile) {
+    return compile_module_file(g_cmd_args.mod_to_compile,
+                               g_cmd_args.key_file_prefix,
+                               g_cmd_args.mod_output_file, STRINGIFY(VERSION));
+  }
+
+  if (g_cmd_args.key_file_prefix)
+    return output_key_file(g_cmd_args.key_file_prefix);
+
   if (g_cmd_args.es6_module_bytecode_file) {
     g_module_bytecode = load_module_bytecode(
         g_cmd_args.es6_module_bytecode_file, &g_module_bytecode_size);
     if (g_module_bytecode == NULL) {
-      release_logf("Error loading module bytecode from %s: %s\n",
-                   g_cmd_args.es6_module_bytecode_file, strerror(errno));
       destroy_log_mutex();
       pthread_mutex_destroy(&g_cached_functions_mutex);
       return EXIT_FAILURE;

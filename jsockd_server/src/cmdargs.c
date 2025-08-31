@@ -3,7 +3,17 @@
 #include "hex.h"
 #include <errno.h>
 #include <libgen.h>
+#include <stdbool.h>
 #include <string.h>
+
+static int n_flags_set(const CmdArgs *cmdargs) {
+  return (cmdargs->es6_module_bytecode_file != NULL) +
+         (cmdargs->socket_path[0] != NULL) +
+         (cmdargs->source_map_file != NULL) + (cmdargs->n_sockets != 0) +
+         (cmdargs->socket_sep_char_set != false) + (cmdargs->version != false) +
+         (cmdargs->max_command_runtime_us != 0) +
+         (cmdargs->key_file_prefix != NULL) + (cmdargs->mod_to_compile != NULL);
+}
 
 static int parse_cmd_args_helper(int argc, char **argv,
                                  void (*errlog)(const char *fmt, ...),
@@ -103,6 +113,31 @@ static int parse_cmd_args_helper(int argc, char **argv,
       hex_decode((uint8_t *)&cmdargs->socket_sep_char,
                  sizeof(cmdargs->socket_sep_char), argv[i]);
       cmdargs->socket_sep_char_set = true;
+    } else if (0 == strcmp(argv[i], "-k")) {
+      if (cmdargs->key_file_prefix != NULL) {
+        errlog("Error: -k can be specified at most once\n");
+        return -1;
+      }
+      ++i;
+      if (i >= argc) {
+        errlog("Error: -k requires an argument (key file)\n");
+        return -1;
+      }
+      cmdargs->key_file_prefix = argv[i];
+    } else if (0 == strcmp(argv[i], "-c")) {
+      if (cmdargs->mod_to_compile != NULL) {
+        errlog("Error: -c can be specified at most once\n");
+        return -1;
+      }
+      ++i;
+      if (i + 1 >= argc) {
+        errlog("Error: -c requires two arguments (ES6 module to compile and "
+               "output file)\n");
+        return -1;
+      }
+      cmdargs->mod_to_compile = argv[i];
+      ++i;
+      cmdargs->mod_output_file = argv[i];
     } else if (argv[i][0] == '-') {
       errlog("Error: unrecognized option: %s\n", argv[i]);
       return -1;
@@ -112,15 +147,25 @@ static int parse_cmd_args_helper(int argc, char **argv,
     }
   }
 
-  if (cmdargs->version &&
-      (cmdargs->n_sockets > 0 || cmdargs->socket_sep_char_set ||
-       cmdargs->es6_module_bytecode_file || cmdargs->source_map_file ||
-       cmdargs->max_command_runtime_us != 0)) {
+  int n_flags = n_flags_set(cmdargs);
+  if (cmdargs->version && n_flags > 1) {
     errlog("Error: -v (version) cannot be used with other flags.\n");
     return -1;
   }
+  if (cmdargs->key_file_prefix &&
+      !(n_flags == 1 || (n_flags == 2 && cmdargs->mod_to_compile))) {
+    errlog("Error: -k (key file) option must be used either alone (to "
+           "generate a key pair) or with the -c option.\n");
+    return -1;
+  }
+  if (cmdargs->mod_to_compile &&
+      !(n_flags == 1 || (n_flags == 2 && cmdargs->key_file_prefix))) {
+    errlog("Error: -c (compile module) must be used only with -k (private key "
+           "file ) option.\n");
+    return -1;
+  }
 
-  if (cmdargs->version)
+  if (cmdargs->version || cmdargs->key_file_prefix || cmdargs->mod_to_compile)
     return 0;
 
   if (cmdargs->n_sockets == 0) {
@@ -143,10 +188,13 @@ static int parse_cmd_args_helper(int argc, char **argv,
 int parse_cmd_args(int argc, char **argv, void (*errlog)(const char *fmt, ...),
                    CmdArgs *cmdargs) {
   if (parse_cmd_args_helper(argc, argv, errlog, cmdargs) < 0) {
+    const char *cmdname = argc > 0 ? basename(argv[0]) : "jsockd";
     errlog("Usage: %s [-m <module_bytecode_file>] [-sm <source_map_file>] [-b "
            "XX] [-t <max_command_runtime_us>] -s <socket1_path> "
-           "[<socket2_path> ...] \n",
-           argc > 0 ? basename(argv[0]) : "jsockd");
+           "[<socket2_path> ...]\n       %s -c <module_to_compile> "
+           "<output_file> [-k "
+           "<private_key_file>]\n       %s -k <key_file_prefix>",
+           cmdname, cmdname, cmdname);
     return -1;
   }
   return 0;

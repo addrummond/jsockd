@@ -6,12 +6,20 @@
 #include "../../src/hash_cache.h"
 #include "../../src/hex.h"
 #include "../../src/line_buf.h"
+#include "../../src/modcompiler.h"
+#include "../../src/utils.h"
+#include "../../src/verify_bytecode.h"
 #include "../../src/wait_group.h"
 #include "lib/acutest.h"
 #include "lib/pcg.h"
 #include <assert.h>
+#include <ed25519/ed25519.h>
 #include <pthread.h>
 #include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#define snprintf_nowarn(...) (snprintf(__VA_ARGS__) < 0 ? abort() : (void)0)
 
 /******************************************************************************
     Tests for wait_group
@@ -568,6 +576,260 @@ static void TEST_cmdargs_dash_t_error_on_double_flag(void) {
   TEST_ASSERT(strstr(cmdargs_errlog_buf, "-t "));
 }
 
+static void TEST_cmdargs_dash_k(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"jsockd", "-k", "keyfileprefix"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r == 0);
+  TEST_ASSERT(!strcmp(cmdargs.key_file_prefix, "keyfileprefix"));
+}
+
+static void TEST_cmdargs_dash_k_error_on_missing_arg(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"jsockd", "-k"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r != 0);
+  TEST_ASSERT(strstr(cmdargs_errlog_buf, "-k "));
+}
+
+static void TEST_cmdargs_dash_k_error_if_combined_with_other_flags(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"jsockd", "-k", "prefix", "-m", "foo.qjsbc"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r != 0);
+  TEST_ASSERT(strstr(cmdargs_errlog_buf, "-k "));
+}
+
+static void TEST_cmdargs_dash_c(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"jsockd", "-c", "module.mjs", "out.qjsbc"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r == 0);
+  TEST_ASSERT(!strcmp(cmdargs.mod_to_compile, "module.mjs"));
+  TEST_ASSERT(!strcmp(cmdargs.mod_output_file, "out.qjsbc"));
+}
+
+static void TEST_cmdargs_dash_c_with_dash_k(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"jsockd", "-c", "module.mjs", "out.qjsbc", "-k", "keyprefix"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r == 0);
+  TEST_ASSERT(!strcmp(cmdargs.mod_to_compile, "module.mjs"));
+  TEST_ASSERT(!strcmp(cmdargs.mod_output_file, "out.qjsbc"));
+  TEST_ASSERT(!strcmp(cmdargs.key_file_prefix, "keyprefix"));
+}
+
+static void TEST_cmdargs_dash_c_with_dash_k_error_if_dash_k_has_no_arg(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"jsockd", "-c", "module.mjs", "out.qjsbc", "-k"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r != 0);
+  TEST_ASSERT(strstr(cmdargs_errlog_buf, "-k "));
+}
+
+static void TEST_cmdargs_dash_c_error_on_no_args(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"jsockd", "-c"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r != 0);
+  TEST_ASSERT(strstr(cmdargs_errlog_buf, "-c "));
+}
+
+static void TEST_cmdargs_dash_c_error_on_only_one_arg(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"jsockd", "-c", "module.mjs"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r != 0);
+  TEST_ASSERT(strstr(cmdargs_errlog_buf, "-c "));
+}
+
+static void TEST_cmdargs_dash_c_error_if_combined_with_other_flags(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"jsockd", "-c", "module.mjs", "out.qjsbc", "-m", "foo.qjsbc"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r != 0);
+  TEST_ASSERT(strstr(cmdargs_errlog_buf, "-c "));
+}
+
+/******************************************************************************
+    Tests for modcompiler
+******************************************************************************/
+
+static void TEST_compile_module_file(void) {
+  const char privkey[] =
+      "6FC575BE3557E26A42B1A09BEEF0F4BFC9C6BBFBDAABB1E2098387A03599CE2B780EA777"
+      "5430EE1083077387B652921E9D1C5CCB5DA3634BFC7B6B46C84E8578920D6160618D2961"
+      "537E4B1DF6F3215F1AD186A1B45FED9869AFA636F5E10910";
+
+  TEST_ASSERT(sizeof(privkey) - 1 ==
+              2 * (ED25519_PUBLIC_KEY_SIZE + ED25519_PRIVATE_KEY_SIZE));
+
+  char tmpdir[1024];
+  TEST_ASSERT(0 == make_temp_dir(tmpdir, sizeof(tmpdir),
+                                 "jsockd_TEST_compile_module_file_XXXXXX"));
+
+  char module_filename[sizeof(tmpdir) + 128];
+  char key_filename[sizeof(tmpdir) + 128];
+  char output_filename[sizeof(tmpdir) + 128];
+  snprintf_nowarn(module_filename, sizeof(module_filename), "%s/mod.mjs",
+                  tmpdir);
+  snprintf_nowarn(key_filename, sizeof(key_filename), "%s/key", tmpdir);
+  snprintf_nowarn(output_filename, sizeof(output_filename), "%s/out.qjsbc",
+                  tmpdir);
+
+  FILE *modulef = fopen(module_filename, "w");
+  FILE *keyf = fopen(key_filename, "w");
+
+  TEST_ASSERT(modulef && keyf);
+
+  TEST_ASSERT(0 <= fprintf(modulef, "export const foo = 17;\n"));
+  TEST_ASSERT(1 == fwrite(privkey,
+                          sizeof(privkey) / sizeof(char) - sizeof(char), 1,
+                          keyf));
+
+  fclose(modulef);
+  fclose(keyf);
+
+  TEST_ASSERT(EXIT_SUCCESS == compile_module_file(module_filename, key_filename,
+                                                  output_filename, "99.99.0"));
+
+  FILE *outf = fopen(output_filename, "r");
+  TEST_ASSERT(outf);
+
+  TEST_ASSERT(0 == fseek(outf, 0, SEEK_END));
+  size_t output_file_size = ftell(outf);
+  TEST_ASSERT(0 == fseek(outf, 0, SEEK_SET));
+
+  uint8_t signature[64];
+  char version[VERSION_STRING_SIZE];
+  size_t bytecode_size =
+      output_file_size - VERSION_STRING_SIZE - ED25519_SIGNATURE_SIZE;
+  uint8_t bytecode[bytecode_size];
+  TEST_ASSERT(0 == fseek(outf, -ED25519_SIGNATURE_SIZE, SEEK_END));
+  TEST_ASSERT(1 == fread(signature, sizeof(signature) / sizeof(char), 1, outf));
+  TEST_ASSERT(0 == fseek(outf, -ED25519_SIGNATURE_SIZE - VERSION_STRING_SIZE,
+                         SEEK_END));
+  TEST_ASSERT(1 == fread(version, sizeof(version) / sizeof(char), 1, outf));
+  TEST_ASSERT(version[VERSION_STRING_SIZE - 1] == '\0');
+  TEST_ASSERT(!strcmp(version, "99.99.0"));
+  TEST_ASSERT(0 == fseek(outf, 0, SEEK_SET));
+  TEST_ASSERT(1 == fread(bytecode, bytecode_size, 1, outf));
+
+  uint8_t pubkey_raw[ED25519_PUBLIC_KEY_SIZE];
+  // we store public key as first 32 bytes of private key file
+  TEST_ASSERT(ED25519_PUBLIC_KEY_SIZE ==
+              hex_decode(pubkey_raw, sizeof(pubkey_raw), privkey));
+
+  TEST_ASSERT(ed25519_verify(signature, bytecode, bytecode_size, pubkey_raw));
+
+  fclose(outf);
+  remove(module_filename);
+  remove(key_filename);
+  remove(output_filename);
+  rmdir(tmpdir);
+}
+
+static void TEST_compile_module_file_without_key(void) {
+  char tmpdir[1024];
+  TEST_ASSERT(
+      0 == make_temp_dir(tmpdir, sizeof(tmpdir),
+                         "jsockd_TEST_compile_module_file_without_key_XXXXXX"));
+
+  char module_filename[sizeof(tmpdir) + 128];
+  char output_filename[sizeof(tmpdir) + 128];
+  snprintf_nowarn(module_filename, sizeof(module_filename), "%s/mod.mjs",
+                  tmpdir);
+  snprintf_nowarn(output_filename, sizeof(output_filename), "%s/out.qjsbc",
+                  tmpdir);
+
+  FILE *modulef = fopen(module_filename, "w");
+
+  TEST_ASSERT(modulef);
+
+  TEST_ASSERT(0 <= fprintf(modulef, "export const foo = 17;\n"));
+
+  fclose(modulef);
+
+  TEST_ASSERT(EXIT_SUCCESS == compile_module_file(module_filename, NULL,
+                                                  output_filename, "99.99.0"));
+
+  FILE *outf = fopen(output_filename, "r");
+  TEST_ASSERT(outf);
+
+  TEST_ASSERT(0 == fseek(outf, 0, SEEK_END));
+  TEST_ASSERT(0 == fseek(outf, 0, SEEK_SET));
+
+  uint8_t signature[64];
+  char version[VERSION_STRING_SIZE];
+  TEST_ASSERT(0 == fseek(outf, -ED25519_SIGNATURE_SIZE, SEEK_END));
+  TEST_ASSERT(1 == fread(signature, sizeof(signature) / sizeof(char), 1, outf));
+  TEST_ASSERT(0 == fseek(outf, -ED25519_SIGNATURE_SIZE - VERSION_STRING_SIZE,
+                         SEEK_END));
+  TEST_ASSERT(1 == fread(version, sizeof(version) / sizeof(char), 1, outf));
+  TEST_ASSERT(version[VERSION_STRING_SIZE - 1] == '\0');
+  TEST_ASSERT(!strcmp(version, "99.99.0"));
+
+  // absent signature should be padded with zeros
+  for (size_t i = 0; i < sizeof(signature); ++i) {
+    TEST_ASSERT(signature[i] == 0);
+  }
+
+  fclose(outf);
+  remove(module_filename);
+  remove(output_filename);
+  rmdir(tmpdir);
+}
+
+static void TEST_output_key_file(void) {
+  char tmpdir[1024];
+  TEST_ASSERT(0 == make_temp_dir(tmpdir, sizeof(tmpdir),
+                                 "jsockd_TEST_modcompiler_XXXXXX"));
+  char keyprefixpath[sizeof(tmpdir) + sizeof("my_key")];
+  snprintf_nowarn(keyprefixpath, sizeof(keyprefixpath), "%s/my_key", tmpdir);
+
+  output_key_file(keyprefixpath);
+
+  char pubkeypath[sizeof(keyprefixpath) + sizeof(".pubkey")];
+  snprintf_nowarn(pubkeypath, sizeof(keyprefixpath), "%s/my_key.pubkey",
+                  tmpdir);
+  FILE *pubhexf = fopen(pubkeypath, "r");
+  char privkeypath[sizeof(keyprefixpath) + sizeof(".privkey")];
+  snprintf_nowarn(privkeypath, sizeof(keyprefixpath), "%s/my_key.privkey",
+                  tmpdir);
+  FILE *privhexf = fopen(privkeypath, "r");
+  TEST_ASSERT(pubhexf && privhexf);
+
+  char pubhex[ED25519_PUBLIC_KEY_SIZE * 2];
+  char privhex[2 * (ED25519_PRIVATE_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE)];
+
+  TEST_ASSERT(1 == fread(pubhex, sizeof(pubhex) / sizeof(char), 1, pubhexf));
+  TEST_ASSERT(1 == fread(privhex, sizeof(privhex) / sizeof(char), 1, privhexf));
+
+  fseek(pubhexf, 0, SEEK_END);
+  fseek(privhexf, 0, SEEK_END);
+  TEST_ASSERT(ED25519_PUBLIC_KEY_SIZE * 2 == ftell(pubhexf));
+  TEST_ASSERT(2 * (ED25519_PRIVATE_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE) ==
+              ftell(privhexf));
+
+  fclose(pubhexf);
+  fclose(privhexf);
+  remove(privkeypath);
+  remove(pubkeypath);
+  rmdir(tmpdir);
+
+  // First 32 bytes of privkey file should match pubkey file
+  TEST_ASSERT(0 == memcmp(pubhex, privhex, ED25519_PUBLIC_KEY_SIZE * 2));
+}
+
 /******************************************************************************
     Add all tests to the list below.
 ******************************************************************************/
@@ -609,4 +871,16 @@ TEST_LIST = {T(wait_group_inc_and_wait_basic_use_case),
              T(cmdargs_dash_t_error_on_negative),
              T(cmdargs_dash_t_error_on_non_numeric),
              T(cmdargs_dash_t_error_on_double_flag),
+             T(cmdargs_dash_k),
+             T(cmdargs_dash_c_with_dash_k),
+             T(cmdargs_dash_c_with_dash_k_error_if_dash_k_has_no_arg),
+             T(cmdargs_dash_k_error_on_missing_arg),
+             T(cmdargs_dash_k_error_if_combined_with_other_flags),
+             T(cmdargs_dash_c),
+             T(cmdargs_dash_c_error_on_no_args),
+             T(cmdargs_dash_c_error_on_only_one_arg),
+             T(cmdargs_dash_c_error_if_combined_with_other_flags),
+             T(compile_module_file),
+             T(compile_module_file_without_key),
+             T(output_key_file),
              {NULL, NULL}};

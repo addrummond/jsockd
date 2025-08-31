@@ -27,12 +27,12 @@ fi
 
 export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=dangerously_allow_invalid_signatures
 
-# Compile the example module to QuickJS bytecode.
-./tools-bin/jsockd_compile_es6_module example_module.mjs /tmp/example_module.qjsb
-
 cd jsockd_server
-
 ./mk.sh Debug
+
+# Compile the example module to QuickJS bytecode.
+./build_Debug/jsockd -c ../example_module.mjs /tmp/example_module.qjsb
+
 (
     ./build_Debug/jsockd -m /tmp/example_module.qjsb -s /tmp/jsockd_fuzz_test_sock > /tmp/jsockd_fuzz_test_server_output 2>&1
     echo $? > /tmp/jsockd_fuzz_test_exit_code

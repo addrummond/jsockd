@@ -12,10 +12,6 @@ N_ITERATIONS=100
 rm -f /tmp/jsockd_test_sock
 rm -f /tmp/jsockd_test_valgrind_exit_code
 
-openssl genpkey -algorithm ed25519 -out private_signing_key.pem
-openssl pkey -inform pem -pubout -outform der -in private_signing_key.pem | tail -c 32 | xxd -p | tr -d '\n' > public_signing_key
-export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=$(cat public_signing_key)
-
 cat <<END > mod1.mjs
 export const getAValue = () => ({
   foo: "bar",
@@ -25,11 +21,15 @@ cat <<END > mod2.mjs
 export const myIdentityFunction = (x) => x;
 END
 
+cd jsockd_server
+./mk.sh Debug
+
+rm -f valgrind_private_signing_key*
+./build_Debug/jsockd -k valgrind_private_signing_key
+export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=$(cat valgrind_private_signing_key.pubkey)
 
 # Compile the example module to QuickJS bytecode.
-./tools-bin/jsockd_compile_es6_module jsockd_server/tests/valgrind/bundle.mjs /tmp/bundle.qjsb private_signing_key.pem
-
-cd jsockd_server
+./build_Debug/jsockd -c tests/valgrind/bundle.mjs /tmp/bundle.qjsb -k valgrind_private_signing_key.privkey
 
 DASH_B_ARG=""
 if [ ! -z "$JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX" ]; then
@@ -37,7 +37,6 @@ if [ ! -z "$JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX" ]; then
 fi
 
 # Start the server with Valgrind
-./mk.sh Debug
 (
     valgrind --error-exitcode=1 --leak-check=full --track-origins=yes -- \
         ./build_Debug/jsockd $DASH_B_ARG -m /tmp/bundle.qjsb -s /tmp/jsockd_test_sock -sm tests/valgrind/bundle.mjs.map

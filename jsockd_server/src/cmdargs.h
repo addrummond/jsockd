@@ -8,7 +8,6 @@
 #include "config.h"
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdio.h>
 
 typedef struct {
   const char *es6_module_bytecode_file;
@@ -19,6 +18,9 @@ typedef struct {
   bool socket_sep_char_set;
   bool version;
   uint64_t max_command_runtime_us;
+  const char *key_file_prefix;
+  const char *mod_to_compile;
+  const char *mod_output_file;
 } CmdArgs;
 
 int parse_cmd_args(int argc, char **argv, void (*errlog)(const char *fmt, ...),

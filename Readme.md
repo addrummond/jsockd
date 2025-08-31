@@ -19,7 +19,7 @@ Steps to add JSockD to your application:
 
 * Bundle all of the required Javascript library code into a single ES6 module (using e.g. [esbuild](https://esbuild.github.io/api/)).
 * Generate an ED25519 public/private key pair for signing your code (see section 2).
-* Compile the ES6 module into a QuickJS bytecode file using the `jsockd_compile_es6_module` command (see section 2).
+* Compile the ES6 module into a QuickJS bytecode file using `jsockd -c` command (see section 2).
 * Configure your client library with the path to the bytecode file and the public key used to sign it.
 * Use the client library to send commands to the JSockD server.
 
@@ -54,6 +54,8 @@ The following is a typical example of a command in the context of React SSR. The
 
 ## 2. The module compiler
 
+### 2.1 Signing and compiling modules
+
 JSockD provides a command-line tool for compiling ES6 modules into QuickJS bytecode files.
 Bytecode must be signed using an ED25519 key to ensure that only trusted code is executed
 by the server.
@@ -61,21 +63,53 @@ by the server.
 Generate a signing key as follows:
 
 ```sh
-openssl genpkey -algorithm ed25519 -out private_signing_key.pem
-openssl pkey -inform pem -pubout -outform der -in private_signing_key.pem | tail -c 32 | xxd -p | tr -d '\n' > public_signing_key
+jsockd -k my_key_file
 ```
 
-**Note that the `openssl` command that comes with MacOS doesn't support the `ed25519` algorithm. You can get a newer openssl via `brew install openssl` and then use `/opt/homebrew/bin/openssl`.**
+This command generates two files, `my_key_file.pubkey` (the public key) and `my_key_file.privkey` (the private key).
 
-The JSockD release bundle includes a `jsockd_compile_es6_module` command that compiles an ES6 module to a QuickJS bytecode file. This command is used to prepare the module that the server will execute. For example:
+We can now compile an ES6 moule to QuickJS bytecode and sign the bytecode using the key:
 
 ```sh
-jsockd_compile_es6_module my_module.mjs my_module.quickjs_bytecode private_signing_key.pem
+jsockd -c my_module.mjs my_module.quickjs_bytecode -k my_key_file.privkey
 ```
 
-**On MacOS you can use `JSOCKD_OPENSSL=/opt/bin/homebrew jsockd_compile_es6_module ...` to override the default openssl when running the bytecode compiler.**
+The public key should be passed to the `jsockd` server process via the `JSOCKD_BYTECODE_MODULE_PUBLIC_KEY` environment variable:
 
-The value in `public_signing_key` should be passed to `jsockd` via the `JSOCKD_BYTECODE_MODULE_PUBLIC_KEY` environment variable.
+```sh
+export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=$(cat my_key_file.pubkey)
+```
+
+### 2.2 I want to use openssl to sign my modules
+
+_**On Mac you may need to install openssl via homebrew to get support for ED25519 signatures.**_
+
+If you don't trust jsockd to generate keys and signatures, you can use openssl to sign your module bytecode.
+Generate public and private keys as follows:
+
+```sh
+openssl genpkey -algorithm ed25519 -out private_signing_key.pem
+openssl pkey -inform pem -pubout -outform der -in private_signing_key.pem | tail -c 32 | xxd -p | tr -d '\n' > public_signing_key_hex
+```
+
+Now compile the module without a key:
+
+```sh
+jsockd -c my_module.mjs my_module.quickjs_bytecode
+```
+
+The last 64 bytes of the bytecode file (usually occupied by the ED25519 signature) are now filled with zeros. The preceding 128 bytes contain the jsockd compiler version string. You therefore need to sign the file **excluding the last 192 bytes** and then replace the last 64 bytes of the file with the signature. The following shell one-liner accomplishes this (modify the value of `BYTECODE_FILE`):
+
+```sh
+BYTECODE_FILE=my_module.quickjs_bytecode BYTECODE_FILE_SIZE=$(wc -c $BYTECODE_FILE | awk '{print $1}') && ( head -c $(($BYTECODE_FILE_SIZE - 192)) $BYTECODE_FILE | openssl pkeyutl -sign -inkey private_signing_key.pem -rawin -in /dev/stdin | dd of=$BYTECODE_FILE bs=1 seek=$(($BYTECODE_FILE_SIZE - 64)) conv=notrunc )
+```
+
+Finally, set the environment variable to the hex-encoded public key before running jsockd:
+
+```sh
+export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=$(cat public_signing_key_hex)
+jsockd -m my_module.quickjs_bytecode -s /tmp/sock
+```
 
 ## 3. The JSockD server
 
@@ -96,6 +130,8 @@ When the server is ready to start accepting commands on the specified UNIX domai
 
 ### 3.2 Command line options
 
+#### Starting the server
+
 | Option      | Argument(s)                | Description                                                                  | Default       | Repeatable | Required |
 |-------------|----------------------------|------------------------------------------------------------------------------|---------------|------------|----------|
 | `-v`        | *(none)*                   | Print version and exit. Cannot be used with other flags.                     |               | No         | No       |
@@ -105,6 +141,22 @@ When the server is ready to start accepting commands on the specified UNIX domai
 | `-b`        | `<XX>`                     | Separator byte as two hex digits (e.g. `0A`).                                | `0A` (= `\n`) | No         | No       |
 | `-s`        | `<socket1> [socket2 ...]`  | One or more socket file paths.                                               |               | Yes        | Yes      |
 | `--`        | *(none)*                   | Indicates end of options for `-s` (allows socket paths starting with `-`).   |               | N/A        | No       |
+
+#### Generating public and private keys
+
+```sh
+jsockd -k <key_file_prefix>
+```
+
+Outputs two files: `<key_file_prefix>.pub` (the public key) and `<key_file_prefix>.pem` (the private key).
+
+#### Compiling a module file
+
+```sh
+jsockd -c <module_file> <output_bytecode_file> [-k <private_key_file>]
+```
+
+Compiles the specified ES6 module file to a QuickJS bytecode file. If the `-k` option is not given, the module is not signed and can be used only by debug builds of `jsockd` that set `JSOCKD_BYTECODE_MODULE_PUBLIC_KEY` to `dangerously_allow_invalid_signatures`.
 
 ### 3.3 The socket protocol
 
@@ -269,7 +321,7 @@ To create a new release:
 
 Each release includes:
 
-- Platform-specific tar.gz archives containing the `jsockd` and `jsockd_compile_es6_module` binaries
+- Platform-specific tar.gz archives containing the `jsockd` binary
 - SHA256 checksums for verification
 
 ### 6.2 New version checklist

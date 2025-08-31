@@ -4,14 +4,13 @@ set -e
 
 export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=dangerously_allow_invalid_signatures
 
-# Compile the example module to QuickJS bytecode.
-./tools-bin/jsockd_compile_es6_module example_module.mjs /tmp/jsockd_memory_increase_test_example_module.qjsb
-
 cd jsockd_server
+./mk.sh Debug
+
+# Compile the example module to QuickJS bytecode.
+build_Debug/jsockd -c ../example_module.mjs /tmp/jsockd_memory_increase_test_example_module.qjsb
 
 echo "?quit" > /tmp/jsockd_memory_increase_test_input
-
-./mk.sh Debug
 
 # Start the server
 (

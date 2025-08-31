@@ -9,7 +9,7 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
-extern atomic_bool g_in_signal_handler;
+atomic_bool g_in_signal_handler;
 
 static pthread_mutex_t g_log_mutex;
 static atomic_bool g_log_mutex_initialized;
@@ -119,4 +119,17 @@ void memswap_small(void *m1, void *m2, size_t size) {
   memcpy(tmp, m1, size);
   memcpy(m1, m2, size);
   memcpy(m2, tmp, size);
+}
+
+int make_temp_dir(char out[], size_t out_size, const char *template) {
+  const char *TMPDIR = getenv("TMPDIR");
+  if (!TMPDIR)
+    TMPDIR = "/tmp";
+  if (strlen(TMPDIR) >=
+      out_size - strlen(template) - 1 - 1) // -1 for '/', -1 for '\0'
+    return -1;
+  snprintf(out, out_size, "%s/%s", TMPDIR, template);
+  if (!mkdtemp(out))
+    return -1;
+  return 0;
 }

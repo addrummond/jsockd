@@ -23,4 +23,9 @@
 
 #define LINE_BUF_BYTES (1024 * 1024 * 1024)
 
+#define VERSION_STRING_SIZE 128
+
+#define PUBLIC_KEY_FILE_SUFFIX ".pubkey"
+#define PRIVATE_KEY_FILE_SUFFIX ".privkey"
+
 #endif
