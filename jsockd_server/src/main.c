@@ -14,6 +14,7 @@
 #include "quickjs.h"
 #include "utils.h"
 #include "verify_bytecode.h"
+#include "version.h"
 #include "wait_group.h"
 #include <assert.h>
 #include <err.h>
@@ -1180,10 +1181,6 @@ static void SIGINT_handler(int sig) {
 
   exit(1);
 }
-
-#ifndef VERSION
-#define VERSION unknown_version
-#endif
 
 int main(int argc, char *argv[]) {
   struct sigaction sa = {.sa_handler = SIGINT_handler};

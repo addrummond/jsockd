@@ -23,4 +23,6 @@
 
 #define LINE_BUF_BYTES (1024 * 1024 * 1024)
 
+#define VERSION_STRING_MAX_LENGTH 128
+
 #endif
