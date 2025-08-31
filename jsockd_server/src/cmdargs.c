@@ -3,7 +3,17 @@
 #include "hex.h"
 #include <errno.h>
 #include <libgen.h>
+#include <stdbool.h>
 #include <string.h>
+
+static int n_flags_set(const CmdArgs *cmdargs) {
+  return (cmdargs->es6_module_bytecode_file != NULL) +
+         (cmdargs->socket_path[0] != NULL) +
+         (cmdargs->source_map_file != NULL) + (cmdargs->n_sockets != 0) +
+         (cmdargs->socket_sep_char_set != false) + (cmdargs->version != false) +
+         (cmdargs->max_command_runtime_us != 0) +
+         (cmdargs->key_file_prefix != NULL);
+}
 
 static int parse_cmd_args_helper(int argc, char **argv,
                                  void (*errlog)(const char *fmt, ...),
@@ -103,6 +113,17 @@ static int parse_cmd_args_helper(int argc, char **argv,
       hex_decode((uint8_t *)&cmdargs->socket_sep_char,
                  sizeof(cmdargs->socket_sep_char), argv[i]);
       cmdargs->socket_sep_char_set = true;
+    } else if (0 == strcmp(argv[i], "-k")) {
+      if (cmdargs->key_file_prefix != NULL) {
+        errlog("Error: -k can be specified at most once\n");
+        return -1;
+      }
+      ++i;
+      if (i >= argc) {
+        errlog("Error: -k requires an argument (key file prefix)\n");
+        return -1;
+      }
+      cmdargs->key_file_prefix = argv[i];
     } else if (argv[i][0] == '-') {
       errlog("Error: unrecognized option: %s\n", argv[i]);
       return -1;
@@ -112,15 +133,16 @@ static int parse_cmd_args_helper(int argc, char **argv,
     }
   }
 
-  if (cmdargs->version &&
-      (cmdargs->n_sockets > 0 || cmdargs->socket_sep_char_set ||
-       cmdargs->es6_module_bytecode_file || cmdargs->source_map_file ||
-       cmdargs->max_command_runtime_us != 0)) {
+  if (cmdargs->version && n_flags_set(cmdargs) > 1) {
     errlog("Error: -v (version) cannot be used with other flags.\n");
     return -1;
   }
+  if (cmdargs->key_file_prefix && n_flags_set(cmdargs) > 1) {
+    errlog("Error: -k (key file prefix) cannot be used with other flags.\n");
+    return -1;
+  }
 
-  if (cmdargs->version)
+  if (cmdargs->version || cmdargs->key_file_prefix)
     return 0;
 
   if (cmdargs->n_sockets == 0) {

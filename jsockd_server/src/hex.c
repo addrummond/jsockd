@@ -30,3 +30,12 @@ size_t hex_decode(uint8_t *buf, size_t buf_len, const char *input) {
   }
   return i;
 }
+
+int hex_encode(uint8_t *buf, size_t size, FILE *out) {
+  size_t i;
+  for (i = 0; i < size; ++i) {
+    if (fprintf(out, "%02X", buf[i]) < 2)
+      return -1;
+  }
+  return 0;
+}
