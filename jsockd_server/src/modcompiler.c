@@ -6,6 +6,11 @@
 #include "version.h"
 #include <ed25519/ed25519.h>
 
+// The module file format:
+//     raw QuickJS bytecode
+//     128 byte version string, null-terminated
+//     64 byte ed25519 signature of bytecode + version string
+
 int compile_file(JSContext *ctx, const char *module_filename,
                  const uint8_t *public_key, const uint8_t *private_key,
                  FILE *fo) {
