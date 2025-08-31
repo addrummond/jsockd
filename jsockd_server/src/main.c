@@ -10,6 +10,7 @@
 #include "hex.h"
 #include "line_buf.h"
 #include "mmap_file.h"
+#include "modcompiler.h"
 #include "quickjs-libc.h"
 #include "quickjs.h"
 #include "utils.h"
@@ -17,7 +18,6 @@
 #include "version.h"
 #include "wait_group.h"
 #include <assert.h>
-#include <ed25519/ed25519.h>
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -1152,65 +1152,6 @@ static void global_cleanup(void) {
                    g_module_bytecode_size + ED25519_SIGNATURE_SIZE);
   if (g_source_map_size != 0 && g_source_map)
     munmap_or_warn((void *)g_source_map, g_source_map_size);
-}
-
-static int output_key_files(const char *key_file_prefix) {
-  int ret = EXIT_SUCCESS;
-
-  size_t privkey_filename_len =
-      strlen(key_file_prefix) + sizeof(".privkey") + 1;
-  size_t pubkey_filename_len = strlen(key_file_prefix) + sizeof(".pubkey") + 1;
-  char *privkey_filename = malloc(privkey_filename_len);
-  char *pubkey_filename = malloc(pubkey_filename_len);
-  snprintf(privkey_filename, privkey_filename_len, "%s.privkey",
-           key_file_prefix);
-  snprintf(pubkey_filename, pubkey_filename_len, "%s.pubkey", key_file_prefix);
-  FILE *privkey_file = fopen(privkey_filename, "wx");
-  FILE *pubkey_file = fopen(pubkey_filename, "wx");
-  if (!privkey_file) {
-    release_logf("Error creating private key file %s: %s\n", privkey_filename,
-                 strerror(errno));
-  }
-  if (!pubkey_file) {
-    release_logf("Error creating public key file %s: %s\n", pubkey_filename,
-                 strerror(errno));
-  }
-  if (!(privkey_file && pubkey_file)) {
-    ret = EXIT_FAILURE;
-    goto end;
-  }
-
-  unsigned char seed[ED25519_SEED_SIZE];
-  unsigned char pubkey[ED25519_PUBLIC_KEY_SIZE];
-  unsigned char privkey[ED25519_PRIVATE_KEY_SIZE];
-  if (0 != ed25519_create_seed(seed)) {
-    release_log("Error creating random seed.\n");
-    ret = EXIT_FAILURE;
-    goto end;
-  }
-  ed25519_create_keypair(pubkey, privkey, seed);
-
-  if (0 != hex_encode(pubkey, ED25519_PUBLIC_KEY_SIZE, pubkey_file)) {
-    release_logf("Error writing to public key file %s: %s", pubkey_filename,
-                 strerror(errno));
-    ret = EXIT_FAILURE;
-    goto end;
-  }
-  if (0 != hex_encode(privkey, ED25519_PRIVATE_KEY_SIZE, privkey_file)) {
-    release_logf("Error writing to private key file %s: %s", privkey_filename,
-                 strerror(errno));
-    ret = EXIT_FAILURE;
-    goto end;
-  }
-
-end:
-  if (privkey_file)
-    fclose(privkey_file);
-  if (pubkey_file)
-    fclose(pubkey_file);
-  free(privkey_filename);
-  free(pubkey_filename);
-  return ret;
 }
 
 static void SIGINT_handler(int sig) {
