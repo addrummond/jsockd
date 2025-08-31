@@ -111,6 +111,7 @@ set(JSOCKD_SERVER_SOURCES
   src/verify_bytecode.c
   src/cmdargs.c
   src/mmap_file.c
+  src/modcompiler.c
   src/js/gen_backtrace.c
   src/js/gen_shims.c
   ${ED25519_LIB_SOURCES}

@@ -51,12 +51,12 @@ int compile_file(JSContext *ctx, const char *module_filename,
     goto end;
   }
   char vstring[VERSION_STRING_MAX_LENGTH] = {0};
-  if (strlen(VERSION) >= VERSION_STRING_MAX_LENGTH) {
+  if (strlen(STRINGIFY(VERSION)) >= VERSION_STRING_MAX_LENGTH) {
     release_logf("VERSION string too long\n");
     ret = -1;
     goto end;
   }
-  strcpy(vstring, VERSION);
+  strcpy(vstring, STRINGIFY(VERSION));
   if (fwrite(vstring, sizeof(vstring) / sizeof(char), 1, fo) < 1) {
     fprintf(stderr, "Error writing version string to output file\n");
     ret = -1;
