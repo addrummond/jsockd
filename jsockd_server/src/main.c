@@ -38,7 +38,7 @@
 #include <time.h>
 #include <unistd.h>
 
-atomic_bool g_in_signal_handler;
+extern atomic_bool g_in_signal_handler;
 
 extern const uint32_t g_backtrace_module_bytecode_size;
 extern const uint8_t g_backtrace_module_bytecode[];
@@ -1221,7 +1221,7 @@ int main(int argc, char *argv[]) {
   if (g_cmd_args.mod_to_compile) {
     return compile_module_file(g_cmd_args.mod_to_compile,
                                g_cmd_args.key_file_prefix,
-                               g_cmd_args.mod_output_file);
+                               g_cmd_args.mod_output_file, STRINGIFY(VERSION));
   }
 
   if (g_cmd_args.key_file_prefix)

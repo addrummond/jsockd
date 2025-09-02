@@ -6,12 +6,16 @@
 #include "../../src/hash_cache.h"
 #include "../../src/hex.h"
 #include "../../src/line_buf.h"
+#include "../../src/modcompiler.h"
+#include "../../src/utils.h"
+#include "../../src/verify_bytecode.h"
 #include "../../src/wait_group.h"
 #include "lib/acutest.h"
 #include "lib/pcg.h"
 #include <assert.h>
 #include <pthread.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
 /******************************************************************************
     Tests for wait_group
@@ -653,10 +657,82 @@ static void TEST_cmdargs_dash_c_error_if_combined_with_other_flags(void) {
 }
 
 /******************************************************************************
+    Tests for modcompiler
+******************************************************************************/
+
+static void TEST_modcompiler(void) {
+  const char privkey[] =
+      "1917E6534247D122C0C245D3E575409BC63F50589D51D91AA2F7414810E6A953087932BB"
+      "B37BFE6D67203CC28138CDCFC3DB82D3C6877D2CA4C4FDD6A91EE37008F407A4C66835B2"
+      "48B697817F932A2B0AB9B42248A8C382CE76F869C4230F56B378FCA911BB04CF6F8629D3"
+      "19BA772B5BD2A5A77C2EFFFB0C380E92F735292A";
+
+  char tmpdir[1024];
+  TEST_ASSERT(0 == make_temp_dir(tmpdir, sizeof(tmpdir),
+                                 "jsockd_TEST_modcompiler_XXXXXX"));
+
+  char module_filename[sizeof(tmpdir) + 128];
+  char key_filename[sizeof(tmpdir) + 128];
+  char output_filename[sizeof(tmpdir) + 128];
+  snprintf(module_filename, sizeof(module_filename), "%s/mod.mjs", tmpdir);
+  snprintf(key_filename, sizeof(key_filename), "%s/key", tmpdir);
+  snprintf(output_filename, sizeof(output_filename), "%s/out.qjsbc", tmpdir);
+
+  FILE *modulef = fopen(module_filename, "w");
+  FILE *keyf = fopen(key_filename, "w");
+
+  TEST_ASSERT(modulef && keyf);
+
+  TEST_ASSERT(0 <= fprintf(modulef, "export const foo = 17;\n"));
+  TEST_ASSERT(1 == fwrite(privkey,
+                          sizeof(privkey) / sizeof(char) - sizeof(char), 1,
+                          keyf));
+
+  fclose(modulef);
+  fclose(keyf);
+
+  TEST_ASSERT(EXIT_SUCCESS == compile_module_file(module_filename, key_filename,
+                                                  output_filename, "99.99.0"));
+
+  FILE *outf = fopen(output_filename, "r");
+  TEST_ASSERT(outf);
+
+  TEST_ASSERT(0 == fseek(outf, 0, SEEK_END));
+  size_t output_file_size = ftell(outf);
+  TEST_ASSERT(0 == fseek(outf, 0, SEEK_SET));
+
+  char signature[64];
+  char version[VERSION_STRING_SIZE];
+  uint8_t
+      bytecode[output_file_size - VERSION_STRING_SIZE - ED25519_SIGNATURE_SIZE];
+  TEST_ASSERT(0 == fseek(outf, -ED25519_SIGNATURE_SIZE, SEEK_END));
+  TEST_ASSERT(1 == fread(signature, sizeof(signature) / sizeof(char), 1, outf));
+  TEST_ASSERT(0 == fseek(outf, -ED25519_SIGNATURE_SIZE - VERSION_STRING_SIZE,
+                         SEEK_END));
+  TEST_ASSERT(1 == fread(version, sizeof(version) / sizeof(char), 1, outf));
+  TEST_ASSERT(version[VERSION_STRING_SIZE - 1] == '\0');
+  TEST_ASSERT(!strcmp(version, "99.99.0"));
+  TEST_ASSERT(0 == fseek(outf, 0, SEEK_SET));
+  TEST_ASSERT(1 == fread(bytecode, sizeof(bytecode), 1, outf));
+
+  uint8_t pubkey_raw[32];
+  // we store public key as first 32 bytes of private key file
+  TEST_ASSERT(32 == hex_decode(pubkey_raw, sizeof(pubkey_raw), privkey));
+  TEST_ASSERT(verify_bytecode(bytecode, sizeof(bytecode), pubkey_raw));
+
+  fclose(outf);
+  remove(module_filename);
+  remove(key_filename);
+  remove(output_filename);
+  rmdir(tmpdir);
+}
+
+/******************************************************************************
     Add all tests to the list below.
 ******************************************************************************/
 
-#define T(name) {#name, TEST_##name}
+#define T(name)                                                                \
+  { #name, TEST_##name }
 
 TEST_LIST = {T(wait_group_inc_and_wait_basic_use_case),
              T(hash_cache_add_and_retrieve),
@@ -702,4 +778,5 @@ TEST_LIST = {T(wait_group_inc_and_wait_basic_use_case),
              T(cmdargs_dash_c_error_on_no_args),
              T(cmdargs_dash_c_error_on_only_one_arg),
              T(cmdargs_dash_c_error_if_combined_with_other_flags),
+             T(modcompiler),
              {NULL, NULL}};

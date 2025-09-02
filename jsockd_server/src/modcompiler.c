@@ -16,8 +16,8 @@
 //     128 byte version string, null-terminated
 //     64 byte ed25519 signature of bytecode
 
-int compile_module_file(const char *module_filename, const char *key_file,
-                        const char *output_filename) {
+int compile_module_file(const char *module_filename, const char *key_filename,
+                        const char *output_filename, const char *version) {
   int ret = EXIT_SUCCESS;
   uint8_t *buf = NULL;
   int eval_flags;
@@ -61,24 +61,29 @@ int compile_module_file(const char *module_filename, const char *key_file,
       JS_WriteObject(ctx, &out_buf_len, obj, JS_WRITE_OBJ_BYTECODE);
 
   char public_key_hex[ED25519_PUBLIC_KEY_SIZE * 2] = {0};
-  char private_key_hex[ED25519_PRIVATE_KEY_SIZE * 2] = {0};
-  if (key_file) {
-    kf = fopen(key_file, "r");
+  char private_key_hex[(ED25519_PUBLIC_KEY_SIZE + ED25519_PRIVATE_KEY_SIZE) *
+                       2] = {0};
+  if (!key_filename) {
+    release_logf("WARNING: No key file specified; module will be unsigned\n");
+  } else {
+    kf = fopen(key_filename, "r");
     if (!kf) {
-      release_logf("Error opening key file %s: %s\n", key_file,
+      release_logf("Error opening key file %s: %s\n", key_filename,
                    strerror(errno));
       ret = EXIT_FAILURE;
       goto end;
     }
     if (fread(public_key_hex, sizeof(public_key_hex) / sizeof(char), 1, kf) <
         1) {
-      release_logf("Error reading public key from key file %s\n", key_file);
+      release_logf("Error reading public key from key file %s: %s\n",
+                   key_filename, strerror(errno));
       ret = EXIT_FAILURE;
       goto end;
     }
     if (fread(private_key_hex, sizeof(private_key_hex) / sizeof(char), 1, kf) <
         1) {
-      release_logf("Error reading private key from key file %s\n", key_file);
+      release_logf("Error reading private key from key file %s: %s\n",
+                   key_filename, strerror(errno));
       ret = EXIT_FAILURE;
       goto end;
     }
@@ -108,12 +113,12 @@ int compile_module_file(const char *module_filename, const char *key_file,
     goto end;
   }
   char vstring[VERSION_STRING_SIZE] = {0};
-  if (strlen(STRINGIFY(VERSION)) >= VERSION_STRING_SIZE) {
+  if (strlen(version) >= VERSION_STRING_SIZE) {
     release_logf("VERSION string too long\n");
     ret = EXIT_FAILURE;
     goto end;
   }
-  strcpy(vstring, STRINGIFY(VERSION));
+  strcpy(vstring, version);
   if (fwrite(vstring, sizeof(vstring) / sizeof(char), 1, mf) < 1) {
     fprintf(stderr, "Error writing version string to output file\n");
     ret = EXIT_FAILURE;
