@@ -120,7 +120,7 @@ static int parse_cmd_args_helper(int argc, char **argv,
       }
       ++i;
       if (i >= argc) {
-        errlog("Error: -k requires an argument (key file prefix)\n");
+        errlog("Error: -k requires an argument (key file)\n");
         return -1;
       }
       cmdargs->key_file_prefix = argv[i];
@@ -154,13 +154,13 @@ static int parse_cmd_args_helper(int argc, char **argv,
   }
   if (cmdargs->key_file_prefix &&
       !(n_flags == 1 || (n_flags == 2 && cmdargs->mod_to_compile))) {
-    errlog("Error: -k (key file prefix) option must be used either alone (to "
+    errlog("Error: -k (key file) option must be used either alone (to "
            "generate a key pair) or with the -c option.\n");
     return -1;
   }
   if (cmdargs->mod_to_compile && (n_flags != 2 || !cmdargs->key_file_prefix)) {
-    errlog("Error: -c (compile module) must be used only with -k (key file "
-           "prefix) option.\n");
+    errlog("Error: -c (compile module) must be used only with -k (private key "
+           "file ) option.\n");
     return -1;
   }
 

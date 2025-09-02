@@ -90,7 +90,7 @@ int compile_module_file(const char *module_filename, const char *key_file,
                (const unsigned char *)public_key,
                (const unsigned char *)private_key);
 
-  mf = fopen(output_filename, "wx");
+  mf = fopen(output_filename, "w");
   if (!mf) {
     release_logf("Error creating output file %s: %s\n", output_filename,
                  strerror(errno));
@@ -127,6 +127,7 @@ end:
   if (mf)
     fclose(mf);
   if (ctx) {
+    js_free(ctx, out_buf);
     js_free(ctx, buf);
     JS_FreeValue(ctx, obj);
     JS_FreeContext(ctx);
