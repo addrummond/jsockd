@@ -119,8 +119,10 @@ Outputs two files: `<key_file_prefix>.pub` (the public key) and `<key_file_prefi
 #### Compiling a module file
 
 ```sh
-jsockd -c <module_file> <output_bytecode_file> -k <private_key_file>
+jsockd -c <module_file> <output_bytecode_file> [-k <private_key_file>]
 ```
+
+Compiles the specified ES6 module file to a QuickJS bytecode file. If the `-k` option is not given, the module is not signed and can be used only by dev builds of `jsockd` that set `JSOCKD_BYTECODE_MODULE_PUBLIC_KEY` to `dangerously_allow_invalid_signatures`.
 
 ### 3.3 The socket protocol
 
