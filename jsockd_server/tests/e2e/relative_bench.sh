@@ -30,12 +30,11 @@ npm install
 
 ./node_modules/.bin/esbuild --target=es2018 --format=esm --bundle tests/e2e/relative_bench/bench.jsx --outfile=tests/e2e/relative_bench/bundle.js
 
-openssl genpkey -algorithm ed25519 -out filc_bench_private_signing_key.pem
-openssl pkey -inform pem -pubout -outform der -in filc_bench_private_signing_key.pem | tail -c 32 | xxd -p | tr -d '\n' > filc_bench_public_signing_key
+build_$BUILD/jsockd -k filc_bench_private_signing_key
 
-export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=$(cat filc_bench_public_signing_key)
+export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=$(cat filc_bench_private_signing_key.pubkey)
 
-../tools-bin/jsockd_compile_es6_module tests/e2e/relative_bench/bundle.js tests/e2e/relative_bench/bundle.qjsbc filc_bench_private_signing_key.pem
+build_$BUILD/jsockd -c tests/e2e/relative_bench/bundle.js tests/e2e/relative_bench/bundle.qjsbc -k filc_bench_private_signing_key.privkey
 
 #
 # Build benchmark command input

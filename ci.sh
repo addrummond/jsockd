@@ -175,10 +175,9 @@ case $1 in
             D="jsockd-${VERSION}-linux-x86_64"
             mkdir jsockd-release-artifacts/$D
             cp build_Release/jsockd jsockd-release-artifacts/$D
-            cp ../tools-bin/jsockd_compile_es6_module_Linux_x86_64 jsockd-release-artifacts/$D/jsockd_compile_es6_module
             tar -C jsockd-release-artifacts -czf $D.tar.gz $D
 
-            # Package Linux x86_64 Fil-C. For now we include the regular x86_64 build of jsockd_compile_es6_module.
+            # Package Linux x86_64 Fil-C.
             D="jsockd-${VERSION}-linux-x86_64_filc"
             mkdir -p jsockd-release-artifacts/$D/jsockd
             patchelf --set-rpath '$ORIGIN' build_Release_TC-fil-c-CI.cmake/jsockd
@@ -187,21 +186,18 @@ case $1 in
             cp -L /home/runner/filc-${FILC_VERSION}-linux-x86_64/pizfix/lib/ld-yolo-x86_64.so jsockd-release-artifacts/$D/jsockd/ld-yolo-x86_64.so
             cp -L /home/runner/filc-${FILC_VERSION}-linux-x86_64/pizfix/lib/libc.so jsockd-release-artifacts/$D/jsockd/libc.so
             cp -L /home/runner/filc-${FILC_VERSION}-linux-x86_64/pizfix/lib/libpizlo.so jsockd-release-artifacts/$D/jsockd/libpizlo.so
-            cp ../tools-bin/jsockd_compile_es6_module_Linux_x86_64 jsockd-release-artifacts/$D/jsockd_compile_es6_module
             tar -C jsockd-release-artifacts -czf $D.tar.gz $D
 
             # Package Linux ARM64
             D="jsockd-${VERSION}-linux-arm64"
             mkdir jsockd-release-artifacts/$D
             cp build_Release_TC-gcc-arm64.cmake/jsockd jsockd-release-artifacts/$D
-            cp ../tools-bin/jsockd_compile_es6_module_Linux_arm64 jsockd-release-artifacts/$D/jsockd_compile_es6_module
             tar -C jsockd-release-artifacts -czf $D.tar.gz $D
 
             # Package MacOS ARM64
             D="jsockd-${VERSION}-macos-arm64"
             mkdir jsockd-release-artifacts/$D
             cp build_Release_TC-oa64.cmake/jsockd jsockd-release-artifacts/$D
-            cp ../tools-bin/jsockd_compile_es6_module_Darwin_arm64 jsockd-release-artifacts/$D/jsockd_compile_es6_module
             tar -C jsockd-release-artifacts -czf $D.tar.gz $D
 
             # Create checksums
