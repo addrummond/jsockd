@@ -1089,9 +1089,24 @@ static const uint8_t *load_module_bytecode(const char *filename,
   const uint8_t *module_bytecode = mmap_file(filename, out_size);
   if (!module_bytecode)
     return NULL;
-  if (*out_size < ED25519_SIGNATURE_SIZE + 1) {
+  if (*out_size < VERSION_STRING_SIZE + ED25519_SIGNATURE_SIZE + 1) {
     release_logf("Module bytecode file is only %zu bytes. Too small!",
                  *out_size);
+    munmap_or_warn((void *)module_bytecode, *out_size);
+    return NULL;
+  }
+
+  char version_string[VERSION_STRING_SIZE];
+  memcpy(version_string, module_bytecode + *out_size - ED25519_SIGNATURE_SIZE,
+         VERSION_STRING_SIZE);
+  version_string[VERSION_STRING_SIZE - 1] = '\0';
+  if (strcmp(version_string, STRINGIFY(VERSION)) &&
+      (!(!strcmp(version_string, "unknown_version") &&
+         !strcmp(STRINGIFY(VERSION), "unknown_version") &&
+         CMAKE_BUILD_TYPE_IS_DEBUG))) {
+    release_logf(
+        "Module bytecode version string '%s' does not match expected '%s'\n",
+        version_string, STRINGIFY(VERSION));
     munmap_or_warn((void *)module_bytecode, *out_size);
     return NULL;
   }
@@ -1104,7 +1119,7 @@ static const uint8_t *load_module_bytecode(const char *filename,
   // uploaded to the GitHub release are Release builds.
   if (CMAKE_BUILD_TYPE_IS_DEBUG &&
       !strcmp(pubkey, "dangerously_allow_invalid_signatures")) {
-    *out_size = *out_size - ED25519_SIGNATURE_SIZE;
+    *out_size = *out_size - VERSION_STRING_SIZE - ED25519_SIGNATURE_SIZE;
     return module_bytecode;
   }
 
@@ -1125,7 +1140,7 @@ static const uint8_t *load_module_bytecode(const char *filename,
     return NULL;
   }
 
-  *out_size = *out_size - ED25519_SIGNATURE_SIZE;
+  *out_size = *out_size - VERSION_STRING_SIZE - ED25519_SIGNATURE_SIZE;
 
   return module_bytecode;
 }

@@ -107,8 +107,8 @@ int compile_module_file(const char *module_filename, const char *key_file,
     ret = EXIT_FAILURE;
     goto end;
   }
-  char vstring[VERSION_STRING_MAX_LENGTH] = {0};
-  if (strlen(STRINGIFY(VERSION)) >= VERSION_STRING_MAX_LENGTH) {
+  char vstring[VERSION_STRING_SIZE] = {0};
+  if (strlen(STRINGIFY(VERSION)) >= VERSION_STRING_SIZE) {
     release_logf("VERSION string too long\n");
     ret = EXIT_FAILURE;
     goto end;
