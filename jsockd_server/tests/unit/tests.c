@@ -568,6 +568,90 @@ static void TEST_cmdargs_dash_t_error_on_double_flag(void) {
   TEST_ASSERT(strstr(cmdargs_errlog_buf, "-t "));
 }
 
+static void TEST_cmdargs_dash_k(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"jsockd", "-k", "keyfileprefix"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r == 0);
+  TEST_ASSERT(!strcmp(cmdargs.key_file_prefix, "keyfileprefix"));
+}
+
+static void TEST_cmdargs_dash_k_error_on_missing_arg(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"jsockd", "-k"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r != 0);
+  TEST_ASSERT(strstr(cmdargs_errlog_buf, "-k "));
+}
+
+static void TEST_cmdargs_dash_k_error_if_combined_with_other_flags(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"jsockd", "-k", "prefix", "-m", "foo.qjsbc"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r != 0);
+  TEST_ASSERT(strstr(cmdargs_errlog_buf, "-k "));
+}
+
+static void TEST_cmdargs_dash_c(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"jsockd", "-c", "module.mjs", "out.qjsbc"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r == 0);
+  TEST_ASSERT(!strcmp(cmdargs.mod_to_compile, "module.mjs"));
+  TEST_ASSERT(!strcmp(cmdargs.mod_output_file, "out.qjsbc"));
+}
+
+static void TEST_cmdargs_dash_c_with_dash_k(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"jsockd", "-c", "module.mjs", "out.qjsbc", "-k", "keyprefix"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r == 0);
+  TEST_ASSERT(!strcmp(cmdargs.mod_to_compile, "module.mjs"));
+  TEST_ASSERT(!strcmp(cmdargs.mod_output_file, "out.qjsbc"));
+  TEST_ASSERT(!strcmp(cmdargs.key_file_prefix, "keyprefix"));
+}
+
+static void TEST_cmdargs_dash_c_with_dash_k_error_if_dash_k_has_no_arg(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"jsockd", "-c", "module.mjs", "out.qjsbc", "-k"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r != 0);
+  TEST_ASSERT(strstr(cmdargs_errlog_buf, "-k "));
+}
+
+static void TEST_cmdargs_dash_c_error_on_no_args(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"jsockd", "-c"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r != 0);
+  TEST_ASSERT(strstr(cmdargs_errlog_buf, "-c "));
+}
+
+static void TEST_cmdargs_dash_c_error_on_only_one_arg(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"jsockd", "-c", "module.mjs"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r != 0);
+  TEST_ASSERT(strstr(cmdargs_errlog_buf, "-c "));
+}
+
+static void TEST_cmdargs_dash_c_error_if_combined_with_other_flags(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"jsockd", "-c", "module.mjs", "out.qjsbc", "-m", "foo.qjsbc"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r != 0);
+  TEST_ASSERT(strstr(cmdargs_errlog_buf, "-c "));
+}
+
 /******************************************************************************
     Add all tests to the list below.
 ******************************************************************************/
@@ -609,4 +693,13 @@ TEST_LIST = {T(wait_group_inc_and_wait_basic_use_case),
              T(cmdargs_dash_t_error_on_negative),
              T(cmdargs_dash_t_error_on_non_numeric),
              T(cmdargs_dash_t_error_on_double_flag),
+             T(cmdargs_dash_k),
+             T(cmdargs_dash_c_with_dash_k),
+             T(cmdargs_dash_c_with_dash_k_error_if_dash_k_has_no_arg),
+             T(cmdargs_dash_k_error_on_missing_arg),
+             T(cmdargs_dash_k_error_if_combined_with_other_flags),
+             T(cmdargs_dash_c),
+             T(cmdargs_dash_c_error_on_no_args),
+             T(cmdargs_dash_c_error_on_only_one_arg),
+             T(cmdargs_dash_c_error_if_combined_with_other_flags),
              {NULL, NULL}};
