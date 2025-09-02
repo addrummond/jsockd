@@ -13,6 +13,7 @@
 #include "lib/acutest.h"
 #include "lib/pcg.h"
 #include <assert.h>
+#include <ed25519/ed25519.h>
 #include <pthread.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -701,10 +702,12 @@ static void TEST_modcompiler(void) {
   size_t output_file_size = ftell(outf);
   TEST_ASSERT(0 == fseek(outf, 0, SEEK_SET));
 
-  char signature[64];
+  uint8_t signature[64];
   char version[VERSION_STRING_SIZE];
-  uint8_t
-      bytecode[output_file_size - VERSION_STRING_SIZE - ED25519_SIGNATURE_SIZE];
+  size_t bytecode_size =
+      output_file_size - VERSION_STRING_SIZE - ED25519_SIGNATURE_SIZE;
+  uint8_t bytecode[bytecode_size];
+  printf("\nBCS %zu\n", bytecode_size);
   TEST_ASSERT(0 == fseek(outf, -ED25519_SIGNATURE_SIZE, SEEK_END));
   TEST_ASSERT(1 == fread(signature, sizeof(signature) / sizeof(char), 1, outf));
   TEST_ASSERT(0 == fseek(outf, -ED25519_SIGNATURE_SIZE - VERSION_STRING_SIZE,
@@ -713,12 +716,12 @@ static void TEST_modcompiler(void) {
   TEST_ASSERT(version[VERSION_STRING_SIZE - 1] == '\0');
   TEST_ASSERT(!strcmp(version, "99.99.0"));
   TEST_ASSERT(0 == fseek(outf, 0, SEEK_SET));
-  TEST_ASSERT(1 == fread(bytecode, sizeof(bytecode), 1, outf));
+  TEST_ASSERT(1 == fread(bytecode, bytecode_size, 1, outf));
 
   uint8_t pubkey_raw[32];
   // we store public key as first 32 bytes of private key file
   TEST_ASSERT(32 == hex_decode(pubkey_raw, sizeof(pubkey_raw), privkey));
-  TEST_ASSERT(verify_bytecode(bytecode, sizeof(bytecode), pubkey_raw));
+  TEST_ASSERT(ed25519_verify(signature, bytecode, bytecode_size, pubkey_raw));
 
   fclose(outf);
   remove(module_filename);

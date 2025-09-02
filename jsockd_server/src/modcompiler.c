@@ -5,7 +5,6 @@
 #include "quickjs.h"
 #include "utils.h"
 #include "verify_bytecode.h"
-#include "version.h"
 #include <ed25519/ed25519.h>
 #include <errno.h>
 #include <stdio.h>
@@ -95,6 +94,7 @@ int compile_module_file(const char *module_filename, const char *key_filename,
 
   unsigned char signature[ED25519_SIGNATURE_SIZE];
 
+  printf("SIGNING N %zu\n", out_buf_len);
   ed25519_sign(signature, out_buf, out_buf_len,
                (const unsigned char *)public_key,
                (const unsigned char *)private_key);
