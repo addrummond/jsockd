@@ -96,6 +96,8 @@ When the server is ready to start accepting commands on the specified UNIX domai
 
 ### 3.2 Command line options
 
+#### Starting the server
+
 | Option      | Argument(s)                | Description                                                                  | Default       | Repeatable | Required |
 |-------------|----------------------------|------------------------------------------------------------------------------|---------------|------------|----------|
 | `-v`        | *(none)*                   | Print version and exit. Cannot be used with other flags.                     |               | No         | No       |
@@ -105,6 +107,20 @@ When the server is ready to start accepting commands on the specified UNIX domai
 | `-b`        | `<XX>`                     | Separator byte as two hex digits (e.g. `0A`).                                | `0A` (= `\n`) | No         | No       |
 | `-s`        | `<socket1> [socket2 ...]`  | One or more socket file paths.                                               |               | Yes        | Yes      |
 | `--`        | *(none)*                   | Indicates end of options for `-s` (allows socket paths starting with `-`).   |               | N/A        | No       |
+
+#### Generating public and private keys
+
+```sh
+jsockd -k <key_file_prefix>
+```
+
+Outputs two files: `<key_file_prefix>.pub` (the public key) and `<key_file_prefix>.pem` (the private key).
+
+#### Compiling a module file
+
+```sh
+jsockd -c <module_file> <output_bytecode_file> -k <private_key_file>
+```
 
 ### 3.3 The socket protocol
 
