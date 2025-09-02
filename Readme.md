@@ -61,21 +61,18 @@ by the server.
 Generate a signing key as follows:
 
 ```sh
-openssl genpkey -algorithm ed25519 -out private_signing_key.pem
-openssl pkey -inform pem -pubout -outform der -in private_signing_key.pem | tail -c 32 | xxd -p | tr -d '\n' > public_signing_key
+jsockd -k my_key_file
 ```
 
-**Note that the `openssl` command that comes with MacOS doesn't support the `ed25519` algorithm. You can get a newer openssl via `brew install openssl` and then use `/opt/homebrew/bin/openssl`.**
+This command generates two files, `my_key_file.pubkey` (the public key) and `my_key_file.privkey` (the private key).
 
-The JSockD release bundle includes a `jsockd_compile_es6_module` command that compiles an ES6 module to a QuickJS bytecode file. This command is used to prepare the module that the server will execute. For example:
+We can now compile an ES6 moule to QuickJS bytecode and sign the bytecode using the key:
 
 ```sh
-jsockd_compile_es6_module my_module.mjs my_module.quickjs_bytecode private_signing_key.pem
+jsockd -c my_module.mjs my_module.quickjs_bytecode -k my_key_file.privkey
 ```
 
-**On MacOS you can use `JSOCKD_OPENSSL=/opt/bin/homebrew jsockd_compile_es6_module ...` to override the default openssl when running the bytecode compiler.**
-
-The value in `public_signing_key` should be passed to `jsockd` via the `JSOCKD_BYTECODE_MODULE_PUBLIC_KEY` environment variable.
+The value in `my_key_file.pubkey` should be passed to the `jsockd` server process via the `JSOCKD_BYTECODE_MODULE_PUBLIC_KEY` environment variable.
 
 ## 3. The JSockD server
 
