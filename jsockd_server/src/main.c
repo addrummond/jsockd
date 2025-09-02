@@ -1204,7 +1204,13 @@ int main(int argc, char *argv[]) {
   }
 
   if (g_cmd_args.key_file_prefix)
-    return output_key_files(g_cmd_args.key_file_prefix);
+    return output_key_file(g_cmd_args.key_file_prefix);
+
+  if (g_cmd_args.mod_to_compile) {
+    return compile_module_file(g_cmd_args.mod_to_compile,
+                               g_cmd_args.key_file_prefix,
+                               g_cmd_args.mod_output_file);
+  }
 
   if (g_cmd_args.es6_module_bytecode_file) {
     g_module_bytecode = load_module_bytecode(

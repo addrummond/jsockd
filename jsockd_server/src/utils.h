@@ -19,6 +19,7 @@ void release_log(const char *s);
 void munmap_or_warn(const void *addr, size_t length);
 int64_t ns_time_diff(const struct timespec *t1, const struct timespec *t2);
 void memswap_small(void *m1, void *m2, size_t size);
+int string_ends_with(const char *str, const char *suffix);
 
 #define mutex_lock(m) mutex_lock_((m), __FILE__, __LINE__)
 #define mutex_unlock(m) mutex_unlock_((m), __FILE__, __LINE__)

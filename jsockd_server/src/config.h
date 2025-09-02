@@ -25,4 +25,7 @@
 
 #define VERSION_STRING_MAX_LENGTH 128
 
+#define PUBLIC_KEY_FILE_SUFFIX ".pubkey"
+#define PRIVATE_KEY_FILE_SUFFIX ".privkey"
+
 #endif

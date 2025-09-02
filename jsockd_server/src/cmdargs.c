@@ -12,7 +12,7 @@ static int n_flags_set(const CmdArgs *cmdargs) {
          (cmdargs->source_map_file != NULL) + (cmdargs->n_sockets != 0) +
          (cmdargs->socket_sep_char_set != false) + (cmdargs->version != false) +
          (cmdargs->max_command_runtime_us != 0) +
-         (cmdargs->key_file_prefix != NULL);
+         (cmdargs->key_file_prefix != NULL) + (cmdargs->mod_to_compile != NULL);
 }
 
 static int parse_cmd_args_helper(int argc, char **argv,
@@ -124,6 +124,20 @@ static int parse_cmd_args_helper(int argc, char **argv,
         return -1;
       }
       cmdargs->key_file_prefix = argv[i];
+    } else if (0 == strcmp(argv[i], "-c")) {
+      if (cmdargs->mod_to_compile != NULL) {
+        errlog("Error: -c can be specified at most once\n");
+        return -1;
+      }
+      ++i;
+      if (i + 1 >= argc) {
+        errlog("Error: -c requires two arguments (ES6 module to compile and "
+               "output file)\n");
+        return -1;
+      }
+      cmdargs->mod_to_compile = argv[i];
+      ++i;
+      cmdargs->mod_output_file = argv[i];
     } else if (argv[i][0] == '-') {
       errlog("Error: unrecognized option: %s\n", argv[i]);
       return -1;
@@ -133,16 +147,24 @@ static int parse_cmd_args_helper(int argc, char **argv,
     }
   }
 
-  if (cmdargs->version && n_flags_set(cmdargs) > 1) {
+  int n_flags = n_flags_set(cmdargs);
+  if (cmdargs->version && n_flags > 1) {
     errlog("Error: -v (version) cannot be used with other flags.\n");
     return -1;
   }
-  if (cmdargs->key_file_prefix && n_flags_set(cmdargs) > 1) {
-    errlog("Error: -k (key file prefix) cannot be used with other flags.\n");
+  if (cmdargs->key_file_prefix &&
+      !(n_flags == 1 || (n_flags == 2 && cmdargs->mod_to_compile))) {
+    errlog("Error: -k (key file prefix) option must be used either alone (to "
+           "generate a key pair) or with the -c option.\n");
+    return -1;
+  }
+  if (cmdargs->mod_to_compile && (n_flags != 2 || !cmdargs->key_file_prefix)) {
+    errlog("Error: -c (compile module) must be used only with -k (key file "
+           "prefix) option.\n");
     return -1;
   }
 
-  if (cmdargs->version || cmdargs->key_file_prefix)
+  if (cmdargs->version || cmdargs->key_file_prefix || cmdargs->mod_to_compile)
     return 0;
 
   if (cmdargs->n_sockets == 0) {

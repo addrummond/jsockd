@@ -19,6 +19,8 @@ typedef struct {
   bool version;
   uint64_t max_command_runtime_us;
   const char *key_file_prefix;
+  const char *mod_to_compile;
+  const char *mod_output_file;
 } CmdArgs;
 
 int parse_cmd_args(int argc, char **argv, void (*errlog)(const char *fmt, ...),
