@@ -1,4 +1,5 @@
 #include "verify_bytecode.h"
+#include "config.h"
 #include <ed25519/ed25519.h>
 
 bool verify_bytecode(const uint8_t *bytecode, size_t bytecode_size,
@@ -6,7 +7,7 @@ bool verify_bytecode(const uint8_t *bytecode, size_t bytecode_size,
   if (bytecode_size < ED25519_SIGNATURE_SIZE + 1)
     return false;
   // The signature is at the end of the bytecode file.
-  return ed25519_verify(bytecode + bytecode_size - ED25519_SIGNATURE_SIZE,
-                        bytecode, bytecode_size - ED25519_SIGNATURE_SIZE,
-                        public_key);
+  return ed25519_verify(
+      bytecode + bytecode_size - ED25519_SIGNATURE_SIZE, bytecode,
+      bytecode_size - ED25519_SIGNATURE_SIZE - VERSION_STRING_SIZE, public_key);
 }

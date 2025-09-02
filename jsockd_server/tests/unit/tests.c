@@ -718,9 +718,21 @@ static void TEST_modcompiler(void) {
   TEST_ASSERT(0 == fseek(outf, 0, SEEK_SET));
   TEST_ASSERT(1 == fread(bytecode, bytecode_size, 1, outf));
 
-  uint8_t pubkey_raw[32];
+  uint8_t pubkey_raw[ED25519_PUBLIC_KEY_SIZE];
   // we store public key as first 32 bytes of private key file
-  TEST_ASSERT(32 == hex_decode(pubkey_raw, sizeof(pubkey_raw), privkey));
+  TEST_ASSERT(ED25519_PUBLIC_KEY_SIZE ==
+              hex_decode(pubkey_raw, sizeof(pubkey_raw), privkey));
+  printf("\npubkey_raw (hex): ");
+  for (size_t i = 0; i < ED25519_PUBLIC_KEY_SIZE; ++i) {
+    printf("%02x", pubkey_raw[i]);
+  }
+  printf("\n");
+  printf("\nsignature_raw (hex): ");
+  for (size_t i = 0; i < ED25519_SIGNATURE_SIZE; ++i) {
+    printf("%02x", signature[i]);
+  }
+  printf("\n");
+
   TEST_ASSERT(ed25519_verify(signature, bytecode, bytecode_size, pubkey_raw));
 
   fclose(outf);
