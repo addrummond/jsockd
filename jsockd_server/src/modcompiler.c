@@ -14,7 +14,7 @@
 // The module file format:
 //     raw QuickJS bytecode
 //     128 byte version string, null-terminated
-//     64 byte ed25519 signature of bytecode + version string
+//     64 byte ed25519 signature of bytecode
 
 int compile_module_file(const char *module_filename, const char *key_file,
                         const char *output_filename) {
