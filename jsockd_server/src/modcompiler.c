@@ -62,22 +62,26 @@ int compile_module_file(const char *module_filename, const char *key_file,
 
   char public_key_hex[ED25519_PUBLIC_KEY_SIZE * 2] = {0};
   char private_key_hex[ED25519_PRIVATE_KEY_SIZE * 2] = {0};
-  kf = fopen(key_file, "r");
-  if (!kf) {
-    release_logf("Error opening key file %s: %s\n", key_file, strerror(errno));
-    ret = EXIT_FAILURE;
-    goto end;
-  }
-  if (fread(public_key_hex, sizeof(public_key_hex) / sizeof(char), 1, kf) < 1) {
-    release_logf("Error reading public key from key file %s\n", key_file);
-    ret = EXIT_FAILURE;
-    goto end;
-  }
-  if (fread(private_key_hex, sizeof(private_key_hex) / sizeof(char), 1, kf) <
-      1) {
-    release_logf("Error reading private key from key file %s\n", key_file);
-    ret = EXIT_FAILURE;
-    goto end;
+  if (key_file) {
+    kf = fopen(key_file, "r");
+    if (!kf) {
+      release_logf("Error opening key file %s: %s\n", key_file,
+                   strerror(errno));
+      ret = EXIT_FAILURE;
+      goto end;
+    }
+    if (fread(public_key_hex, sizeof(public_key_hex) / sizeof(char), 1, kf) <
+        1) {
+      release_logf("Error reading public key from key file %s\n", key_file);
+      ret = EXIT_FAILURE;
+      goto end;
+    }
+    if (fread(private_key_hex, sizeof(private_key_hex) / sizeof(char), 1, kf) <
+        1) {
+      release_logf("Error reading private key from key file %s\n", key_file);
+      ret = EXIT_FAILURE;
+      goto end;
+    }
   }
   uint8_t public_key[ED25519_PUBLIC_KEY_SIZE] = {0};
   uint8_t private_key[ED25519_PRIVATE_KEY_SIZE] = {0};

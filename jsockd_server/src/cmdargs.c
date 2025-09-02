@@ -158,7 +158,8 @@ static int parse_cmd_args_helper(int argc, char **argv,
            "generate a key pair) or with the -c option.\n");
     return -1;
   }
-  if (cmdargs->mod_to_compile && (n_flags != 2 || !cmdargs->key_file_prefix)) {
+  if (cmdargs->mod_to_compile &&
+      !(n_flags == 1 || (n_flags == 2 && cmdargs->key_file_prefix))) {
     errlog("Error: -c (compile module) must be used only with -k (private key "
            "file ) option.\n");
     return -1;
@@ -190,8 +191,9 @@ int parse_cmd_args(int argc, char **argv, void (*errlog)(const char *fmt, ...),
     const char *cmdname = argc > 0 ? basename(argv[0]) : "jsockd";
     errlog("Usage: %s [-m <module_bytecode_file>] [-sm <source_map_file>] [-b "
            "XX] [-t <max_command_runtime_us>] -s <socket1_path> "
-           "[<socket2_path> ...]\n%s -c <module_to_compile> <output_file> -k "
-           "<private_key_file>\n%s -k <key_file_prefix>",
+           "[<socket2_path> ...]\n       %s -c <module_to_compile> "
+           "<output_file> [-k "
+           "<private_key_file>]\n       %s -k <key_file_prefix>",
            cmdname, cmdname, cmdname);
     return -1;
   }
