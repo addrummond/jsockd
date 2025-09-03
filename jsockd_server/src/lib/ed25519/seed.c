@@ -6,6 +6,7 @@
 #include <windows.h>
 #include <wincrypt.h>
 #else
+#include <stdlib.h>
 #include <stdio.h>
 #endif
 
@@ -30,8 +31,9 @@ int ed25519_create_seed(unsigned char *seed) {
         return 1;
     }
 
-    fread(seed, 1, 32, f);
+    size_t r = fread(seed, 1, 32, f);
     fclose(f);
+    return r != 32;
 #endif
 
     return 0;
