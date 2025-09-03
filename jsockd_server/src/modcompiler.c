@@ -20,6 +20,7 @@ int compile_module_file(const char *module_filename,
                         const char *output_filename, const char *version) {
   int ret = EXIT_SUCCESS;
   uint8_t *buf = NULL;
+  uint8_t *out_buf = NULL;
   int eval_flags;
   JSValue obj = JS_UNDEFINED;
   JSRuntime *rt = NULL;
