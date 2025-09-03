@@ -827,8 +827,7 @@ static void TEST_output_key_file(void) {
     Add all tests to the list below.
 ******************************************************************************/
 
-#define T(name)                                                                \
-  { #name, TEST_##name }
+#define T(name) {#name, TEST_##name}
 
 TEST_LIST = {T(wait_group_inc_and_wait_basic_use_case),
              T(hash_cache_add_and_retrieve),
