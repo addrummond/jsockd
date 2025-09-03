@@ -1097,7 +1097,9 @@ static const uint8_t *load_module_bytecode(const char *filename,
   }
 
   char version_string[VERSION_STRING_SIZE];
-  memcpy(version_string, module_bytecode + *out_size - ED25519_SIGNATURE_SIZE,
+  memcpy(version_string,
+         module_bytecode + *out_size - ED25519_SIGNATURE_SIZE -
+             VERSION_STRING_SIZE,
          VERSION_STRING_SIZE);
   version_string[VERSION_STRING_SIZE - 1] = '\0';
   if (strcmp(version_string, STRINGIFY(VERSION)) &&
@@ -1231,8 +1233,6 @@ int main(int argc, char *argv[]) {
     g_module_bytecode = load_module_bytecode(
         g_cmd_args.es6_module_bytecode_file, &g_module_bytecode_size);
     if (g_module_bytecode == NULL) {
-      release_logf("Error loading module bytecode from %s: %s\n",
-                   g_cmd_args.es6_module_bytecode_file, strerror(errno));
       destroy_log_mutex();
       pthread_mutex_destroy(&g_cached_functions_mutex);
       return EXIT_FAILURE;
