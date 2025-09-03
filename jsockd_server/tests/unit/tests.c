@@ -19,6 +19,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define snprintf_nowarn(...) (snprintf(__VA_ARGS__) < 0 ? abort() : (void)0)
+
 /******************************************************************************
     Tests for wait_group
 ******************************************************************************/
@@ -678,9 +680,11 @@ static void TEST_compile_module_file(void) {
   char module_filename[sizeof(tmpdir) + 128];
   char key_filename[sizeof(tmpdir) + 128];
   char output_filename[sizeof(tmpdir) + 128];
-  snprintf(module_filename, sizeof(module_filename), "%s/mod.mjs", tmpdir);
-  snprintf(key_filename, sizeof(key_filename), "%s/key", tmpdir);
-  snprintf(output_filename, sizeof(output_filename), "%s/out.qjsbc", tmpdir);
+  snprintf_nowarn(module_filename, sizeof(module_filename), "%s/mod.mjs",
+                  tmpdir);
+  snprintf_nowarn(key_filename, sizeof(key_filename), "%s/key", tmpdir);
+  snprintf_nowarn(output_filename, sizeof(output_filename), "%s/out.qjsbc",
+                  tmpdir);
 
   FILE *modulef = fopen(module_filename, "w");
   FILE *keyf = fopen(key_filename, "w");
@@ -742,8 +746,10 @@ static void TEST_compile_module_file_without_key(void) {
 
   char module_filename[sizeof(tmpdir) + 128];
   char output_filename[sizeof(tmpdir) + 128];
-  snprintf(module_filename, sizeof(module_filename), "%s/mod.mjs", tmpdir);
-  snprintf(output_filename, sizeof(output_filename), "%s/out.qjsbc", tmpdir);
+  snprintf_nowarn(module_filename, sizeof(module_filename), "%s/mod.mjs",
+                  tmpdir);
+  snprintf_nowarn(output_filename, sizeof(output_filename), "%s/out.qjsbc",
+                  tmpdir);
 
   FILE *modulef = fopen(module_filename, "w");
 
@@ -760,7 +766,6 @@ static void TEST_compile_module_file_without_key(void) {
   TEST_ASSERT(outf);
 
   TEST_ASSERT(0 == fseek(outf, 0, SEEK_END));
-  size_t output_file_size = ftell(outf);
   TEST_ASSERT(0 == fseek(outf, 0, SEEK_SET));
 
   uint8_t signature[64];
@@ -789,15 +794,17 @@ static void TEST_output_key_file(void) {
   TEST_ASSERT(0 == make_temp_dir(tmpdir, sizeof(tmpdir),
                                  "jsockd_TEST_modcompiler_XXXXXX"));
   char keyprefixpath[sizeof(tmpdir) + sizeof("my_key")];
-  snprintf(keyprefixpath, sizeof(keyprefixpath), "%s/my_key", tmpdir);
+  snprintf_nowarn(keyprefixpath, sizeof(keyprefixpath), "%s/my_key", tmpdir);
 
   output_key_file(keyprefixpath);
 
   char pubkeypath[sizeof(keyprefixpath) + sizeof(".pubkey")];
-  snprintf(pubkeypath, sizeof(keyprefixpath), "%s/my_key.pubkey", tmpdir);
+  snprintf_nowarn(pubkeypath, sizeof(keyprefixpath), "%s/my_key.pubkey",
+                  tmpdir);
   FILE *pubhexf = fopen(pubkeypath, "r");
   char privkeypath[sizeof(keyprefixpath) + sizeof(".privkey")];
-  snprintf(privkeypath, sizeof(keyprefixpath), "%s/my_key.privkey", tmpdir);
+  snprintf_nowarn(privkeypath, sizeof(keyprefixpath), "%s/my_key.privkey",
+                  tmpdir);
   FILE *privhexf = fopen(privkeypath, "r");
   TEST_ASSERT(pubhexf && privhexf);
 
@@ -827,7 +834,8 @@ static void TEST_output_key_file(void) {
     Add all tests to the list below.
 ******************************************************************************/
 
-#define T(name) {#name, TEST_##name}
+#define T(name)                                                                \
+  { #name, TEST_##name }
 
 TEST_LIST = {T(wait_group_inc_and_wait_basic_use_case),
              T(hash_cache_add_and_retrieve),
