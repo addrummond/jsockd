@@ -58,8 +58,7 @@ int compile_module_file(const char *module_filename,
   }
 
   size_t out_buf_len;
-  uint8_t *out_buf =
-      JS_WriteObject(ctx, &out_buf_len, obj, JS_WRITE_OBJ_BYTECODE);
+  out_buf = JS_WriteObject(ctx, &out_buf_len, obj, JS_WRITE_OBJ_BYTECODE);
 
   char public_key_hex[ED25519_PUBLIC_KEY_SIZE * 2] = {0};
   char private_key_hex[ED25519_PRIVATE_KEY_SIZE * 2] = {0};
