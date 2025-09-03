@@ -21,11 +21,9 @@ int compile_module_file(const char *module_filename,
   int ret = EXIT_SUCCESS;
   uint8_t *buf = NULL;
   uint8_t *out_buf = NULL;
-  int eval_flags;
   JSValue obj = JS_UNDEFINED;
   JSRuntime *rt = NULL;
   JSContext *ctx = NULL;
-  size_t buf_len;
   FILE *mf = NULL;
   FILE *kf = NULL;
 
@@ -42,14 +40,15 @@ int compile_module_file(const char *module_filename,
     goto end;
   }
 
+  size_t buf_len;
   buf = js_load_file(ctx, &buf_len, module_filename);
   if (!buf) {
     release_logf("Could not load '%s'\n", module_filename);
     ret = EXIT_FAILURE;
     goto end;
   }
-  eval_flags = JS_EVAL_FLAG_COMPILE_ONLY | JS_EVAL_TYPE_MODULE;
-  obj = JS_Eval(ctx, (const char *)buf, buf_len, module_filename, eval_flags);
+  obj = JS_Eval(ctx, (const char *)buf, buf_len, module_filename,
+                JS_EVAL_FLAG_COMPILE_ONLY | JS_EVAL_TYPE_MODULE);
   if (JS_IsException(obj)) {
     release_logf("Error compiling module '%s'\n", module_filename);
     js_std_dump_error(ctx);
