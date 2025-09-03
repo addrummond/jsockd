@@ -124,7 +124,7 @@ void memswap_small(void *m1, void *m2, size_t size) {
 int make_temp_dir(char out[], size_t out_size, const char *template) {
   const char *TMPDIR = getenv("TMPDIR");
   if (!TMPDIR)
-    return -1;
+    TMPDIR = "/tmp";
   if (strlen(TMPDIR) >=
       out_size - strlen(template) - 1 - 1) // -1 for '/', -1 for '\0'
     return -1;
