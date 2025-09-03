@@ -80,7 +80,7 @@ The public key should be passed to the `jsockd` server process via the `JSOCKD_B
 export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=$(cat my_key_file.pubkey)
 ```
 
-### 2.2 I want to use openssl to sign my modules
+### 2.2 [optional] Using openssl to sign bytecode
 
 _**On Mac you may need to install openssl via homebrew to get support for ED25519 signatures.**_
 
