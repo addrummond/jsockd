@@ -91,21 +91,8 @@ int compile_module_file(const char *module_filename, const char *key_filename,
   hex_decode(public_key, ED25519_PUBLIC_KEY_SIZE, public_key_hex);
   hex_decode(private_key, ED25519_PRIVATE_KEY_SIZE, private_key_hex);
 
-  printf("\n[[[]]]pubkey_raw (hex): ");
-  for (size_t i = 0; i < ED25519_PUBLIC_KEY_SIZE; ++i) {
-    printf("%02x", public_key[i]);
-  }
-  printf("\n");
-
-  printf("\n[[[]]]privkey_raw (hex): ");
-  for (size_t i = 0; i < ED25519_PRIVATE_KEY_SIZE; ++i) {
-    printf("%02x", private_key[i]);
-  }
-  printf("\n");
-
   unsigned char signature[ED25519_SIGNATURE_SIZE];
 
-  printf("SIGNING N %zu\n", out_buf_len);
   ed25519_sign(signature, out_buf, out_buf_len,
                (const unsigned char *)public_key,
                (const unsigned char *)private_key);
@@ -215,7 +202,7 @@ int output_key_file(const char *key_file_prefix) {
   // As the format used by the ed25519 library we're using doesn't make it
   // trivial to extract public keys from private keys, prepend the public key to
   // the private key.
-  if (0 != hex_encode(pubkey, ED25519_PRIVATE_KEY_SIZE, privkey_file)) {
+  if (0 != hex_encode(pubkey, ED25519_PUBLIC_KEY_SIZE, privkey_file)) {
     release_logf("Error writing to private key file %s: %s", privkey_filename,
                  strerror(errno));
     ret = EXIT_FAILURE;

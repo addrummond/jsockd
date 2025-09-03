@@ -663,10 +663,12 @@ static void TEST_cmdargs_dash_c_error_if_combined_with_other_flags(void) {
 
 static void TEST_modcompiler(void) {
   const char privkey[] =
-      "1917E6534247D122C0C245D3E575409BC63F50589D51D91AA2F7414810E6A953087932BB"
-      "B37BFE6D67203CC28138CDCFC3DB82D3C6877D2CA4C4FDD6A91EE37008F407A4C66835B2"
-      "48B697817F932A2B0AB9B42248A8C382CE76F869C4230F56B378FCA911BB04CF6F8629D3"
-      "19BA772B5BD2A5A77C2EFFFB0C380E92F735292A";
+      "6FC575BE3557E26A42B1A09BEEF0F4BFC9C6BBFBDAABB1E2098387A03599CE2B780EA777"
+      "5430EE1083077387B652921E9D1C5CCB5DA3634BFC7B6B46C84E8578920D6160618D2961"
+      "537E4B1DF6F3215F1AD186A1B45FED9869AFA636F5E10910";
+
+  TEST_ASSERT(sizeof(privkey) - 1 ==
+              2 * (ED25519_PUBLIC_KEY_SIZE + ED25519_PRIVATE_KEY_SIZE));
 
   char tmpdir[1024];
   TEST_ASSERT(0 == make_temp_dir(tmpdir, sizeof(tmpdir),
@@ -707,7 +709,6 @@ static void TEST_modcompiler(void) {
   size_t bytecode_size =
       output_file_size - VERSION_STRING_SIZE - ED25519_SIGNATURE_SIZE;
   uint8_t bytecode[bytecode_size];
-  printf("\nBCS %zu\n", bytecode_size);
   TEST_ASSERT(0 == fseek(outf, -ED25519_SIGNATURE_SIZE, SEEK_END));
   TEST_ASSERT(1 == fread(signature, sizeof(signature) / sizeof(char), 1, outf));
   TEST_ASSERT(0 == fseek(outf, -ED25519_SIGNATURE_SIZE - VERSION_STRING_SIZE,
@@ -722,16 +723,6 @@ static void TEST_modcompiler(void) {
   // we store public key as first 32 bytes of private key file
   TEST_ASSERT(ED25519_PUBLIC_KEY_SIZE ==
               hex_decode(pubkey_raw, sizeof(pubkey_raw), privkey));
-  printf("\npubkey_raw (hex): ");
-  for (size_t i = 0; i < ED25519_PUBLIC_KEY_SIZE; ++i) {
-    printf("%02x", pubkey_raw[i]);
-  }
-  printf("\n");
-  printf("\nsignature_raw (hex): ");
-  for (size_t i = 0; i < ED25519_SIGNATURE_SIZE; ++i) {
-    printf("%02x", signature[i]);
-  }
-  printf("\n");
 
   TEST_ASSERT(ed25519_verify(signature, bytecode, bytecode_size, pubkey_raw));
 
