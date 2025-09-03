@@ -130,7 +130,13 @@ When the server is ready to start accepting commands on the specified UNIX domai
 
 ### 3.2 Command line options
 
-#### Generating public and private keys
+#### Get version
+
+```sh
+jsockd -v
+```
+
+#### Generate public and private keys
 
 ```sh
 jsockd -k <key_file_prefix>
@@ -138,7 +144,7 @@ jsockd -k <key_file_prefix>
 
 Outputs two files: `<key_file_prefix>.pub` (the public key) and `<key_file_prefix>.pem` (the private key).
 
-#### Compiling a module file
+#### Compile a module file
 
 ```sh
 jsockd -c <module_file> <output_bytecode_file> [-k <private_key_file>]
@@ -146,11 +152,10 @@ jsockd -c <module_file> <output_bytecode_file> [-k <private_key_file>]
 
 Compiles the specified ES6 module file to a QuickJS bytecode file. If the `-k` option is not given, the module is not signed. Unsigned modules can be used only by debug builds of `jsockd` when the `JSOCKD_BYTECODE_MODULE_PUBLIC_KEY` env var is set to `dangerously_allow_invalid_signatures`.
 
-#### Starting the server
+#### Start the server
 
 | Option      | Argument(s)                | Description                                                                  | Default       | Repeatable | Required |
 |-------------|----------------------------|------------------------------------------------------------------------------|---------------|------------|----------|
-| `-v`        | *(none)*                   | Print version and exit. Cannot be used with other flags.                     |               | No         | No       |
 | `-m`        | `<module_bytecode_file>`   | Path to ES6 module bytecode file.                                            |               | No         | No       |
 | `-sm`       | `<source_map_file>`        | Path to source map file (e.g. `foo.js.map`). Can only be used with `-m`.     |               | No         | No       |
 | `-t`        | `<microseconds>`           | Maximum command runtime in microseconds (must be integer > 0).               | 250000        | No         | No       |
