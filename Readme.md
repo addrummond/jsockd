@@ -120,7 +120,7 @@ jsockd -m my_module.quickjs_bytecode -s /tmp/sock
 The server is started as follows:
 
 ```sh
-export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=xxxxx # see next section
+export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=xxxxx # see previous section
 jsockd -m <es6_module_bytecode_file> -s <socket1_path> [<socket2_path> ...]
 ```
 
