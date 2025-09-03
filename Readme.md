@@ -82,6 +82,8 @@ export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=$(cat my_key_file.pubkey)
 
 ### 2.2 I want to use openssl to sign my modules
 
+_**On Mac you may need to install openssl via homebrew to get support for ED25519 signatures.**_
+
 If you don't trust jsockd to generate keys and signatures, you can use openssl to sign your module bytecode.
 Generate public and private keys as follows:
 
@@ -101,8 +103,6 @@ The last 64 bytes of the file (usually occupied by the ED25519 signature) are no
 ```sh
 BYTECODE_FILE=my_module.quickjs_bytecode BYTECODE_FILE_SIZE=$(wc -c $BYTECODE_FILE | awk '{print $1}') && ( head -c $(($BYTECODE_FILE_SIZE - 192)) $BYTECODE_FILE | openssl pkeyutl -sign -inkey private_signing_key.pem -rawin -in /dev/stdin | dd of=$BYTECODE_FILE bs=1 seek=$(($BYTECODE_FILE_SIZE - 64)) conv=notrunc )
 ```
-
-**On Mac you may need to install openssl via homebrew to get support for ED25519 signatures.**
 
 Finally, set the environment variable to the hex-encoded public key before running jsockd:
 
