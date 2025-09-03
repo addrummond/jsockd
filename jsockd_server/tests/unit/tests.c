@@ -673,7 +673,7 @@ static void TEST_compile_module_file(void) {
 
   char tmpdir[1024];
   TEST_ASSERT(0 == make_temp_dir(tmpdir, sizeof(tmpdir),
-                                 "jsockd_TEST_modcompiler_XXXXXX"));
+                                 "jsockd_TEST_compile_module_file_XXXXXX"));
 
   char module_filename[sizeof(tmpdir) + 128];
   char key_filename[sizeof(tmpdir) + 128];
@@ -730,6 +730,56 @@ static void TEST_compile_module_file(void) {
   fclose(outf);
   remove(module_filename);
   remove(key_filename);
+  remove(output_filename);
+  rmdir(tmpdir);
+}
+
+static void TEST_compile_module_file_without_key(void) {
+  char tmpdir[1024];
+  TEST_ASSERT(
+      0 == make_temp_dir(tmpdir, sizeof(tmpdir),
+                         "jsockd_TEST_compile_module_file_without_key_XXXXXX"));
+
+  char module_filename[sizeof(tmpdir) + 128];
+  char output_filename[sizeof(tmpdir) + 128];
+  snprintf(module_filename, sizeof(module_filename), "%s/mod.mjs", tmpdir);
+  snprintf(output_filename, sizeof(output_filename), "%s/out.qjsbc", tmpdir);
+
+  FILE *modulef = fopen(module_filename, "w");
+
+  TEST_ASSERT(modulef);
+
+  TEST_ASSERT(0 <= fprintf(modulef, "export const foo = 17;\n"));
+
+  fclose(modulef);
+
+  TEST_ASSERT(EXIT_SUCCESS == compile_module_file(module_filename, NULL,
+                                                  output_filename, "99.99.0"));
+
+  FILE *outf = fopen(output_filename, "r");
+  TEST_ASSERT(outf);
+
+  TEST_ASSERT(0 == fseek(outf, 0, SEEK_END));
+  size_t output_file_size = ftell(outf);
+  TEST_ASSERT(0 == fseek(outf, 0, SEEK_SET));
+
+  uint8_t signature[64];
+  char version[VERSION_STRING_SIZE];
+  TEST_ASSERT(0 == fseek(outf, -ED25519_SIGNATURE_SIZE, SEEK_END));
+  TEST_ASSERT(1 == fread(signature, sizeof(signature) / sizeof(char), 1, outf));
+  TEST_ASSERT(0 == fseek(outf, -ED25519_SIGNATURE_SIZE - VERSION_STRING_SIZE,
+                         SEEK_END));
+  TEST_ASSERT(1 == fread(version, sizeof(version) / sizeof(char), 1, outf));
+  TEST_ASSERT(version[VERSION_STRING_SIZE - 1] == '\0');
+  TEST_ASSERT(!strcmp(version, "99.99.0"));
+
+  // absent signature should be padded with zeros
+  for (size_t i = 0; i < sizeof(signature); ++i) {
+    TEST_ASSERT(signature[i] == 0);
+  }
+
+  fclose(outf);
+  remove(module_filename);
   remove(output_filename);
   rmdir(tmpdir);
 }
@@ -825,5 +875,6 @@ TEST_LIST = {T(wait_group_inc_and_wait_basic_use_case),
              T(cmdargs_dash_c_error_on_only_one_arg),
              T(cmdargs_dash_c_error_if_combined_with_other_flags),
              T(compile_module_file),
+             T(compile_module_file_without_key),
              T(output_key_file),
              {NULL, NULL}};

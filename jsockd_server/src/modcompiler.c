@@ -15,7 +15,8 @@
 //     128 byte version string, null-terminated
 //     64 byte ed25519 signature of bytecode
 
-int compile_module_file(const char *module_filename, const char *key_filename,
+int compile_module_file(const char *module_filename,
+                        const char *privkey_filename,
                         const char *output_filename, const char *version) {
   int ret = EXIT_SUCCESS;
   uint8_t *buf = NULL;
@@ -61,12 +62,12 @@ int compile_module_file(const char *module_filename, const char *key_filename,
 
   char public_key_hex[ED25519_PUBLIC_KEY_SIZE * 2] = {0};
   char private_key_hex[ED25519_PRIVATE_KEY_SIZE * 2] = {0};
-  if (!key_filename) {
+  if (!privkey_filename) {
     release_logf("WARNING: No key file specified; module will be unsigned\n");
   } else {
-    kf = fopen(key_filename, "r");
+    kf = fopen(privkey_filename, "r");
     if (!kf) {
-      release_logf("Error opening key file %s: %s\n", key_filename,
+      release_logf("Error opening key file %s: %s\n", privkey_filename,
                    strerror(errno));
       ret = EXIT_FAILURE;
       goto end;
@@ -74,14 +75,14 @@ int compile_module_file(const char *module_filename, const char *key_filename,
     if (fread(public_key_hex, sizeof(public_key_hex) / sizeof(char), 1, kf) <
         1) {
       release_logf("Error reading public key from key file %s: %s\n",
-                   key_filename, strerror(errno));
+                   privkey_filename, strerror(errno));
       ret = EXIT_FAILURE;
       goto end;
     }
     if (fread(private_key_hex, sizeof(private_key_hex) / sizeof(char), 1, kf) <
         1) {
       release_logf("Error reading private key from key file %s: %s\n",
-                   key_filename, strerror(errno));
+                   privkey_filename, strerror(errno));
       ret = EXIT_FAILURE;
       goto end;
     }
@@ -91,11 +92,13 @@ int compile_module_file(const char *module_filename, const char *key_filename,
   hex_decode(public_key, ED25519_PUBLIC_KEY_SIZE, public_key_hex);
   hex_decode(private_key, ED25519_PRIVATE_KEY_SIZE, private_key_hex);
 
-  unsigned char signature[ED25519_SIGNATURE_SIZE];
+  unsigned char signature[ED25519_SIGNATURE_SIZE] = {0};
 
-  ed25519_sign(signature, out_buf, out_buf_len,
-               (const unsigned char *)public_key,
-               (const unsigned char *)private_key);
+  if (privkey_filename) {
+    ed25519_sign(signature, out_buf, out_buf_len,
+                 (const unsigned char *)public_key,
+                 (const unsigned char *)private_key);
+  }
 
   mf = fopen(output_filename, "w");
   if (!mf) {
