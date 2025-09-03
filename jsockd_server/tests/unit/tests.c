@@ -16,6 +16,7 @@
 #include <ed25519/ed25519.h>
 #include <pthread.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 /******************************************************************************
@@ -661,7 +662,7 @@ static void TEST_cmdargs_dash_c_error_if_combined_with_other_flags(void) {
     Tests for modcompiler
 ******************************************************************************/
 
-static void TEST_modcompiler(void) {
+static void TEST_compile_module_file(void) {
   const char privkey[] =
       "6FC575BE3557E26A42B1A09BEEF0F4BFC9C6BBFBDAABB1E2098387A03599CE2B780EA777"
       "5430EE1083077387B652921E9D1C5CCB5DA3634BFC7B6B46C84E8578920D6160618D2961"
@@ -733,6 +734,45 @@ static void TEST_modcompiler(void) {
   rmdir(tmpdir);
 }
 
+static void TEST_output_key_file(void) {
+  char tmpdir[1024];
+  TEST_ASSERT(0 == make_temp_dir(tmpdir, sizeof(tmpdir),
+                                 "jsockd_TEST_modcompiler_XXXXXX"));
+  char keyprefixpath[sizeof(tmpdir) + sizeof("my_key")];
+  snprintf(keyprefixpath, sizeof(keyprefixpath), "%s/my_key", tmpdir);
+
+  output_key_file(keyprefixpath);
+
+  char pubkeypath[sizeof(keyprefixpath) + sizeof(".pubkey")];
+  snprintf(pubkeypath, sizeof(keyprefixpath), "%s/my_key.pubkey", tmpdir);
+  FILE *pubhexf = fopen(pubkeypath, "r");
+  char privkeypath[sizeof(keyprefixpath) + sizeof(".privkey")];
+  snprintf(privkeypath, sizeof(keyprefixpath), "%s/my_key.privkey", tmpdir);
+  FILE *privhexf = fopen(privkeypath, "r");
+  TEST_ASSERT(pubhexf && privhexf);
+
+  char pubhex[ED25519_PUBLIC_KEY_SIZE * 2];
+  char privhex[2 * (ED25519_PRIVATE_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE)];
+
+  TEST_ASSERT(1 == fread(pubhex, sizeof(pubhex) / sizeof(char), 1, pubhexf));
+  TEST_ASSERT(1 == fread(privhex, sizeof(privhex) / sizeof(char), 1, privhexf));
+
+  fseek(pubhexf, 0, SEEK_END);
+  fseek(privhexf, 0, SEEK_END);
+  TEST_ASSERT(ED25519_PUBLIC_KEY_SIZE * 2 == ftell(pubhexf));
+  TEST_ASSERT(2 * (ED25519_PRIVATE_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE) ==
+              ftell(privhexf));
+
+  fclose(pubhexf);
+  fclose(privhexf);
+  remove(privkeypath);
+  remove(pubkeypath);
+  rmdir(tmpdir);
+
+  // First 32 bytes of privkey file should match pubkey file
+  TEST_ASSERT(0 == memcmp(pubhex, privhex, ED25519_PUBLIC_KEY_SIZE * 2));
+}
+
 /******************************************************************************
     Add all tests to the list below.
 ******************************************************************************/
@@ -784,5 +824,6 @@ TEST_LIST = {T(wait_group_inc_and_wait_basic_use_case),
              T(cmdargs_dash_c_error_on_no_args),
              T(cmdargs_dash_c_error_on_only_one_arg),
              T(cmdargs_dash_c_error_if_combined_with_other_flags),
-             T(modcompiler),
+             T(compile_module_file),
+             T(output_key_file),
              {NULL, NULL}};
