@@ -74,7 +74,7 @@ We can now compile an ES6 module to QuickJS bytecode and sign the bytecode using
 jsockd -c my_module.mjs my_module.quickjs_bytecode -k my_key_file.privkey
 ```
 
-The public key should be passed to the `jsockd` server process via the `JSOCKD_BYTECODE_MODULE_PUBLIC_KEY` environment variable:
+The public key is passed to the `jsockd` server process via the `JSOCKD_BYTECODE_MODULE_PUBLIC_KEY` environment variable:
 
 ```sh
 export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=$(cat my_key_file.pubkey)
