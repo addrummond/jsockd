@@ -24,6 +24,7 @@ END
 cd jsockd_server
 ./mk.sh Debug
 
+rm -f valgrind_private_signing_key*
 ./build_Debug/jsockd -k valgrind_private_signing_key
 export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=$(cat valgrind_private_signing_key.pubkey)
 
