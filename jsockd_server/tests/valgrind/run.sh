@@ -28,7 +28,7 @@ cd jsockd_server
 export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=$(cat private_signing_key.pubkey)
 
 # Compile the example module to QuickJS bytecode.
-./build_Debug/jsockd -c jsockd_server/tests/valgrind/bundle.mjs /tmp/bundle.qjsb -k private_signing_key.privkey
+./build_Debug/jsockd -c tests/valgrind/bundle.mjs /tmp/bundle.qjsb -k private_signing_key.privkey
 
 DASH_B_ARG=""
 if [ ! -z "$JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX" ]; then
