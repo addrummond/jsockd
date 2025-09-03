@@ -1117,8 +1117,6 @@ static const uint8_t *load_module_bytecode(const char *filename,
   if (!pubkey)
     pubkey = "";
 
-  // Not documented because we allow this in Debug builds only, and binaries
-  // uploaded to the GitHub release are Release builds.
   if (CMAKE_BUILD_TYPE_IS_DEBUG &&
       !strcmp(pubkey, "dangerously_allow_invalid_signatures")) {
     *out_size = *out_size - VERSION_STRING_SIZE - ED25519_SIGNATURE_SIZE;
