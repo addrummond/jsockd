@@ -60,8 +60,7 @@ int compile_module_file(const char *module_filename, const char *key_filename,
       JS_WriteObject(ctx, &out_buf_len, obj, JS_WRITE_OBJ_BYTECODE);
 
   char public_key_hex[ED25519_PUBLIC_KEY_SIZE * 2] = {0};
-  char private_key_hex[(ED25519_PUBLIC_KEY_SIZE + ED25519_PRIVATE_KEY_SIZE) *
-                       2] = {0};
+  char private_key_hex[ED25519_PRIVATE_KEY_SIZE * 2] = {0};
   if (!key_filename) {
     release_logf("WARNING: No key file specified; module will be unsigned\n");
   } else {
@@ -91,6 +90,18 @@ int compile_module_file(const char *module_filename, const char *key_filename,
   uint8_t private_key[ED25519_PRIVATE_KEY_SIZE] = {0};
   hex_decode(public_key, ED25519_PUBLIC_KEY_SIZE, public_key_hex);
   hex_decode(private_key, ED25519_PRIVATE_KEY_SIZE, private_key_hex);
+
+  printf("\n[[[]]]pubkey_raw (hex): ");
+  for (size_t i = 0; i < ED25519_PUBLIC_KEY_SIZE; ++i) {
+    printf("%02x", public_key[i]);
+  }
+  printf("\n");
+
+  printf("\n[[[]]]privkey_raw (hex): ");
+  for (size_t i = 0; i < ED25519_PRIVATE_KEY_SIZE; ++i) {
+    printf("%02x", private_key[i]);
+  }
+  printf("\n");
 
   unsigned char signature[ED25519_SIGNATURE_SIZE];
 
