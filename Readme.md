@@ -98,7 +98,7 @@ Now compile the module without a key:
 jsockd -c my_module.mjs my_module.quickjs_bytecode
 ```
 
-The last 64 bytes of the bytecode file (usually occupied by the ED25519 signature) are now filled with zeros. The preceding 128 bytes contain the jsockd compiler version string. You therefore need to sign the file **excluding the last 192 bytes** and then replace the last 64 bytes of the file with the signature. The following shell one-liner accomplishes this (modify the value of `BYTECODE_FILE`):
+The last 64 bytes of the bytecode file (usually occupied by the ED25519 signature) are now filled with zeros. The preceding 128 bytes contain the jsockd compiler version string. You therefore need to sign the file **excluding the last 192 bytes** and then replace the last 64 bytes of the file with the signature. The following shell one-liner accomplishes this:
 
 ```sh
 BYTECODE_FILE=my_module.quickjs_bytecode BYTECODE_FILE_SIZE=$(wc -c $BYTECODE_FILE | awk '{print $1}') && ( head -c $(($BYTECODE_FILE_SIZE - 192)) $BYTECODE_FILE | openssl pkeyutl -sign -inkey private_signing_key.pem -rawin -in /dev/stdin | dd of=$BYTECODE_FILE bs=1 seek=$(($BYTECODE_FILE_SIZE - 64)) conv=notrunc )
