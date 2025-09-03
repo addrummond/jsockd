@@ -30,6 +30,7 @@ npm install
 
 ./node_modules/.bin/esbuild --target=es2018 --format=esm --bundle tests/e2e/relative_bench/bench.jsx --outfile=tests/e2e/relative_bench/bundle.js
 
+rm -f filc_bench_private_signing_key*
 build_$BUILD/jsockd -k filc_bench_private_signing_key
 
 export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=$(cat filc_bench_private_signing_key.pubkey)
