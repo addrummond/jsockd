@@ -84,7 +84,7 @@ export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=$(cat my_key_file.pubkey)
 
 _**On Mac you may need to install openssl via homebrew to get support for ED25519 signatures.**_
 
-If you don't trust jsockd to generate keys and signatures, you can use openssl to sign your module bytecode.
+If you don't trust JSockD to generate keys and signatures, you can use openssl to sign your module bytecode.
 Generate public and private keys as follows:
 
 ```sh
