@@ -273,7 +273,6 @@ The JS server is built using CMake 4. The `mk.sh` wrapper script invokes CMake w
 Run the following commands from within the `jsockd_server` directory:
 
 ```sh
-npm i # optional, installs clang-format for code formatting
 ./mk.sh Debug # Debug build
 ./mk.sh Release # Release build
 ```
@@ -290,7 +289,11 @@ Run unit tests can be as follows:
 ./mk.sh Debug test
 ```
 
-### 5.3 Developing with Fil-C
+### 5.3 Code formatting
+
+The `format.sh` script in `jsockd_server` formats C source files using `clang-format`. Run `npm i` to install the appropriate version of `clang-format`.
+
+### 5.4 Developing with Fil-C
 
 **TODO: rough notes**
 
