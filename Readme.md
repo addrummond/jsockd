@@ -68,7 +68,7 @@ jsockd -k my_key_file
 
 This command generates two files, `my_key_file.pubkey` (the public key) and `my_key_file.privkey` (the private key).
 
-We can now compile an ES6 moule to QuickJS bytecode and sign the bytecode using the key:
+We can now compile an ES6 module to QuickJS bytecode and sign the bytecode using the key:
 
 ```sh
 jsockd -c my_module.mjs my_module.quickjs_bytecode -k my_key_file.privkey
