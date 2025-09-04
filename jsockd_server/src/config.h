@@ -28,4 +28,7 @@
 #define PUBLIC_KEY_FILE_SUFFIX ".pubkey"
 #define PRIVATE_KEY_FILE_SUFFIX ".privkey"
 
+// 30 seconds
+#define NS_BEFORE_QUICKJS_DEINIT 30000000000
+
 #endif
