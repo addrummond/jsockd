@@ -925,8 +925,7 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
     return ts->socket_state->stream_io_err;
   }
 
-  struct timespec now;
-  if (0 != clock_gettime(MONOTONIC_CLOCK, &now)) {
+  if (0 != clock_gettime(MONOTONIC_CLOCK, &ts->last_command_time)) {
     JS_FreeValue(ts->ctx, parsed_arg);
     JS_FreeValue(ts->ctx, ret);
     JS_FreeValue(ts->ctx, stringified);
@@ -935,7 +934,7 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
   }
 
   ts->last_command_exec_time_ns =
-      ns_time_diff(&now, &ts->last_js_execution_start);
+      ns_time_diff(&ts->last_command_time, &ts->last_js_execution_start);
 
   size_t sz;
   const char *str = JS_ToCStringLen(ts->ctx, &sz, stringified);
