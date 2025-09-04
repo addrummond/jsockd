@@ -182,6 +182,7 @@ static atomic_int g_new_thread_state_count;
 
 // The state for each thread which runs a QuickJS VM.
 typedef struct ThreadState {
+  int thread_index;
   SocketState *socket_state;
   JSRuntime *rt;
   JSContext *ctx;
@@ -205,7 +206,7 @@ typedef struct ThreadState {
   pthread_t replacement_thread;
   const char *trampoline_line;
   int trampoline_line_len;
-  struct timespec last_command_time;
+  struct timespec last_active_time;
 #ifdef CMAKE_BUILD_TYPE_DEBUG
   bool manually_trigger_thread_state_reset;
 #endif
@@ -358,8 +359,13 @@ listen_on_unix_socket(ThreadState *ts,
     ts->socket_state->streamfd =
         accept(ts->socket_state->sockfd,
                (struct sockaddr *)&ts->socket_state->addr, &streamfd_size);
-    debug_log("Accepted on ts->socket\n");
+    debug_logf("Accepted on ts->socket thread %i\n", ts->thread_index);
     if (ts->socket_state->streamfd < 0) {
+      ts->exit_status = -1;
+      goto error_no_inc;
+    }
+    if (0 != clock_gettime(MONOTONIC_CLOCK, &ts->last_active_time)) {
+      release_logf("Error getting time after accept: %s", strerror(errno));
       ts->exit_status = -1;
       goto error_no_inc;
     }
@@ -370,6 +376,8 @@ listen_on_unix_socket(ThreadState *ts,
 
   for (;;) {
   read_loop:
+    tick_handler(ts);
+
     switch (poll_fd(ts->socket_state->streamfd)) {
     case READY:
       break;
@@ -380,8 +388,6 @@ listen_on_unix_socket(ThreadState *ts,
       goto error_no_inc;
     } break;
     }
-
-    tick_handler(ts);
 
     int exit_value = line_buf_read(&line_buf, g_cmd_args.socket_sep_char,
                                    lb_read, &ts->socket_state->streamfd,
@@ -491,7 +497,8 @@ static int interrupt_handler(JSRuntime *rt, void *opaque) {
   if (start->tv_sec != 0) {
     struct timespec now;
     if (0 != clock_gettime(MONOTONIC_CLOCK, &now)) {
-      release_log("Error getting time in interrupt handler\n");
+      release_logf("Error getting time in interrupt handler: %s\n",
+                   strerror(errno));
       return 0;
     }
     int64_t delta_ns = ns_time_diff(&now, start);
@@ -574,7 +581,17 @@ static const char *get_backtrace(ThreadState *ts, const char *backtrace,
   return bt_str;
 }
 
-static int init_thread_state(ThreadState *ts, SocketState *socket_state) {
+static int init_thread_state(ThreadState *ts, SocketState *socket_state,
+                             int thread_index) {
+  debug_logf("Calling init_thread_state for thread %i\n", thread_index);
+  ts->thread_index = thread_index;
+
+  if (0 != clock_gettime(MONOTONIC_CLOCK, &ts->last_active_time)) {
+    release_logf("Error getting time while initializing thread %i state: %s\n",
+                 thread_index, strerror(errno));
+    return -1;
+  }
+
   ts->rt = JS_NewRuntime();
   if (!ts->rt) {
     release_log("Failed to create JS runtime\n");
@@ -655,7 +672,6 @@ static int init_thread_state(ThreadState *ts, SocketState *socket_state) {
   ts->my_replacement = NULL;
   ts->trampoline_line = NULL;
   ts->trampoline_line_len = 0;
-  memset(&ts->last_command_time, 0, sizeof(ts->last_command_time));
   atomic_init(&ts->replacement_thread_state, REPLACEMENT_THREAD_STATE_NONE);
 
 #ifdef DEBUG
@@ -667,6 +683,9 @@ static int init_thread_state(ThreadState *ts, SocketState *socket_state) {
 
 // called whenever we want to clean a thread a state up
 static void cleanup_thread_state(ThreadState *ts) {
+  if (ts->rt == NULL) // It's already been cleaned up;
+    return;
+
   JS_FreeValue(ts->ctx, ts->backtrace_module);
   JS_FreeValue(ts->ctx, ts->compiled_query);
   JS_FreeValue(ts->ctx, ts->compiled_module);
@@ -677,6 +696,8 @@ static void cleanup_thread_state(ThreadState *ts) {
 
   JS_FreeContext(ts->ctx);
   JS_FreeRuntime(ts->rt);
+  ts->ctx = NULL;
+  ts->rt = NULL;
 }
 
 static void cleanup_old_runtime(ThreadState *ts) {
@@ -724,6 +745,11 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
 
   int rts =
       atomic_load_explicit(&ts->replacement_thread_state, memory_order_relaxed);
+
+  if (ts->rt == NULL) {
+    assert(rts == REPLACEMENT_THREAD_STATE_NONE);
+    init_thread_state(ts, ts->socket_state, ts->thread_index);
+  }
 
   // Check to see if the thread state has been reinitialized (following a memory
   // increase).
@@ -809,7 +835,8 @@ static void *reset_thread_state_thread(void *data) {
   ThreadState *ts = (ThreadState *)data;
   ts->my_replacement = (ThreadState *)malloc(sizeof(ThreadState));
   debug_inc_new_thread_state_count();
-  init_thread_state((ThreadState *)ts->my_replacement, ts->socket_state);
+  init_thread_state((ThreadState *)ts->my_replacement, ts->socket_state,
+                    ts->thread_index);
   atomic_store_explicit(&ts->replacement_thread_state,
                         REPLACEMENT_THREAD_STATE_INIT_COMPLETE,
                         memory_order_relaxed);
@@ -925,7 +952,8 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
     return ts->socket_state->stream_io_err;
   }
 
-  if (0 != clock_gettime(MONOTONIC_CLOCK, &ts->last_command_time)) {
+  struct timespec now;
+  if (0 != clock_gettime(MONOTONIC_CLOCK, &now)) {
     JS_FreeValue(ts->ctx, parsed_arg);
     JS_FreeValue(ts->ctx, ret);
     JS_FreeValue(ts->ctx, stringified);
@@ -934,7 +962,7 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
   }
 
   ts->last_command_exec_time_ns =
-      ns_time_diff(&ts->last_command_time, &ts->last_js_execution_start);
+      ns_time_diff(&now, &ts->last_js_execution_start);
 
   size_t sz;
   const char *str = JS_ToCStringLen(ts->ctx, &sz, stringified);
@@ -1090,22 +1118,26 @@ static int line_handler(const char *line, size_t len, ThreadState *ts,
 }
 
 static void tick_handler(ThreadState *ts) {
-  if (atomic_load_explicit(&g_n_ready_threads, memory_order_relaxed) <= 1)
+  if (ts->line_n != 0 || ts->rt == NULL)
     return;
-  if (ts->last_command_time.tv_sec == 0 && ts->last_command_time.tv_nsec == 0)
+  int n_ready_threads =
+      atomic_load_explicit(&g_n_ready_threads, memory_order_relaxed);
+  if (n_ready_threads <= 1 || n_ready_threads != ts->thread_index + 1)
     return;
   struct timespec now;
   if (0 != clock_gettime(MONOTONIC_CLOCK, &now)) {
     debug_log("Error getting time in tick handler\n");
     return;
   }
-  uint64_t ns_diff = ns_time_diff(&now, &ts->last_command_time);
+  uint64_t ns_diff = ns_time_diff(&now, &ts->last_active_time);
   if (ns_diff >= NS_BEFORE_QUICKJS_DEINIT &&
       REPLACEMENT_THREAD_STATE_NONE ==
           atomic_load_explicit(&ts->replacement_thread_state,
                                memory_order_relaxed)) {
-    ts->last_command_time.tv_sec = 0;
-    ts->last_command_time.tv_nsec = 0;
+    atomic_fetch_add_explicit(&g_n_ready_threads, -1, memory_order_relaxed);
+    debug_logf("Shutting down QuickJS on thread %s\n",
+               ts->socket_state->unix_socket_filename);
+    cleanup_thread_state(ts);
   }
 }
 
@@ -1282,7 +1314,7 @@ int main(int argc, char *argv[]) {
   for (int n = 0; n < n_threads; ++n) {
     debug_logf("Creating thread %i\n", n);
     init_socket_state(&g_socket_states[n], g_cmd_args.socket_path[n]);
-    if (0 != init_thread_state(&g_thread_states[n], &g_socket_states[n])) {
+    if (0 != init_thread_state(&g_thread_states[n], &g_socket_states[n], n)) {
       release_logf("Error initializing thread %i\n", n);
       if (g_module_bytecode_size != 0 && g_module_bytecode)
         munmap_or_warn((void *)g_module_bytecode, g_module_bytecode_size);
