@@ -54,7 +54,6 @@ void mutex_init_(pthread_mutex_t *m, const char *file, int line) {
 }
 
 void release_logf(const char *fmt, ...) {
-  return;
   va_list args;
   va_start(args, fmt);
 
