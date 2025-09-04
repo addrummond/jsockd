@@ -576,6 +576,53 @@ static void TEST_cmdargs_dash_t_error_on_double_flag(void) {
   TEST_ASSERT(strstr(cmdargs_errlog_buf, "-t "));
 }
 
+static void TEST_cmdargs_dash_i(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"jsockd", "-s", "/tmp/sock", "-m", "foo.qjsbc", "-i", "500"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r == 0);
+  TEST_ASSERT(cmdargs.max_idle_time_us == 500);
+}
+
+static void TEST_cmdargs_dash_i_error_on_0(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"jsockd", "-s", "/tmp/sock", "-m", "foo.qjsbc", "-i", "0"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r != 0);
+  TEST_ASSERT(strstr(cmdargs_errlog_buf, "-i "));
+}
+
+static void TEST_cmdargs_dash_i_error_on_negative(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"jsockd", "-s", "/tmp/sock", "-m", "foo.qjsbc", "-i", "-1"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r != 0);
+  TEST_ASSERT(strstr(cmdargs_errlog_buf, "-i "));
+}
+
+static void TEST_cmdargs_dash_i_error_on_non_numeric(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"jsockd",    "-s", "/tmp/sock", "-m",
+                  "foo.qjsbc", "-i", "sfdsff"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r != 0);
+  TEST_ASSERT(strstr(cmdargs_errlog_buf, "-i "));
+}
+
+static void TEST_cmdargs_dash_i_error_on_double_flag(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"jsockd", "-i",        "500", "-s", "/tmp/sock",
+                  "-m",     "foo.qjsbc", "-i",  "50"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r != 0);
+  TEST_ASSERT(strstr(cmdargs_errlog_buf, "-i "));
+}
+
 static void TEST_cmdargs_dash_k(void) {
   CmdArgs cmdargs = {0};
   char *argv[] = {"jsockd", "-k", "keyfileprefix"};
@@ -871,6 +918,11 @@ TEST_LIST = {T(wait_group_inc_and_wait_basic_use_case),
              T(cmdargs_dash_t_error_on_negative),
              T(cmdargs_dash_t_error_on_non_numeric),
              T(cmdargs_dash_t_error_on_double_flag),
+             T(cmdargs_dash_i),
+             T(cmdargs_dash_i_error_on_0),
+             T(cmdargs_dash_i_error_on_negative),
+             T(cmdargs_dash_i_error_on_non_numeric),
+             T(cmdargs_dash_i_error_on_double_flag),
              T(cmdargs_dash_k),
              T(cmdargs_dash_c_with_dash_k),
              T(cmdargs_dash_c_with_dash_k_error_if_dash_k_has_no_arg),

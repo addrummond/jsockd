@@ -12,7 +12,8 @@ static int n_flags_set(const CmdArgs *cmdargs) {
          (cmdargs->source_map_file != NULL) + (cmdargs->n_sockets != 0) +
          (cmdargs->socket_sep_char_set != false) + (cmdargs->version != false) +
          (cmdargs->max_command_runtime_us != 0) +
-         (cmdargs->key_file_prefix != NULL) + (cmdargs->mod_to_compile != NULL);
+         (cmdargs->max_idle_time_us != 0) + (cmdargs->key_file_prefix != NULL) +
+         (cmdargs->mod_to_compile != NULL);
 }
 
 static int parse_cmd_args_helper(int argc, char **argv,
@@ -54,6 +55,24 @@ static int parse_cmd_args_helper(int argc, char **argv,
         return -1;
       }
       cmdargs->max_command_runtime_us = (uint64_t)v;
+    } else if (0 == strcmp(argv[i], "-i")) {
+      ++i;
+      if (i >= argc) {
+        errlog("Error: -i requires an argument (max thread idle time in "
+               "microseconds)\n");
+        return -1;
+      }
+      if (cmdargs->max_idle_time_us != 0) {
+        errlog("Error: -i can be specified at most once\n");
+        return -1;
+      }
+      errno = 0;
+      long long int v = strtoll(argv[i], NULL, 10);
+      if (errno != 0 || v <= 0) {
+        errlog("Error: -i requires a valid integer argument > 0\n");
+        return -1;
+      }
+      cmdargs->max_idle_time_us = (uint64_t)v;
     } else if (0 == strcmp(argv[i], "-s")) {
       ++i;
       bool after_double_dash = false;
@@ -181,6 +200,8 @@ static int parse_cmd_args_helper(int argc, char **argv,
 
   if (cmdargs->max_command_runtime_us == 0)
     cmdargs->max_command_runtime_us = DEFAULT_MAX_COMMAND_RUNTIME_US;
+  if (cmdargs->max_idle_time_us == 0)
+    cmdargs->max_idle_time_us = DEFAULT_MAX_IDLE_TIME_US;
 
   return 0;
 }
@@ -190,7 +211,8 @@ int parse_cmd_args(int argc, char **argv, void (*errlog)(const char *fmt, ...),
   if (parse_cmd_args_helper(argc, argv, errlog, cmdargs) < 0) {
     const char *cmdname = argc > 0 ? basename(argv[0]) : "jsockd";
     errlog("Usage: %s [-m <module_bytecode_file>] [-sm <source_map_file>] [-b "
-           "XX] [-t <max_command_runtime_us>] -s <socket1_path> "
+           "XX] [-t <max_command_runtime_us>] [-i <max_idle_time_us>] -s "
+           "<socket1_path> "
            "[<socket2_path> ...]\n       %s -c <module_to_compile> "
            "<output_file> [-k "
            "<private_key_file>]\n       %s -k <key_file_prefix>",
