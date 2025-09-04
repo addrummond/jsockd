@@ -1036,9 +1036,15 @@ static int line_handler(const char *line, size_t len, ThreadState *ts,
   debug_logf("LINE %i on %s: %s\n", ts->line_n,
              ts->socket_state->unix_socket_filename, line);
 
-  // Allow the truncation logic to be triggered by a special '?truncated' line
-  // in debug builds so that we don't have to generate large inputs in the
-  // Valgrind tests.
+  if (0 != clock_gettime(MONOTONIC_CLOCK, &ts->last_active_time)) {
+    release_logf("Error getting time in line_handler thread %i: %s\n",
+                 ts->thread_index, strerror(errno));
+    return -1;
+  }
+
+  // Allow the truncation logic to be triggered by a special '?truncated'
+  // line in debug builds so that we don't have to generate large inputs
+  // in the Valgrind tests.
   if (truncated || (CMAKE_BUILD_TYPE_IS_DEBUG && !strcmp(line, "?truncated")))
     ts->truncated = true;
 
@@ -1126,7 +1132,8 @@ static void tick_handler(ThreadState *ts) {
     return;
   struct timespec now;
   if (0 != clock_gettime(MONOTONIC_CLOCK, &now)) {
-    debug_log("Error getting time in tick handler\n");
+    release_logf("Error getting time in tick_handler thread %i: %s\n",
+                 ts->thread_index, strerror(errno));
     return;
   }
   uint64_t ns_diff = ns_time_diff(&now, &ts->last_active_time);
@@ -1366,8 +1373,8 @@ int main(int argc, char *argv[]) {
 
   global_cleanup();
 
-  // logging mutex is now destroyed and we're only running one thread, so we can
-  // use stdio directly
+  // logging mutex is now destroyed and we're only running one thread, so we
+  // can use stdio directly
   if (CMAKE_BUILD_TYPE_IS_DEBUG)
     fputs("Global cleanup complete\n", stderr);
 
