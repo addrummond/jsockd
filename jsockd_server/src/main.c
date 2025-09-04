@@ -50,6 +50,7 @@ static const uint8_t *g_module_bytecode;
 static size_t g_module_bytecode_size;
 
 static atomic_int g_n_threads;
+static atomic_int g_n_ready_threads;
 
 static const uint8_t *g_source_map;
 static size_t g_source_map_size;
@@ -204,6 +205,7 @@ typedef struct ThreadState {
   pthread_t replacement_thread;
   const char *trampoline_line;
   int trampoline_line_len;
+  struct timespec last_command_time;
 #ifdef CMAKE_BUILD_TYPE_DEBUG
   bool manually_trigger_thread_state_reset;
 #endif
@@ -320,7 +322,8 @@ static int listen_on_unix_socket_line_handler_wrapper(const char *line,
 static void
 listen_on_unix_socket(ThreadState *ts,
                       int (*line_handler)(const char *line, size_t len,
-                                          ThreadState *data, bool truncated)) {
+                                          ThreadState *data, bool truncated),
+                      void (*tick_handler)(ThreadState *ts)) {
   ListenOnUnixSocketLineHandler louslh = {.ts = ts,
                                           .line_handler = line_handler};
   char *line_buf_buffer = calloc(LINE_BUF_BYTES, sizeof(char));
@@ -377,6 +380,8 @@ listen_on_unix_socket(ThreadState *ts,
       goto error_no_inc;
     } break;
     }
+
+    tick_handler(ts);
 
     int exit_value = line_buf_read(&line_buf, g_cmd_args.socket_sep_char,
                                    lb_read, &ts->socket_state->streamfd,
@@ -650,6 +655,7 @@ static int init_thread_state(ThreadState *ts, SocketState *socket_state) {
   ts->my_replacement = NULL;
   ts->trampoline_line = NULL;
   ts->trampoline_line_len = 0;
+  memset(&ts->last_command_time, sizeof(ts->last_command_time), 0);
   atomic_init(&ts->replacement_thread_state, REPLACEMENT_THREAD_STATE_NONE);
 
 #ifdef DEBUG
@@ -1009,49 +1015,7 @@ static int line_handler(const char *line, size_t len, ThreadState *ts,
   if (truncated || (CMAKE_BUILD_TYPE_IS_DEBUG && !strcmp(line, "?truncated")))
     ts->truncated = true;
 
-  if (!truncated) {
-    if (!strcmp("?quit", line)) {
-      if (!JS_IsUndefined(ts->compiled_query)) {
-        JS_FreeValue(ts->ctx, ts->compiled_query);
-        ts->compiled_query = JS_UNDEFINED;
-      }
-      atomic_store_explicit(&g_interrupted_or_error, true,
-                            memory_order_relaxed);
-      write_const_to_stream(ts, "quit\n");
-      return EXIT_ON_QUIT_COMMAND;
-    }
-    if (!strcmp("?reset", line)) {
-      if (!JS_IsUndefined(ts->compiled_query)) {
-        JS_FreeValue(ts->ctx, ts->compiled_query);
-        ts->compiled_query = JS_UNDEFINED;
-      }
-      ts->line_n = 0;
-      ts->truncated = false;
-      write_const_to_stream(ts, "reset\n");
-      return 0;
-    }
-    if (!strcmp("?exectime", line)) {
-      char exec_time_buf[21]; // 20 digits for int64_t, + 1 for zeroterm
-      int exec_time_len = snprintf(
-          exec_time_buf, sizeof(exec_time_buf) / sizeof(exec_time_buf[0]),
-          "%" PRId64, ts->last_command_exec_time_ns);
-      write_to_stream(
-          ts, exec_time_buf,
-          MIN(exec_time_len,
-              (int)(sizeof(exec_time_buf) / sizeof(exec_time_buf[0]) - 1)));
-      write_const_to_stream(ts, "\n");
-      return 0;
-    }
-#ifdef CMAKE_BUILD_TYPE_DEBUG
-    if (!strcmp("?tsreset", line)) {
-      ts->manually_trigger_thread_state_reset = true;
-      write_const_to_stream(ts, "tsreset\n");
-      return 0;
-    }
-#endif
-  }
-
-  if (ts->truncated) {
+  if (truncated) {
     if (ts->line_n == 2) {
       ts->truncated = false;
       ts->line_n = 0;
@@ -1060,14 +1024,52 @@ static int line_handler(const char *line, size_t len, ThreadState *ts,
         ts->compiled_query = JS_UNDEFINED;
       }
       write_to_stream(ts, ts->current_uuid, ts->current_uuid_len);
-      write_const_to_stream(ts, " exception \"jsockd command was too long "
-                                "and had to be truncated\"\n");
+      write_const_to_stream(ts, " exception \"jsockd command was too long\n");
     } else {
       // we'll signal an error once the client has sent the third line
       ts->line_n++;
     }
     return 0;
   }
+
+  if (!strcmp("?quit", line)) {
+    if (!JS_IsUndefined(ts->compiled_query)) {
+      JS_FreeValue(ts->ctx, ts->compiled_query);
+      ts->compiled_query = JS_UNDEFINED;
+    }
+    atomic_store_explicit(&g_interrupted_or_error, true, memory_order_relaxed);
+    write_const_to_stream(ts, "quit\n");
+    return EXIT_ON_QUIT_COMMAND;
+  }
+  if (!strcmp("?reset", line)) {
+    if (!JS_IsUndefined(ts->compiled_query)) {
+      JS_FreeValue(ts->ctx, ts->compiled_query);
+      ts->compiled_query = JS_UNDEFINED;
+    }
+    ts->line_n = 0;
+    ts->truncated = false;
+    write_const_to_stream(ts, "reset\n");
+    return 0;
+  }
+  if (!strcmp("?exectime", line)) {
+    char exec_time_buf[21]; // 20 digits for int64_t, + 1 for zeroterm
+    int exec_time_len = snprintf(
+        exec_time_buf, sizeof(exec_time_buf) / sizeof(exec_time_buf[0]),
+        "%" PRId64, ts->last_command_exec_time_ns);
+    write_to_stream(
+        ts, exec_time_buf,
+        MIN(exec_time_len,
+            (int)(sizeof(exec_time_buf) / sizeof(exec_time_buf[0]) - 1)));
+    write_const_to_stream(ts, "\n");
+    return 0;
+  }
+#ifdef CMAKE_BUILD_TYPE_DEBUG
+  if (!strcmp("?tsreset", line)) {
+    ts->manually_trigger_thread_state_reset = true;
+    write_const_to_stream(ts, "tsreset\n");
+    return 0;
+  }
+#endif
 
   if (line[0] == '?') {
     write_const_to_stream(ts, "bad command\n");
@@ -1088,9 +1090,29 @@ static int line_handler(const char *line, size_t len, ThreadState *ts,
   }
 }
 
+static void tick_handler(ThreadState *ts) {
+  if (atomic_load_explicit(&g_n_ready_threads, memory_order_relaxed) <= 1)
+    return;
+  if (ts->last_command_time.tv_sec == 0 && ts->last_command_time.tv_nsec == 0)
+    return;
+  struct timespec now;
+  if (0 != clock_gettime(MONOTONIC_CLOCK, &now)) {
+    debug_logf("Error getting time in tick handler\n");
+    return;
+  }
+  uint64_t ns_diff = ns_time_diff(&now, &ts->last_command_time);
+  if (ns_diff >= NS_BEFORE_QUICKJS_DEINIT &&
+      REPLACEMENT_THREAD_STATE_NONE ==
+          atomic_load_explicit(&ts->replacement_thread_state,
+                               memory_order_relaxed)) {
+    ts->last_command_time.tv_sec = 0;
+    ts->last_command_time.tv_nsec = 0;
+  }
+}
+
 static void *listen_thread_func(void *data) {
   ThreadState *ts = (ThreadState *)data;
-  listen_on_unix_socket(ts, line_handler);
+  listen_on_unix_socket(ts, line_handler, tick_handler);
   debug_log("Listen thread terminating...\n");
   return NULL;
 }
@@ -1243,6 +1265,8 @@ int main(int argc, char *argv[]) {
 
   int n_threads = MIN(g_cmd_args.n_sockets, MAX_THREADS);
   atomic_store_explicit(&g_n_threads, g_cmd_args.n_sockets,
+                        memory_order_relaxed);
+  atomic_store_explicit(&g_n_ready_threads, g_cmd_args.n_sockets,
                         memory_order_relaxed);
 
   if (0 != wait_group_init(&g_thread_ready_wait_group, n_threads)) {
