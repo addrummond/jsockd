@@ -75,7 +75,7 @@ index 0cf9a12..ff866c1 100644
 -                if (no_recurse)
 -                    return (intptr_t)cptr;
 +                if (no_recurse) {
-+                    *out_ret = cptr;
++                    *out_ret = (uint8_t *)cptr;
 +                    return 1;
 +                }
                  ret = 1;
