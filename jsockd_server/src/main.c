@@ -304,10 +304,25 @@ static int initialize_and_listen_on_unix_socket(SocketState *socket_state) {
   return 0;
 }
 
-static void listen_on_unix_socket(ThreadState *ts,
-                                  int (*line_handler)(const char *line,
+typedef struct {
+  ThreadState *ts;
+  int (*line_handler)(const char *line, size_t len, ThreadState *data,
+                      bool truncated);
+} ListenOnUnixSocketLineHandler;
+
+static int listen_on_unix_socket_line_handler_wrapper(const char *line,
                                                       size_t len, void *data,
-                                                      bool truncated)) {
+                                                      bool truncated) {
+  ListenOnUnixSocketLineHandler *lh = (ListenOnUnixSocketLineHandler *)data;
+  return lh->line_handler(line, len, lh->ts, truncated);
+}
+
+static void
+listen_on_unix_socket(ThreadState *ts,
+                      int (*line_handler)(const char *line, size_t len,
+                                          ThreadState *data, bool truncated)) {
+  ListenOnUnixSocketLineHandler louslh = {.ts = ts,
+                                          .line_handler = line_handler};
   char *line_buf_buffer = calloc(LINE_BUF_BYTES, sizeof(char));
   LineBuf line_buf = {.buf = line_buf_buffer, .size = LINE_BUF_BYTES};
 
@@ -363,9 +378,10 @@ static void listen_on_unix_socket(ThreadState *ts,
     } break;
     }
 
-    int exit_value =
-        line_buf_read(&line_buf, g_cmd_args.socket_sep_char, lb_read,
-                      &ts->socket_state->streamfd, line_handler, (void *)ts);
+    int exit_value = line_buf_read(&line_buf, g_cmd_args.socket_sep_char,
+                                   lb_read, &ts->socket_state->streamfd,
+                                   listen_on_unix_socket_line_handler_wrapper,
+                                   (void *)&louslh);
 
     while (exit_value == TRAMPOLINE) {
       JS_UpdateStackTop(ts->rt);
@@ -982,9 +998,8 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
   return ts->socket_state->stream_io_err;
 }
 
-static int line_handler(const char *line, size_t len, void *data,
+static int line_handler(const char *line, size_t len, ThreadState *ts,
                         bool truncated) {
-  ThreadState *ts = (ThreadState *)data;
   debug_logf("LINE %i on %s: %s\n", ts->line_n,
              ts->socket_state->unix_socket_filename, line);
 
