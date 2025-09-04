@@ -4,6 +4,7 @@
 #define MAX_THREADS 8
 #define MESSAGE_UUID_MAX_BYTES 32
 #define DEFAULT_MAX_COMMAND_RUNTIME_US 250000
+#define DEFAULT_MAX_IDLE_TIME_US 30000000
 
 // This is the interval at which threads pause IO on the UNIX socket to check
 // for exceptional conditions (e.g. SIGINT).
@@ -27,8 +28,5 @@
 
 #define PUBLIC_KEY_FILE_SUFFIX ".pubkey"
 #define PRIVATE_KEY_FILE_SUFFIX ".privkey"
-
-// 30 seconds
-#define NS_BEFORE_QUICKJS_DEINIT 30000000000
 
 #endif

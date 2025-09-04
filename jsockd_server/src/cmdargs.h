@@ -18,6 +18,7 @@ typedef struct {
   bool socket_sep_char_set;
   bool version;
   uint64_t max_command_runtime_us;
+  uint64_t max_idle_time_us;
   const char *key_file_prefix;
   const char *mod_to_compile;
   const char *mod_output_file;

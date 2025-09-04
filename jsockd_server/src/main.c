@@ -1137,7 +1137,7 @@ static void tick_handler(ThreadState *ts) {
     return;
   }
   uint64_t ns_diff = ns_time_diff(&now, &ts->last_active_time);
-  if (ns_diff >= NS_BEFORE_QUICKJS_DEINIT &&
+  if (ns_diff / 1000ULL >= g_cmd_args.max_idle_time_us &&
       REPLACEMENT_THREAD_STATE_NONE ==
           atomic_load_explicit(&ts->replacement_thread_state,
                                memory_order_relaxed)) {
