@@ -154,14 +154,14 @@ Compiles the specified ES6 module file to a QuickJS bytecode file. If the `-k` o
 
 #### Server
 
-| Option      | Argument(s)                | Description                                                                  | Default       | Repeatable | Required |
-|-------------|----------------------------|------------------------------------------------------------------------------|---------------|------------|----------|
-| `-m`        | `<module_bytecode_file>`   | Path to ES6 module bytecode file.                                            |               | No         | No       |
-| `-sm`       | `<source_map_file>`        | Path to source map file (e.g. `foo.js.map`). Can only be used with `-m`.     |               | No         | No       |
-| `-t`        | `<microseconds>`           | Maximum command runtime in microseconds (must be integer > 0).               | 250000        | No         | No       |
-| `-b`        | `<XX>`                     | Separator byte as two hex digits (e.g. `0A`).                                | `0A` (= `\n`) | No         | No       |
-| `-s`        | `<socket1> [socket2 ...]`  | One or more socket file paths.                                               |               | Yes        | Yes      |
-| `--`        | *(none)*                   | Indicates end of options for `-s` (allows socket paths starting with `-`).   |               | N/A        | No       |
+| Option      | Argument(s)                 | Description                                                                  | Default       | Repeatable | Required |
+|-------------|-----------------------------|------------------------------------------------------------------------------|---------------|------------|----------|
+| `-m`        | `<module_bytecode_file>`    | Path to ES6 module bytecode file.                                            |               | No         | No       |
+| `-sm`       | `<source_map_file>`         | Path to source map file (e.g. `foo.js.map`). Can only be used with `-m`.     |               | No         | No       |
+| `-t`        | `<microseconds>`            | Maximum command runtime in microseconds (must be integer > 0).               | 250000        | No         | No       |
+| `-b`        | `<XX>`                      | Separator byte as two hex digits (e.g. `0A`).                                | `0A` (= `\n`) | No         | No       |
+| `-s`        | `<socket1> [<socket2> ...]` | One or more socket file paths.                                               |               | Yes        | Yes      |
+| `--`        | *(none)*                    | Indicates end of options for `-s` (allows socket paths starting with `-`).   |               | N/A        | No       |
 
 ### 3.3 The socket protocol
 
