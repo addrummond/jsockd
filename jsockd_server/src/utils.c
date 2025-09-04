@@ -9,16 +9,13 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
-atomic_bool g_in_signal_handler;
-
 static pthread_mutex_t g_log_mutex;
 static atomic_bool g_log_mutex_initialized;
 
 void init_log_mutex(void) {
   int r = pthread_mutex_init(&g_log_mutex, NULL);
   if (r != 0) {
-    if (!atomic_load_explicit(&g_in_signal_handler, memory_order_relaxed))
-      fprintf(stderr, "Failed to initalize log mutex\n");
+    fprintf(stderr, "Failed to initalize log mutex\n");
     exit(1);
   }
   atomic_store_explicit(&g_log_mutex_initialized, true, memory_order_relaxed);
@@ -27,42 +24,37 @@ void init_log_mutex(void) {
 void destroy_log_mutex(void) {
   atomic_store_explicit(&g_log_mutex_initialized, false, memory_order_relaxed);
   if (0 != pthread_mutex_destroy(&g_log_mutex)) {
-    if (!atomic_load_explicit(&g_in_signal_handler, memory_order_relaxed))
-      fprintf(stderr, "Unable to destroy log mutex\n");
+    fprintf(stderr, "Unable to destroy log mutex\n");
     exit(1);
   }
 }
 
 void mutex_lock_(pthread_mutex_t *m, const char *file, int line) {
   if (0 != pthread_mutex_lock(m)) {
-    if (!atomic_load_explicit(&g_in_signal_handler, memory_order_relaxed))
-      fprintf(stderr, "Failed to lock mutex at %s:%i: %s\n", file, line,
-              strerror(errno));
+    fprintf(stderr, "Failed to lock mutex at %s:%i: %s\n", file, line,
+            strerror(errno));
     exit(1);
   }
 }
 
 void mutex_unlock_(pthread_mutex_t *m, const char *file, int line) {
   if (0 != pthread_mutex_unlock(m)) {
-    if (!atomic_load_explicit(&g_in_signal_handler, memory_order_relaxed))
-      fprintf(stderr, "Failed to unlock mutex at %s:%i: %s\n", file, line,
-              strerror(errno));
+    fprintf(stderr, "Failed to unlock mutex at %s:%i: %s\n", file, line,
+            strerror(errno));
     exit(1);
   }
 }
 
 void mutex_init_(pthread_mutex_t *m, const char *file, int line) {
   if (0 != pthread_mutex_init(m, NULL)) {
-    if (!atomic_load_explicit(&g_in_signal_handler, memory_order_relaxed))
-      fprintf(stderr, "Failed to initialized mutex at %s:%i: %s\n", file, line,
-              strerror(errno));
+    fprintf(stderr, "Failed to initialized mutex at %s:%i: %s\n", file, line,
+            strerror(errno));
     exit(1);
   }
 }
 
 void release_logf(const char *fmt, ...) {
-  if (atomic_load_explicit(&g_in_signal_handler, memory_order_relaxed))
-    return;
+  return;
   va_list args;
   va_start(args, fmt);
 

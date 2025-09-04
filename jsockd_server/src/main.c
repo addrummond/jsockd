@@ -38,13 +38,13 @@
 #include <time.h>
 #include <unistd.h>
 
-extern atomic_bool g_in_signal_handler;
-
 extern const uint32_t g_backtrace_module_bytecode_size;
 extern const uint8_t g_backtrace_module_bytecode[];
 
 extern const uint32_t g_shims_module_bytecode_size;
 extern const uint8_t g_shims_module_bytecode[];
+
+static atomic_bool g_sigint_triggered;
 
 static const uint8_t *g_module_bytecode;
 static size_t g_module_bytecode_size;
@@ -1170,32 +1170,13 @@ static void global_cleanup(void) {
 }
 
 static void SIGINT_handler(int sig) {
-  atomic_store_explicit(&g_in_signal_handler, true, memory_order_relaxed);
+  atomic_store_explicit(&g_sigint_triggered, true, memory_order_relaxed);
   atomic_store_explicit(&g_interrupted_or_error, true, memory_order_relaxed);
 
   // Using stdio inside an interrupt handler is not safe, but calls to write
   // are explicilty allowed.
   const char msg[] = "\nSIGINT received, cleaning up...\n";
   write_all(2, msg, sizeof(msg) - 1);
-
-  // We received SIGINT while we were still in the middle of waiting for
-  // threads to be ready. Give up on trying to do a proper teardown.
-  if (wait_group_n_remaining(&g_thread_ready_wait_group) > 0)
-    exit(1);
-
-  for (int i = 0; i < atomic_load_explicit(&g_n_threads, memory_order_relaxed);
-       ++i)
-    pthread_join(g_threads[i], NULL); // can fail, but no useful error handling
-                                      // to be done
-
-  if (atomic_load_explicit(&g_global_init_complete, memory_order_relaxed))
-    global_cleanup();
-
-  for (int i = 0; i < atomic_load_explicit(&g_n_threads, memory_order_relaxed);
-       ++i)
-    destroy_thread_state(&g_thread_states[i]);
-
-  exit(1);
 }
 
 int main(int argc, char *argv[]) {
@@ -1343,6 +1324,9 @@ int main(int argc, char *argv[]) {
     if (g_thread_states[i].exit_status != 0)
       return EXIT_FAILURE;
   }
+
+  if (atomic_load_explicit(&g_sigint_triggered, memory_order_relaxed))
+    return EXIT_FAILURE;
 
   return EXIT_SUCCESS;
 }
