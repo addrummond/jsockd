@@ -258,7 +258,7 @@ export { flubBar, blagFoo }
 
 To build JSockD from source, you must first build QuickJS and then the JS server.
 
-Tools necessary for the build are listed in `.tool-versions` and can be installed using [mise-en-place](https://mise.jdx.dev/) or [asdf](https://asdf-vm.com/).
+The version of CMake required for the build is listed in `.tool-versions`, and can be installed using [mise-en-place](https://mise.jdx.dev/) or [asdf](https://asdf-vm.com/).
 
 ### 5.1 Building QuickJS
 
