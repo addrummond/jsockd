@@ -655,7 +655,7 @@ static int init_thread_state(ThreadState *ts, SocketState *socket_state) {
   ts->my_replacement = NULL;
   ts->trampoline_line = NULL;
   ts->trampoline_line_len = 0;
-  memset(&ts->last_command_time, sizeof(ts->last_command_time), 0);
+  memset(&ts->last_command_time, 0, sizeof(ts->last_command_time));
   atomic_init(&ts->replacement_thread_state, REPLACEMENT_THREAD_STATE_NONE);
 
 #ifdef DEBUG
@@ -851,7 +851,7 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
 
   if (0 != clock_gettime(MONOTONIC_CLOCK, &ts->last_js_execution_start)) {
     JS_FreeValue(ts->ctx, ts->compiled_query);
-    release_logf("Error getting time in handle_line_3_parameter [1]\n");
+    release_log("Error getting time in handle_line_3_parameter [1]\n");
     return -1;
   }
 
@@ -930,7 +930,7 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
     JS_FreeValue(ts->ctx, parsed_arg);
     JS_FreeValue(ts->ctx, ret);
     JS_FreeValue(ts->ctx, stringified);
-    release_logf("Error getting time in handle_line_3_parameter [2]\n");
+    release_log("Error getting time in handle_line_3_parameter [2]\n");
     return -1;
   }
 
@@ -1097,7 +1097,7 @@ static void tick_handler(ThreadState *ts) {
     return;
   struct timespec now;
   if (0 != clock_gettime(MONOTONIC_CLOCK, &now)) {
-    debug_logf("Error getting time in tick handler\n");
+    debug_log("Error getting time in tick handler\n");
     return;
   }
   uint64_t ns_diff = ns_time_diff(&now, &ts->last_command_time);
