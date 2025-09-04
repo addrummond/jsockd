@@ -51,10 +51,10 @@ index 9fcb7a6..84db494 100644
 +
  #endif  /* CUTILS_H */
 diff --git a/libregexp.c b/libregexp.c
-index 2b33c86..2254199 100644
+index 0cf9a12..ff866c1 100644
 --- a/libregexp.c
 +++ b/libregexp.c
-@@ -2711,10 +2711,11 @@ static int lre_poll_timeout(REExecContext *s)
+@@ -2722,10 +2722,11 @@ static int lre_poll_timeout(REExecContext *s)
  }
  
  /* return 1 if match, 0 if not match or < 0 if error. */
@@ -68,20 +68,20 @@ index 2b33c86..2254199 100644
  {
      int opcode, ret;
      int cbuf_type;
-@@ -2731,8 +2732,10 @@ static intptr_t lre_exec_backtrack(REExecContext *s, uint8_t **capture,
+@@ -2742,8 +2743,10 @@ static intptr_t lre_exec_backtrack(REExecContext *s, uint8_t **capture,
          case REOP_match:
              {
                  REExecState *rs;
 -                if (no_recurse)
 -                    return (intptr_t)cptr;
 +                if (no_recurse) {
-+                    *out_ret = (uint8_t *)cptr;
++                    *out_ret = cptr;
 +                    return 1;
 +                }
                  ret = 1;
                  goto recurse;
              no_match:
-@@ -3111,14 +3114,15 @@ static intptr_t lre_exec_backtrack(REExecContext *s, uint8_t **capture,
+@@ -3122,14 +3125,15 @@ static intptr_t lre_exec_backtrack(REExecContext *s, uint8_t **capture,
                  for(;;) {
                      if (lre_poll_timeout(s))
                          return LRE_RET_TIMEOUT;
@@ -99,19 +99,19 @@ index 2b33c86..2254199 100644
                      q++;
                      if (q >= quant_max && quant_max != INT32_MAX)
                          break;
-@@ -3176,8 +3180,9 @@ int lre_exec(uint8_t **capture,
-         capture[i] = NULL;
-     alloca_size = s->stack_size_max * sizeof(stack_buf[0]);
-     stack_buf = alloca(alloca_size);
+@@ -3197,8 +3201,9 @@ int lre_exec(uint8_t **capture,
+         }
+     }
+
 +    uint8_t *out_ret;
      ret = lre_exec_backtrack(s, capture, stack_buf, 0, bc_buf + RE_HEADER_LEN,
--                             cbuf + (cindex << cbuf_type), FALSE);
-+                             cbuf + (cindex << cbuf_type), FALSE, &out_ret);
+-                             cptr, FALSE);
++                             cptr, FALSE, &out_ret);
      lre_realloc(s->opaque, s->state_stack, 0);
      return ret;
  }
 diff --git a/quickjs.c b/quickjs.c
-index caad931..f131366 100644
+index b93e282..c80e98c 100644
 --- a/quickjs.c
 +++ b/quickjs.c
 @@ -54,6 +54,8 @@
@@ -140,7 +140,7 @@ index caad931..f131366 100644
                                         in the 2 low bits */
              void *opaque;
          } init;
-@@ -5475,12 +5478,13 @@ JSValue JS_NewCFunctionData(JSContext *ctx, JSCFunctionData *func,
+@@ -5492,12 +5495,13 @@ JSValue JS_NewCFunctionData(JSContext *ctx, JSCFunctionData *func,
  
  static JSContext *js_autoinit_get_realm(JSProperty *pr)
  {
@@ -156,7 +156,7 @@ index caad931..f131366 100644
  }
  
  static void js_autoinit_free(JSRuntime *rt, JSProperty *pr)
-@@ -8133,7 +8137,7 @@ static int __exception JS_GetOwnPropertyNamesInternal(JSContext *ctx,
+@@ -8160,7 +8164,7 @@ static int __exception JS_GetOwnPropertyNamesInternal(JSContext *ctx,
      assert(sym_index == atom_count);
  
      if (num_keys_count != 0 && !num_sorted) {
@@ -165,7 +165,7 @@ index caad931..f131366 100644
                 ctx);
      }
      *ptab = tab_atom;
-@@ -9819,10 +9823,10 @@ static int JS_DefineAutoInitProperty(JSContext *ctx, JSValueConst this_obj,
+@@ -9846,10 +9850,10 @@ static int JS_DefineAutoInitProperty(JSContext *ctx, JSValueConst this_obj,
      pr = add_property(ctx, p, prop, (flags & JS_PROP_C_W_E) | JS_PROP_AUTOINIT);
      if (unlikely(!pr))
          return -1;
@@ -179,7 +179,7 @@ index caad931..f131366 100644
      pr->u.init.opaque = opaque;
      return TRUE;
  }
-@@ -29048,7 +29052,7 @@ static JSValue js_build_module_ns(JSContext *ctx, JSModuleDef *m)
+@@ -29159,7 +29163,7 @@ static JSValue js_build_module_ns(JSContext *ctx, JSModuleDef *m)
      }
  
      /* sort the exported names */
@@ -188,7 +188,7 @@ index caad931..f131366 100644
             sizeof(s->exported_names[0]), exported_names_cmp, ctx);
  
      for(i = 0; i < s->exported_names_count; i++) {
-@@ -29958,7 +29962,7 @@ static JSValue js_async_module_execution_fulfilled(JSContext *ctx, JSValueConst
+@@ -30069,7 +30073,7 @@ static JSValue js_async_module_execution_fulfilled(JSContext *ctx, JSValueConst
      }
  
      /* sort by increasing async_evaluation timestamp */
@@ -197,7 +197,7 @@ index caad931..f131366 100644
             exec_module_list_cmp, NULL);
  
      for(i = 0; i < exec_list->count; i++) {
-@@ -41831,7 +41835,7 @@ static JSValue js_array_sort(JSContext *ctx, JSValueConst this_val,
+@@ -41942,7 +41946,7 @@ static JSValue js_array_sort(JSContext *ctx, JSValueConst this_val,
          array[pos].pos = i;
          pos++;
      }
@@ -206,7 +206,7 @@ index caad931..f131366 100644
      if (asc.exception)
          goto exception;
  
-@@ -54391,7 +54395,7 @@ static JSValue js_typed_array_sort(JSContext *ctx, JSValueConst this_val,
+@@ -54498,7 +54502,7 @@ static JSValue js_typed_array_sort(JSContext *ctx, JSValueConst this_val,
                  array_idx[i] = i;
              tsc.array_ptr = array_ptr;
              tsc.elt_size = elt_size;
@@ -215,7 +215,7 @@ index caad931..f131366 100644
                     js_TA_cmp_generic, &tsc);
              if (tsc.exception) {
                  if (tsc.exception == 1)
-@@ -54437,7 +54441,7 @@ static JSValue js_typed_array_sort(JSContext *ctx, JSValueConst this_val,
+@@ -54544,7 +54548,7 @@ static JSValue js_typed_array_sort(JSContext *ctx, JSValueConst this_val,
              }
              js_free(ctx, array_idx);
          } else {
