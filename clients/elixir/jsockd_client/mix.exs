@@ -138,6 +138,9 @@ defmodule JsockdClient.MixProject do
 
       File.touch!(Path.join([priv_dir, "jsockd_js_server_version_tag_#{@jsockd_version}"]))
 
+      File.rm_rf!(Path.join([priv_dir, "jsockd-release-artifacts"]))
+
+      # Rename the extracted directory to a fixed name so that the rest of the code can find it.
       File.rename(
         Path.join([priv_dir, release_extracted_dirname]),
         Path.join([priv_dir, "jsockd-release-artifacts"])

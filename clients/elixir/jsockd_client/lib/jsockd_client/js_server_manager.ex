@@ -36,8 +36,6 @@ defmodule JSockDClient.JsServerManager do
           "jsockd-release-artifacts/jsockd#{if use_filc_when_available?, do: "/jsockd", else: ""}"
         ])
 
-    IO.inspect(bytecode_module_file, label: "MBF")
-
     port_id =
       Port.open({:spawn_executable, exec}, [
         :use_stdio,
