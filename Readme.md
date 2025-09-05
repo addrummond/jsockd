@@ -142,7 +142,7 @@ jsockd -v
 jsockd -k <key_file_prefix>
 ```
 
-Outputs two files: `<key_file_prefix>.pub` (the public key) and `<key_file_prefix>.pem` (the private key).
+Outputs two files: `<key_file_prefix>.pubkey` (the public key) and `<key_file_prefix>.privkey` (the private key).
 
 #### Compile a module file
 
