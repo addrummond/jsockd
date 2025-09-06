@@ -11,6 +11,7 @@
 typedef struct {
   char *buf;   // buffer for the line
   size_t size; // size of the buffer
+  // fields below can be zero initialized
   int start;
   int afsep;
   bool truncated;
