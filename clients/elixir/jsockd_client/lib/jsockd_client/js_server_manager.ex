@@ -249,10 +249,10 @@ defmodule JSockDClient.JsServerManager do
     sock
   end
 
-  defp get_thread(
-         unix_sockets_with_threads_orig,
-         unix_sockets_with_threads \\ unix_sockets_with_threads_orig
-       ) do
+  defp get_thread(unix_sockets_with_threads_orig),
+    do: get_thread(unix_sockets_with_threads_orig, unix_sockets_with_threads_orig)
+
+  defp get_thread(unix_sockets_with_threads_orig, unix_sockets_with_threads) do
     # Get the first thread/socket that isn't already busy processing a message,
     # or choose one at random if they're all busy. This way, the less busy we
     # are, the more QuickJS interpreters JSockD will shut down.
