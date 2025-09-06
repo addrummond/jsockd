@@ -192,8 +192,7 @@ defmodule JSockDClient.JsServerManager do
       raise "JSockDClient.JsServerManager not ready to send commands: no unix sockets available"
     end
 
-    {t, usockpid} = get_thread(state.unix_sockets_with_threads)
-    IO.inspect(t)
+    {_, usockpid} = get_thread(state.unix_sockets_with_threads)
 
     send(usockpid, {:send, message_uuid, function, argument_string, from, self()})
 
