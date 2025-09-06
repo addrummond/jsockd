@@ -26,6 +26,9 @@ defmodule JSockDClient.Application do
     max_command_runtime_us =
       Application.get_env(:jsockd_client, :max_command_runtime_us)
 
+    max_idle_time_us =
+      Application.get_env(:jsockd_client, :max_idle_time_us)
+
     use_filc_when_available? =
       Application.get_env(:jsockd_client, :use_filc_when_available?, false)
 
