@@ -54,8 +54,9 @@ static atomic_int g_n_ready_threads;
 
 static const uint8_t *g_source_map;
 static size_t g_source_map_size;
-static atomic_int g_source_map_load_count; // once all threads have loaded the
-// source map, we can munmap the file
+
+// once all threads have loaded the source map, we can munmap the file
+static atomic_int g_source_map_load_count;
 
 // Testing scenarios with collisions is less labor intensive if we use a smaller
 // number of bits in the debug build.
@@ -350,7 +351,6 @@ listen_on_unix_socket(ThreadState *ts,
     case GO_AROUND:
       goto accept_loop;
     case SIG_INTERRUPT_OR_ERROR: {
-      ts->exit_status = -1;
       goto error_no_inc;
     } break;
     }
@@ -384,7 +384,6 @@ listen_on_unix_socket(ThreadState *ts,
     case GO_AROUND:
       goto read_loop;
     case SIG_INTERRUPT_OR_ERROR: {
-      ts->exit_status = -1;
       goto error_no_inc;
     } break;
     }
