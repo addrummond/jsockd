@@ -13,6 +13,7 @@ typedef struct {
   size_t size; // size of the buffer
   int start;
   bool truncated;
+  int n;
 } LineBuf;
 
 #define LINE_BUF_READ_EOF -99999
@@ -23,5 +24,10 @@ int line_buf_read(LineBuf *b, char sep_char,
                   int (*line_handler)(const char *line, size_t line_len,
                                       void *data, bool truncated),
                   void *line_handler_data);
+
+int line_buf_replay(LineBuf *b, char sep_char,
+                    int (*line_handler)(const char *line, size_t line_len,
+                                        void *data, bool truncated),
+                    void *line_handler_data);
 
 #endif

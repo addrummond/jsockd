@@ -13,16 +13,28 @@ defmodule JSockDClient do
 
   The first argument passed to the JavaScript function is the precompiled bytecode module.
   """
+
+  # keep in sync with config.h
+  @default_max_command_runtime_us 250_000
+
   def send_js(function, argument) do
     message_uuid = :crypto.strong_rand_bytes(8) |> Base.encode64()
+
+    timeout_ms =
+      round(
+        (Application.get_env(:jsockd_client, :max_command_runtime_us) ||
+           @default_max_command_runtime_us) /
+          1000 * 10
+      )
 
     try do
       JSockDClient.JsServerManager
       |> GenServer.call(
         {:send_command, message_uuid, function, Jason.encode!(argument)},
-        _timeout = 800
+        _timeout = timeout_ms
       )
       |> parse_response()
+      |> IO.inspect()
     catch
       :exit, reason ->
         # The JS server implements its own timeout mechanism, so if we've been
