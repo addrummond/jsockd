@@ -11,6 +11,7 @@ int line_buf_read(LineBuf *b, char sep_char,
 
   if (to_read == 0) {
     b->start = 0;
+    b->afsep = 0;
     to_read = b->size;
     b->truncated = true;
   }
