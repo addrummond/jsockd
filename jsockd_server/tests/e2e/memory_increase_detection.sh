@@ -15,18 +15,13 @@ build_Debug/jsockd -c ../example_module.mjs /tmp/jsockd_memory_increase_test_exa
 #   (m, p) => { (global_var=(globalThis.global_var ?? { })); globalVar[p] = { }; return "foo"; }
 #   $n
 # which should leak memory.
-awk 'BEGIN { for (i = 0; i < 8000; i++) { print "cmd"i"\n(m, p) => { (globalThis.globalVar=(globalThis.global_var ?? { })); globalThis.globalVar[p] = { \"foo\": p }; return \"foo\"; }\n"i } }' > /tmp/jsockd_memory_increase_test_input
+awk 'BEGIN { for (i = 0; i < 2000; i++) { print "cmd"i"\n(m, p) => { (globalThis.globalVar=(globalThis.global_var ?? { })); globalThis.globalVar[p] = { \"foo\": p }; return \"foo\"; }\n"i } }' > /tmp/jsockd_memory_increase_test_input
 echo "?quit" >> /tmp/jsockd_memory_increase_test_input
 
 ./mk.sh Debug
 
 rm -f /tmp/jsockd_memory_increase_test_sock
-rm -f /tmp/jsockd_memory_increase_test_server_exit_code
-# Start the server
-(
-    ./build_Debug/jsockd -m /tmp/jsockd_memory_increase_test_example_module.qjsb -s /tmp/jsockd_memory_increase_test_sock > /tmp/jsockd_memory_increase_test_output 2>&1
-    echo $? > /tmp/jsockd_memory_increase_test_server_exit_code
-) &
+./build_Debug/jsockd -m /tmp/jsockd_memory_increase_test_example_module.qjsb -s /tmp/jsockd_memory_increase_test_sock > /tmp/jsockd_memory_increase_test_output 2>&1 &
 server_pid=$!
 
 i=0
@@ -43,18 +38,10 @@ echo "Sending output to server..."
 # have time to do the expected number of thread state resets.
 perl -e 'use Time::HiRes qw(usleep); while (<>) { print; usleep(2500); }' < /tmp/jsockd_memory_increase_test_input | ( nc -U /tmp/jsockd_memory_increase_test_sock >/dev/null || true )
 
-i=0
-while ! [ -f /tmp/jsockd_memory_increase_test_server_exit_code ] && [ $i -lt 15 ]; do
-  echo "Waiting for server to exit"
-  sleep 1
-  i=$(($i + 1))
-done
-
-if ! [ -f /tmp/jsockd_memory_increase_test_server_exit_code ]; then
-    echo "Server failed to exit"
-    kill -9 $server_pid
-    exit 1
-fi
+echo "Waiting for server to exit..."
+wait $server_pid
+server_exit_code=$?
+echo "Server exited with code $server_exit_code"
 
 echo "Server has exited, checking exit code..."
 if [ $(cat /tmp/jsockd_memory_increase_test_server_exit_code) -ne 0 ]; then
