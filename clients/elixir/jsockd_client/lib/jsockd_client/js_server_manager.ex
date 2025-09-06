@@ -15,6 +15,7 @@ defmodule JSockDClient.JsServerManager do
           jsockd_exec: jsockd_exec,
           source_map: source_map,
           max_command_runtime_us: max_command_runtime_us,
+          max_idle_time_us: max_idle_time_us,
           use_filc_when_available?: use_filc_when_available?
         }
       ) do
@@ -52,6 +53,11 @@ defmodule JSockDClient.JsServerManager do
           end ++
             if max_command_runtime_us do
               ["-t", "#{max_command_runtime_us}"]
+            else
+              []
+            end ++
+            if max_idle_time_us do
+              ["-i", "#{max_idle_time_us}"]
             else
               []
             end ++
