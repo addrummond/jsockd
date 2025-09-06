@@ -185,7 +185,7 @@ defmodule JSockDClient.JsServerManager do
       raise "JSockDClient.JsServerManager not ready to send commands: no unix sockets available"
     end
 
-    {_, usockpid} = Enum.random(state.unix_sockets_with_threads)
+    {_, usockpid} = get_thread(state.unix_sockets_with_threads)
     send(usockpid, {:send, message_uuid, function, argument_string, from, self()})
 
     {:noreply, %{state | pending_calls: Map.put(state.pending_calls, from, message_uuid)}}
@@ -241,5 +241,27 @@ defmodule JSockDClient.JsServerManager do
     {:ok, sock} = :socket.open(:local, :stream, :default)
     :ok = :socket.connect(sock, %{family: :local, path: path})
     sock
+  end
+
+  defp get_thread(
+         unix_sockets_with_threads_orig,
+         unix_sockets_with_threads \\ unix_sockets_with_threads_orig
+       ) do
+    # Get the first thread/socket that isn't already busy processing a message,
+    # or choose one at random if they're all busy. This way, the less busy we
+    # are, the more QuickJS interpreters JSockD will shut down.
+    case unix_sockets_with_threads do
+      [] ->
+        Enum.random(unix_sockets_with_threads_orig)
+
+      [elem = {_, pid} | rest] ->
+        case :erlang.process_info(pid, :message_queue_len) do
+          {:message_queue_len, 0} ->
+            elem
+
+          {:message_queue_len, _} ->
+            get_thread(unix_sockets_with_threads_orig, rest)
+        end
+    end
   end
 end
