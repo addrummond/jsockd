@@ -34,7 +34,6 @@ defmodule JSockDClient do
         _timeout = timeout_ms
       )
       |> parse_response()
-      |> IO.inspect()
     catch
       :exit, reason ->
         # The JS server implements its own timeout mechanism, so if we've been
