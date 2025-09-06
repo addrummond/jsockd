@@ -978,6 +978,12 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
 
   ts->memory_check_count =
       ((ts->memory_check_count + 1) % MEMORY_CHECK_INTERVAL);
+  if (manually_trigger_thread_state_reset(ts))
+    debug_log("TEMP LOG 1\n");
+  if (0 == ts->memory_check_count)
+    debug_log("TEMP LOG 2\n");
+  if (atomic_load_explicit(&ts->replacement_thread_state, memory_order_relaxed))
+    debug_log("TEMP LOG 3\n");
   if ((manually_trigger_thread_state_reset(ts) ||
        0 == ts->memory_check_count) &&
       REPLACEMENT_THREAD_STATE_NONE ==
