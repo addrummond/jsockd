@@ -1,5 +1,4 @@
 #!/bin/sh
-set -e
 
 #
 # This test repeatedly sends the server different commands so that its query
@@ -37,11 +36,7 @@ if [ ! -z "$JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX" ]; then
 fi
 
 # Start the server with Valgrind
-(
-    valgrind --error-exitcode=1 --leak-check=full --track-origins=yes -- \
-        ./build_Debug/jsockd $DASH_B_ARG -i 500000 -m /tmp/bundle.qjsb -s /tmp/jsockd_test_sock1 /tmp/jsockd_test_sock2 -sm tests/valgrind/bundle.mjs.map
-    echo $? > /tmp/jsockd_test_valgrind_exit_code
-) &
+valgrind --error-exitcode=1 --leak-check=full --track-origins=yes -- ./build_Debug/jsockd $DASH_B_ARG -i 500000 -m /tmp/bundle.qjsb -s /tmp/jsockd_test_sock1 /tmp/jsockd_test_sock2 -sm tests/valgrind/bundle.mjs.map &
 server_pid=$!
 
 # Start the client
@@ -72,29 +67,21 @@ server_pid=$!
 ) 2>&1 &
 client_pid=$!
 
+echo "Waiting for client..."
 wait $client_pid
+echo "Client terminated"
 
-i=0
-while [ ! -f /tmp/jsockd_test_valgrind_exit_code ] && [ $i -lt 60 ]; do
-  echo "Waiting for server to exit"
-  sleep 1
-  i=$(($i + 1))
-done
+echo "Waiting for server..."
+wait $server_pid
+valgrind_exit_code=$?
+echo "Server terminated"
 
-if ! [ -f /tmp/jsockd_test_valgrind_exit_code ]; then
-    echo "Server did not exit gracefully, killing it"
-    kill $server_pid || true
+echo "Valgrind exit code: $valgrind_exit_code"
+
+if [ $valgrind_exit_code -ne 0 ]; then
+    echo
+    echo "********************"
+    echo "Valgrind detected errors."
+    echo "********************"
     exit 1
-else
-    valgrind_exit_code=$(cat /tmp/jsockd_test_valgrind_exit_code)
-    echo "Valgrind exit code: $valgrind_exit_code"
-
-    if [ $valgrind_exit_code -ne 0 ]; then
-        echo
-        echo "********************"
-        echo "Valgrind detected errors."
-        echo "********************"
-    fi
-
-    exit $valgrind_exit_code
 fi
