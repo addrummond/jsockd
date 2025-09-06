@@ -669,10 +669,10 @@ static int init_thread_state(ThreadState *ts, SocketState *socket_state,
   atomic_init(&ts->replacement_thread_state, REPLACEMENT_THREAD_STATE_NONE);
 
 #ifdef CMAKE_BUILD_TYPE_DEBUG
-  ts->manually_trigger_thread_state_reset = false
+  ts->manually_trigger_thread_state_reset = false;
 #endif
 
-      return 0;
+  return 0;
 }
 
 // called whenever we want to clean a thread a state up
