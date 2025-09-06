@@ -748,6 +748,7 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
   if (ts->rt == NULL) {
     assert(rts == REPLACEMENT_THREAD_STATE_NONE);
     init_thread_state(ts, ts->socket_state, ts->thread_index);
+    atomic_fetch_add_explicit(&g_n_ready_threads, 1, memory_order_relaxed);
   }
 
   // Check to see if the thread state has been reinitialized (following a memory
