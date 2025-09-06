@@ -23,11 +23,12 @@ defmodule JSockDClient.JsServerManager do
 
     uid = :crypto.strong_rand_bytes(16) |> Base.encode16()
 
+    tmp = System.tmp_dir()
+
     unix_socket_paths =
       1..n_threads
       |> Enum.map(fn i ->
-        # TODO: in /tmp?
-        "/tmp/jsockd_#{uid}_#{i}.sock"
+        Path.join(tmp, "jsockd_#{uid}_#{i}.sock")
       end)
 
     exec =
