@@ -12,6 +12,7 @@ typedef struct {
   char *buf;   // buffer for the line
   size_t size; // size of the buffer
   int start;
+  int afsep;
   bool truncated;
   int n;
 } LineBuf;

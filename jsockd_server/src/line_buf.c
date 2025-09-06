@@ -29,23 +29,24 @@ int line_buf_replay(LineBuf *b, char sep_char,
                                         void *data, bool truncated),
                     void *line_handler_data) {
   int i;
-  int sep = -1;
-  int lh_r = 0;
-  for (i = b->start; i < b->start + b->n && lh_r >= 0; ++i) {
+  for (i = b->start; i < b->start + b->n; ++i) {
     if (b->buf[i] == sep_char) {
       b->buf[i] = '\0';
-      // Note: the parens around (sep + 1) are necessary to avoid (temporarily)
-      // decrementing b->buf to the position before its first byte, invoking the
-      // spectre of undefined behavior (consider the case where sep == -1).
-      lh_r = line_handler(b->buf + (sep + 1), i - sep - 1, line_handler_data,
-                          b->truncated);
-      sep = i;
+      int lh_r = line_handler(b->buf + b->afsep, i - b->afsep,
+                              line_handler_data, b->truncated);
       b->truncated = false;
+      if (lh_r < 0) {
+        b->buf[i] = sep_char;
+        b->start = b->afsep;
+        return lh_r;
+      }
+      b->afsep = i + 1;
     }
   }
 
-  memcpy(b->buf, b->buf + sep + 1, i - sep - 1);
-  b->start = i - sep - 1;
+  memmove(b->buf, b->buf + b->afsep, i - b->afsep);
+  b->start = i - b->afsep;
+  b->afsep = 0;
 
-  return lh_r < 0 ? lh_r : b->n;
+  return b->n;
 }
