@@ -339,6 +339,56 @@ static void TEST_line_buf_one_shot(void) {
   free(b.buf);
 }
 
+static void TEST_line_buf_replay_empty_case(void) {
+  LineBuf b = {.buf = malloc(sizeof(char) * 64), .size = 64};
+  const char *input = "line1\nline2\nline3\n";
+
+  int r;
+  int count = 0;
+  r = line_buf_read(&b, '\n', read_all_from_string, (void *)input,
+                    line_handler_inc_count, &count);
+  TEST_ASSERT(r == LINE_BUF_READ_EOF || r > 0);
+  TEST_ASSERT(count == 3);
+
+  r = line_buf_replay(&b, '\n', line_handler_never_called, NULL);
+
+  free(b.buf);
+}
+
+static int line_handler_fail_on_2(const char *line, size_t line_len, void *data,
+                                  bool truncated) {
+  fprintf(stderr, "HANDLER A: %.*s\n", (int)line_len, line);
+  if (line[4] == '2')
+    return -1;
+  ++*((int *)data);
+  return 0;
+}
+
+static int line_handler_inc_by_line_num(const char *line, size_t line_len,
+                                        void *data, bool truncated) {
+  fprintf(stderr, "HANDLER B: %.*s\n", (int)line_len, line);
+  *((int *)data) += (line[4] - '0');
+  return 0;
+}
+
+static void TEST_line_buf_replay_error_case(void) {
+  LineBuf b = {.buf = malloc(sizeof(char) * 64), .size = 64};
+  const char *input = "line1\nline2\nline3\n";
+
+  int r;
+  int count = 0;
+  r = line_buf_read(&b, '\n', read_all_from_string, (void *)input,
+                    line_handler_fail_on_2, &count);
+  TEST_ASSERT(r < 0);
+  TEST_ASSERT(count == 1);
+
+  count = 0;
+  r = line_buf_replay(&b, '\n', line_handler_inc_by_line_num, &count);
+  TEST_ASSERT(count == 2 + 3);
+
+  free(b.buf);
+}
+
 /******************************************************************************
     Tests for hex
 ******************************************************************************/
@@ -881,7 +931,8 @@ static void TEST_output_key_file(void) {
     Add all tests to the list below.
 ******************************************************************************/
 
-#define T(name) {#name, TEST_##name}
+#define T(name)                                                                \
+  { #name, TEST_##name }
 
 TEST_LIST = {T(wait_group_inc_and_wait_basic_use_case),
              T(hash_cache_add_and_retrieve),
@@ -895,6 +946,8 @@ TEST_LIST = {T(wait_group_inc_and_wait_basic_use_case),
              T(line_buf_truncation),
              T(line_buf_one_shot),
              T(line_buf_truncation_then_normal_read),
+             T(line_buf_replay_empty_case),
+             T(line_buf_replay_error_case),
              T(hex_decode_empty_string_zero_length),
              T(hex_decode_nonempty_string_zero_length),
              T(hex_decode_gives_expected_result),
