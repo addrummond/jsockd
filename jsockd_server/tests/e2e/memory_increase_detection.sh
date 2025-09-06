@@ -21,7 +21,7 @@ echo "?quit" >> /tmp/jsockd_memory_increase_test_input
 ./mk.sh Debug
 
 rm -f /tmp/jsockd_memory_increase_test_sock
-./build_Debug/jsockd -m /tmp/jsockd_memory_increase_test_example_module.qjsb -s /tmp/jsockd_memory_increase_test_sock > /tmp/jsockd_memory_increase_test_output 2>&1 &
+( ./build_Debug/jsockd -m /tmp/jsockd_memory_increase_test_example_module.qjsb -s /tmp/jsockd_memory_increase_test_sock > /tmp/jsockd_memory_increase_test_output 2>&1 ) &
 server_pid=$!
 
 i=0
