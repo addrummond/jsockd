@@ -829,8 +829,13 @@ static void *reset_thread_state_thread(void *data) {
   ThreadState *ts = (ThreadState *)data;
   ts->my_replacement = (ThreadState *)malloc(sizeof(ThreadState));
   debug_inc_new_thread_state_count();
-  init_thread_state((ThreadState *)ts->my_replacement, ts->socket_state,
-                    ts->thread_index);
+  if (0 != init_thread_state((ThreadState *)ts->my_replacement,
+                             ts->socket_state, ts->thread_index)) {
+    release_log("Error initializing replacement thread state\n");
+    atomic_store_explicit(&g_interrupted_or_error, true, memory_order_relaxed);
+    ts->exit_status = 1;
+    return NULL;
+  }
   atomic_store_explicit(&ts->replacement_thread_state,
                         REPLACEMENT_THREAD_STATE_INIT_COMPLETE,
                         memory_order_relaxed);
