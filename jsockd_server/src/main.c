@@ -668,7 +668,7 @@ static int init_thread_state(ThreadState *ts, SocketState *socket_state,
   ts->my_replacement = NULL;
   atomic_init(&ts->replacement_thread_state, REPLACEMENT_THREAD_STATE_NONE);
 
-#ifdef DEBUG
+#ifdef CMAKE_BUILD_TYPE_DEBUG
   ts->manually_trigger_thread_state_reset = false
 #endif
 
