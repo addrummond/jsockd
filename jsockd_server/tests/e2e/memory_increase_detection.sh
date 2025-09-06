@@ -44,7 +44,7 @@ server_exit_code=$?
 echo "Server exited with code $server_exit_code"
 
 echo "Server has exited, checking exit code..."
-if [ $(cat /tmp/jsockd_memory_increase_test_server_exit_code) -ne 0 ]; then
+if [ $server_exit_code -ne 0 ]; then
     echo "Server exited with an error code, which is unexpected."
     exit 1
 fi
