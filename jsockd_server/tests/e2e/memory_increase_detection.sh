@@ -15,7 +15,7 @@ build_Debug/jsockd -c ../example_module.mjs /tmp/jsockd_memory_increase_test_exa
 #   (m, p) => { (global_var=(globalThis.global_var ?? { })); globalVar[p] = { }; return "foo"; }
 #   $n
 # which should leak memory.
-awk 'BEGIN { for (i = 0; i < 2000; i++) { print "cmd"i"\n(m, p) => { (globalThis.globalVar=(globalThis.global_var ?? { })); globalThis.globalVar[p] = { \"foo\": p }; return \"foo\"; }\n"i } }' > /tmp/jsockd_memory_increase_test_input
+awk 'BEGIN { for (i = 0; i < 8000; i++) { print "cmd"i"\n(m, p) => { (globalThis.globalVar=(globalThis.global_var ?? { })); globalThis.globalVar[p] = { \"foo\": p }; return \"foo\"; }\n"i } }' > /tmp/jsockd_memory_increase_test_input
 echo "?quit" >> /tmp/jsockd_memory_increase_test_input
 
 ./mk.sh Debug
