@@ -205,8 +205,6 @@ typedef struct ThreadState {
   struct ThreadState *my_replacement;
   atomic_int replacement_thread_state;
   pthread_t replacement_thread;
-  const char *trampoline_line;
-  int trampoline_line_len;
   struct timespec last_active_time;
 #ifdef CMAKE_BUILD_TYPE_DEBUG
   bool manually_trigger_thread_state_reset;
@@ -383,20 +381,19 @@ listen_on_unix_socket(ThreadState *ts,
       break;
     case GO_AROUND:
       goto read_loop;
-    case SIG_INTERRUPT_OR_ERROR: {
+    case SIG_INTERRUPT_OR_ERROR:
       goto error_no_inc;
-    } break;
     }
 
     int exit_value = line_buf_read(&line_buf, g_cmd_args.socket_sep_char,
                                    lb_read, &ts->socket_state->streamfd,
                                    listen_on_unix_socket_line_handler_wrapper,
                                    (void *)&louslh);
-
     while (exit_value == TRAMPOLINE) {
       JS_UpdateStackTop(ts->rt);
-      exit_value =
-          line_handler(ts->trampoline_line, ts->trampoline_line_len, ts, false);
+      exit_value = line_buf_replay(&line_buf, g_cmd_args.socket_sep_char,
+                                   listen_on_unix_socket_line_handler_wrapper,
+                                   (void *)&louslh);
     }
 
     if (exit_value < 0 && exit_value != LINE_BUF_READ_EOF &&
@@ -669,8 +666,6 @@ static int init_thread_state(ThreadState *ts, SocketState *socket_state,
   ts->truncated = false;
   ts->last_command_exec_time_ns = 0;
   ts->my_replacement = NULL;
-  ts->trampoline_line = NULL;
-  ts->trampoline_line_len = 0;
   atomic_init(&ts->replacement_thread_state, REPLACEMENT_THREAD_STATE_NONE);
 
 #ifdef DEBUG
@@ -775,8 +770,7 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
       ts->replacement_thread_state = REPLACEMENT_THREAD_STATE_NONE;
       return -1;
     }
-    ts->trampoline_line = line;
-    ts->trampoline_line_len = len;
+    release_log("Trampolining to new thread state...\n");
     return TRAMPOLINE;
   }
 

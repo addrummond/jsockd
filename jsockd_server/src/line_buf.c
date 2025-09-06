@@ -15,15 +15,22 @@ int line_buf_read(LineBuf *b, char sep_char,
     b->truncated = true;
   }
 
-  int n = readf(b->buf + b->start, to_read, readf_data);
-  if (n == 0)
+  b->n = readf(b->buf + b->start, to_read, readf_data);
+  if (b->n == 0)
     return LINE_BUF_READ_EOF;
-  if (n < 0)
-    return n;
+  if (b->n < 0)
+    return b->n;
 
+  return line_buf_replay(b, sep_char, line_handler, line_handler_data);
+}
+
+int line_buf_replay(LineBuf *b, char sep_char,
+                    int (*line_handler)(const char *line, size_t line_len,
+                                        void *data, bool truncated),
+                    void *line_handler_data) {
   int i;
   int sep = -1;
-  for (i = b->start; i < b->start + n; ++i) {
+  for (i = b->start; i < b->start + b->n; ++i) {
     if (b->buf[i] == sep_char) {
       b->buf[i] = '\0';
       // Note: the parens around (sep + 1) are necessary to avoid (temporarily)
@@ -41,5 +48,5 @@ int line_buf_read(LineBuf *b, char sep_char,
   memcpy(b->buf, b->buf + sep + 1, i - sep - 1);
   b->start = i - sep - 1;
 
-  return n;
+  return b->n;
 }
