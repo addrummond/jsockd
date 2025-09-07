@@ -211,8 +211,8 @@ The `?quit` command causes the server to exit immediately (closing all sockets, 
 
 ```javascript
 {
-  "raw": "..." // the raw QuickJS error message + stack trace
-  "pretty": "..." // The formatted backtrace with source map info (if sourcemap provided)
+  "raw": "...", // the raw QuickJS error message + stack trace
+  "pretty": "...", // The formatted backtrace with source map info (if sourcemap provided)
   "errorMessage": "Error: foo", // the error message
   "trace": [
      {
