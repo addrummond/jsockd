@@ -238,6 +238,14 @@ When a source map is provided, each entry in the `"trace"` array (see previous s
 
 It is recommended to specify a source map only for development and testing purposes, as the code for computing source mapped back traces is not optimized for performance. As long as you have a source map for your bundle, you always have the option of manually resolving the backtrace entries when looking at errors in production.
 
+### 3.6 Load balancing
+
+The client should request a number of sockets roughly in line with the number of avaiable CPU cores (or fewer if a light load is anticipated).
+
+Random load balancing between sockets should be sufficient for most use cases.
+
+If any socket except the first is unused for a significant period of time (as specified by the `-i` command line option), then the QuickJS runtime for that socket is shut down to free up memory. The next command received on that socket causes a new QuickJS runtime to be created. Thus the client may distribute commands over the first *n* sockets, with *n* rising and falling with increasing/decreasing load.
+
 ## 4. Bundling your JavaScript code
 
 JSockD can be used with any bundler that can output an ES6 module (or with no bundler at all if your JS code is contained in a single file). The following is an example of how to bundle you code using [esbuild](https://esbuild.github.io/). The `root_module.mjs` module should contain all the code that you want to execute in the JSockD server. It can import other modules as needed.=
