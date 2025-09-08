@@ -242,9 +242,9 @@ It is recommended to specify a source map only for development and testing purpo
 
 The client should request a number of sockets roughly in line with the number of avaiable CPU cores (or fewer if a light load is anticipated).
 
-Random load balancing between sockets should be sufficient for most use cases.
+If any socket except the first is unused for a significant period of time (as specified by the `-i` command line option), then the QuickJS runtime for that socket is shut down to free up memory. The next command received on that socket causes a new QuickJS runtime to be created. Thus the client may distribute commands over the first *n* sockets, with *n* rising and falling with increasing/decreasing load. A good rule of thumb is to route commands to socket *n* only if sockets 1..*n*-1 are all busy processing commands.
 
-If any socket except the first is unused for a significant period of time (as specified by the `-i` command line option), then the QuickJS runtime for that socket is shut down to free up memory. The next command received on that socket causes a new QuickJS runtime to be created. Thus the client may distribute commands over the first *n* sockets, with *n* rising and falling with increasing/decreasing load.
+When an idle thread is woken, the typical time to initialize a new QuickJS runtime is on the order of a few milliseconds. It's assumed that this latency is acceptable for most use cases. This is especially so given that a correctly-implenented client will wake an idle thread only in cases where all other threads are currently processing commands, so that some latency in processing the command is in any case inevitable.
 
 ## 4. Bundling your JavaScript code
 
