@@ -310,22 +310,19 @@ typedef struct {
   ThreadState *ts;
   int (*line_handler)(const char *line, size_t len, ThreadState *data,
                       bool truncated);
-} ListenOnUnixSocketLineHandler;
+} CommandLoopLineHandler;
 
-static int listen_on_unix_socket_line_handler_wrapper(const char *line,
-                                                      size_t len, void *data,
-                                                      bool truncated) {
-  ListenOnUnixSocketLineHandler *lh = (ListenOnUnixSocketLineHandler *)data;
+static int command_loop_line_handler_wrapper(const char *line, size_t len,
+                                             void *data, bool truncated) {
+  CommandLoopLineHandler *lh = (CommandLoopLineHandler *)data;
   return lh->line_handler(line, len, lh->ts, truncated);
 }
 
-static void
-listen_on_unix_socket(ThreadState *ts,
-                      int (*line_handler)(const char *line, size_t len,
-                                          ThreadState *data, bool truncated),
-                      void (*tick_handler)(ThreadState *ts)) {
-  ListenOnUnixSocketLineHandler louslh = {.ts = ts,
-                                          .line_handler = line_handler};
+static void command_loop(ThreadState *ts,
+                         int (*line_handler)(const char *line, size_t len,
+                                             ThreadState *data, bool truncated),
+                         void (*tick_handler)(ThreadState *ts)) {
+  CommandLoopLineHandler louslh = {.ts = ts, .line_handler = line_handler};
   char *line_buf_buffer = calloc(LINE_BUF_BYTES, sizeof(char));
   LineBuf line_buf = {.buf = line_buf_buffer, .size = LINE_BUF_BYTES};
 
@@ -385,15 +382,15 @@ listen_on_unix_socket(ThreadState *ts,
       goto error_no_inc;
     }
 
-    int exit_value = line_buf_read(&line_buf, g_cmd_args.socket_sep_char,
-                                   lb_read, &ts->socket_state->streamfd,
-                                   listen_on_unix_socket_line_handler_wrapper,
-                                   (void *)&louslh);
+    int exit_value =
+        line_buf_read(&line_buf, g_cmd_args.socket_sep_char, lb_read,
+                      &ts->socket_state->streamfd,
+                      command_loop_line_handler_wrapper, (void *)&louslh);
     while (exit_value == TRAMPOLINE) {
       JS_UpdateStackTop(ts->rt);
-      exit_value = line_buf_replay(&line_buf, g_cmd_args.socket_sep_char,
-                                   listen_on_unix_socket_line_handler_wrapper,
-                                   (void *)&louslh);
+      exit_value =
+          line_buf_replay(&line_buf, g_cmd_args.socket_sep_char,
+                          command_loop_line_handler_wrapper, (void *)&louslh);
     }
 
     if (exit_value < 0 && exit_value != LINE_BUF_READ_EOF &&
@@ -1149,7 +1146,7 @@ static void tick_handler(ThreadState *ts) {
 
 static void *listen_thread_func(void *data) {
   ThreadState *ts = (ThreadState *)data;
-  listen_on_unix_socket(ts, line_handler, tick_handler);
+  command_loop(ts, line_handler, tick_handler);
   debug_log("Listen thread terminating...\n");
   return NULL;
 }
