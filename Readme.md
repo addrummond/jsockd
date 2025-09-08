@@ -308,31 +308,3 @@ The `format.sh` script in `jsockd_server` formats C source files using `clang-fo
 
 * `./build_quickjs.sh linux_x86_64_filc`
 * [In `jsockd_server`] `TOOLCHAIN_FILE=TC-fil-c.cmake ./mk.sh Debug`
-
-## 6. Releases
-
-### 6.1 Creating a release
-
-Pre-built binaries are available for download from the [GitHub releases page](https://github.com/addrummond/jsockd/releases). The following platforms are supported:
-
-- Linux x86_64
-- Linux ARM64
-- macOS ARM64 (Apple Silicon)
-
-To create a new release:
-
-1. Tag the commit with a version tag starting with 'v' (e.g., `v1.0.0`)
-2. Push the tag to GitHub: `git push origin v1.0.0`
-3. The release workflow will automatically build binaries and create a GitHub release
-
-Each release includes:
-
-- Platform-specific tar.gz archives containing the `jsockd` binary
-- SHA256 checksums for verification
-
-### 6.2 New version checklist
-
-* Update `@jsockd_version` in `clients/elixir/jsockd_client/mix.exs`.
-* Update the example `deps` entry in `clients/elixir/jsockd_client/README.md`.
-* Push to `main`.
-* Tag with the version number and push the tag.
