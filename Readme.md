@@ -159,7 +159,7 @@ Compiles the specified ES6 module file to a QuickJS bytecode file. If the `-k` o
 | `-m`        | `<module_bytecode_file>`    | Path to ES6 module bytecode file.                                            |               | No         | No       |
 | `-sm`       | `<source_map_file>`         | Path to source map file (e.g. `foo.js.map`). Can only be used with `-m`.     |               | No         | No       |
 | `-t`        | `<microseconds>`            | Maximum command runtime in microseconds (must be integer > 0).               | 250000        | No         | No       |
-| `-i`        | `<microseconds>`            | Maximum time in microseconds that thread can remain idle before QuickJS runtime is shut down (must be integer > 0). | 250000        | No         | No       |
+| `-i`        | `<microseconds>`            | Maximum time in microseconds that thread can remain idle before QuickJS runtime is shut down, or 0 for no idle timeout (must be integer >= 0). | 0             | No         | No       |
 | `-b`        | `<XX>`                      | Separator byte as two hex digits (e.g. `0A`).                                | `0A` (= `\n`) | No         | No       |
 | `-s`        | `<socket1> [<socket2> ...]` | One or more socket file paths.                                               |               | Yes        | Yes      |
 | `--`        | *(none)*                    | Indicates end of options for `-s` (allows socket paths starting with `-`).   |               | N/A        | No       |
@@ -242,9 +242,9 @@ It is recommended to specify a source map only for development and testing purpo
 
 The client should request a number of sockets roughly in line with the number of avaiable CPU cores (or fewer if a light load is anticipated).
 
-If any socket except the first is unused for a significant period of time (as specified by the `-i` command line option), then the QuickJS runtime for that socket is shut down to free up memory. The next command received on that socket causes a new QuickJS runtime to be created. Thus the client may distribute commands over the first *n* sockets, with *n* rising and falling with increasing/decreasing load. A good rule of thumb is to route commands to socket *n* only if sockets 1..*n*-1 are all busy processing commands.
+If any socket except the first is unused for a significant period of time (as specified by the `-i` command line option), then the QuickJS runtime for that socket is shut down to free up memory. The next command received on that socket causes a new QuickJS runtime to be created. Thus the client may distribute commands over the first n sockets, with n rising and falling with increasing/decreasing load. A good rule of thumb is to route commands to socket n only if sockets 1..n-1 are all busy processing commands.
 
-When an idle thread is woken, the typical time to initialize a new QuickJS runtime is on the order of a few milliseconds. It's assumed that this latency is acceptable for most use cases. This is especially so given that a correctly-implenented client will wake an idle thread only in cases where all other threads are currently processing commands, so that some latency in processing the command is in any case inevitable.
+When an idle thread is woken, the typical time to initialize a new QuickJS runtime is on the order of a few milliseconds. If this latency is unacceptable, the client can omit the `-i` option or set it to `0`, in which case no idle threads are ever shut down.
 
 ## 4. Bundling your JavaScript code
 

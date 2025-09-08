@@ -633,13 +633,13 @@ static void TEST_cmdargs_dash_i(void) {
   TEST_ASSERT(cmdargs.max_idle_time_us == 500);
 }
 
-static void TEST_cmdargs_dash_i_error_on_0(void) {
+static void TEST_cmdargs_dash_i_allows_0(void) {
   CmdArgs cmdargs = {0};
   char *argv[] = {"jsockd", "-s", "/tmp/sock", "-m", "foo.qjsbc", "-i", "0"};
   int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
                          &cmdargs);
-  TEST_ASSERT(r != 0);
-  TEST_ASSERT(strstr(cmdargs_errlog_buf, "-i "));
+  TEST_ASSERT(r == 0);
+  TEST_ASSERT(cmdargs.max_idle_time_us == 0 && cmdargs.max_idle_time_set);
 }
 
 static void TEST_cmdargs_dash_i_error_on_negative(void) {
@@ -969,7 +969,7 @@ TEST_LIST = {T(wait_group_inc_and_wait_basic_use_case),
              T(cmdargs_dash_t_error_on_non_numeric),
              T(cmdargs_dash_t_error_on_double_flag),
              T(cmdargs_dash_i),
-             T(cmdargs_dash_i_error_on_0),
+             T(cmdargs_dash_i_allows_0),
              T(cmdargs_dash_i_error_on_negative),
              T(cmdargs_dash_i_error_on_non_numeric),
              T(cmdargs_dash_i_error_on_double_flag),

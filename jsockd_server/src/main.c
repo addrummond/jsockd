@@ -1120,7 +1120,7 @@ static int line_handler(const char *line, size_t len, ThreadState *ts,
 }
 
 static void tick_handler(ThreadState *ts) {
-  if (ts->line_n != 0 || ts->rt == NULL)
+  if (g_cmd_args.max_idle_time_us == 0 || ts->line_n != 0 || ts->rt == NULL)
     return;
   int n_ready_threads =
       atomic_load_explicit(&g_n_ready_threads, memory_order_relaxed);

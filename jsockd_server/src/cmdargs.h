@@ -19,6 +19,7 @@ typedef struct {
   bool version;
   uint64_t max_command_runtime_us;
   uint64_t max_idle_time_us;
+  bool max_idle_time_set;
   const char *key_file_prefix;
   const char *mod_to_compile;
   const char *mod_output_file;
