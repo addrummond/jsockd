@@ -357,7 +357,6 @@ static void TEST_line_buf_replay_empty_case(void) {
 
 static int line_handler_fail_on_2(const char *line, size_t line_len, void *data,
                                   bool truncated) {
-  fprintf(stderr, "HANDLER A: %.*s\n", (int)line_len, line);
   if (line[4] == '2')
     return -1;
   ++*((int *)data);
@@ -366,7 +365,6 @@ static int line_handler_fail_on_2(const char *line, size_t line_len, void *data,
 
 static int line_handler_inc_by_line_num(const char *line, size_t line_len,
                                         void *data, bool truncated) {
-  fprintf(stderr, "HANDLER B: %.*s\n", (int)line_len, line);
   *((int *)data) += (line[4] - '0');
   return 0;
 }
