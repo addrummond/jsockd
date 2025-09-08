@@ -248,7 +248,7 @@ If any socket except the first is unused for a significant period of time (as sp
 
 ## 4. Bundling your JavaScript code
 
-JSockD can be used with any bundler that can output an ES6 module (or with no bundler at all if your JS code is contained in a single file). The following is an example of how to bundle you code using [esbuild](https://esbuild.github.io/). The `root_module.mjs` module should contain all the code that you want to execute in the JSockD server. It can import other modules as needed.=
+JSockD can be used with any bundler that can output an ES6 module (or with no bundler at all if your JS code is contained in a single file). The following is an example of how to bundle you code using [esbuild](https://esbuild.github.io/). The `root_module.mjs` module should contain all the code that you want to execute in the JSockD server. It can import other modules as needed.
 
 ```
 esbuild root_module.mjs --bundle --outfile=bundle.mjs --sourcemap --format=esm
