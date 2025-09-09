@@ -67,7 +67,7 @@ static int parse_cmd_args_helper(int argc, char **argv,
         return -1;
       }
       errno = 0;
-      char *endptr;
+      char *endptr = NULL;
       long long int v = strtoll(argv[i], &endptr, 10);
       if (errno != 0 || !endptr || *endptr != '\0' || v < 0) {
         errlog("Error: -i requires a valid integer argument >= 0\n");
