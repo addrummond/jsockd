@@ -4,7 +4,35 @@
 #include <errno.h>
 #include <libgen.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <string.h>
+
+typedef enum {
+    FLAG, INTEGER, HEXPAIR, STRING
+} OptionKind;
+
+typedef struct {
+    OptionKind kind;
+    const char *name;
+    size_t min_count;
+    size_t max_count;
+    ptrdiff_t value_offset;
+    ptrdiff_t count_offset;
+} Option;
+
+static const Option options[] = {
+    { FLAG, "-v", 0, 0, offsetof(CmdArgs, version), -1 },
+    { STRING, "-m", 1, 1, offsetof(CmdArgs, es6_module_bytecode_file), -1 },
+    { INTEGER, "-t", 1, 1, offsetof(CmdArgs, max_command_runtime_us), -1 },
+    { INTEGER, "-i", 1, 1, offsetof(CmdArgs, max_idle_time_us),
+      offsetof(CmdArgs, max_idle_time_set) },
+    { STRING, "-s", 1, (size_t)-1, offsetof(CmdArgs, socket_path),
+      offsetof(CmdArgs, n_sockets) },
+    { STRING, "-sm" },
+    { HEXPAIR, "-b" },
+    { STRING, "-k" },
+    { STRING, "-c" }
+}
 
 static int n_flags_set(const CmdArgs *cmdargs) {
   return (cmdargs->es6_module_bytecode_file != NULL) +
