@@ -100,13 +100,21 @@ defmodule JsockdClient.MixProject do
         ]
       ]
 
-      {:ok, {_, _, body}} =
+      {:ok, {{_, status, _}, _, body}} =
         :httpc.request(:get, {release_url, []}, http_options, body_format: :binary)
+
+      if status != 200 do
+        raise "Error downloading release from #{release_url}: #{status} - #{inspect(body)}"
+      end
 
       File.write!(release_path, body)
 
-      {:ok, {_, _, signature_body}} =
+      {:ok, {{_, signature_status, _}, _, signature_body}} =
         :httpc.request(:get, {signature_file_url, []}, http_options, body_format: :binary)
+
+      if signature_status != 200 do
+        raise "Error downloading signature file from #{signature_file_url}: #{signature_status} - #{inspect(signature_body)}"
+      end
 
       sigs =
         signature_body |> String.trim() |> String.split("\n") |> Enum.map(&String.split(&1, "\t"))

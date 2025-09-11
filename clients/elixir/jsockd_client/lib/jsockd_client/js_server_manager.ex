@@ -41,6 +41,7 @@ defmodule JSockDClient.JsServerManager do
     port_id =
       Port.open({:spawn_executable, exec}, [
         :use_stdio,
+        :stderr_to_stdout,
         :in,
         :exit_status,
         line: 80,
@@ -106,17 +107,33 @@ defmodule JSockDClient.JsServerManager do
 
   @impl true
   def handle_info({_port, {:data, {_, msg}}}, state) do
-    if state.unix_sockets_with_threads != [] do
-      raise "Unexpected message received from jsockd: #{inspect(msg)}"
-    end
-
     msg = List.to_string(msg)
 
     case Regex.run(~r/^READY (\d+)/, msg) do
       nil ->
-        raise "Bad message received from jsockd: #{msg}"
+        # It's a log message written to stderr (which has been redirected to stdout).
+        # Scan it to determine the log level and then forward it to Logger
+        case Regex.run(~r/jsockd ([^ ]+) \[([^][]+)\] (.*)/, msg) do
+          [_, time, "ERROR", msg] ->
+            Logger.error("!jsockd #{time} #{String.trim_trailing(msg)}")
+
+          [_, time, "WARN", msg] ->
+            Logger.warning("!!jsockd #{time} #{String.trim_trailing(msg)}")
+
+          [_, time, _, msg] ->
+            Logger.info("!!!jsockd #{time} #{String.trim_trailing(msg)}")
+
+          _ ->
+            Logger.info("!!!!jsockd #{String.trim_trailing(msg)}")
+        end
+
+        {:noreply, state}
 
       [_, n_threads] ->
+        if state.unix_sockets_with_threads != [] do
+          raise "Unexpected READY message received from jsockd: #{inspect(msg)}"
+        end
+
         n_threads = String.to_integer(n_threads)
 
         Process.flag(:trap_exit, true)

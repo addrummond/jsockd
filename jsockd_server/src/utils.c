@@ -53,18 +53,42 @@ void mutex_init_(pthread_mutex_t *m, const char *file, int line) {
   }
 }
 
-void release_logf(const char *fmt, ...) {
+static void print_log_prefix(LogLevel log_level) {
+  struct timespec ts;
+  if (0 == clock_gettime(CLOCK_REALTIME, &ts)) {
+    char timebuf[ISO8601_MAX_LEN];
+    timespec_to_iso8601(&ts, timebuf, sizeof(timebuf) / sizeof(timebuf[0]));
+    const char *ll = "";
+    switch (log_level) {
+    case LOG_INFO:
+      ll = "INFO";
+      break;
+    case LOG_WARN:
+      ll = "WARN";
+      break;
+    case LOG_ERROR:
+      ll = "ERROR";
+      break;
+    }
+    fprintf(stderr, "jsockd %s [%s] ", timebuf, ll);
+  }
+}
+
+void release_logf(LogLevel log_level, const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
 
   if (g_log_mutex_initialized)
     mutex_lock(&g_log_mutex);
+  print_log_prefix(log_level);
   vfprintf(stderr, fmt, args);
   if (g_log_mutex_initialized)
     mutex_unlock(&g_log_mutex);
 }
 
-void release_log(const char *s) { release_logf("%s", s); }
+void release_log(LogLevel log_level, const char *s) {
+  release_logf(log_level, "%s", s);
+}
 
 int write_all(int fd, const char *buf, size_t len) {
   while (len > 0) {
@@ -82,8 +106,8 @@ int write_all(int fd, const char *buf, size_t len) {
 
 void munmap_or_warn(const void *addr, size_t length) {
   if (munmap((void *)addr, length) < 0) {
-    debug_logf("Error unmapping memory at %p of size %zu: %s\n", addr, length,
-               strerror(errno));
+    debug_logf(LOG_ERROR, "Error unmapping memory at %p of size %zu: %s\n",
+               addr, length, strerror(errno));
   }
 }
 
@@ -123,4 +147,25 @@ int make_temp_dir(char out[], size_t out_size, const char *template) {
   if (!mkdtemp(out))
     return -1;
   return 0;
+}
+
+static long ns_to_ms(long ns) { return (ns / 1000) + (ns % 1000 >= 500); }
+
+void timespec_to_iso8601(const struct timespec *ts, char *buf, size_t buflen) {
+  struct tm tm_utc;
+  // Convert seconds to UTC time structure
+  if (gmtime_r(&ts->tv_sec, &tm_utc) == NULL) {
+    buf[0] = '\0';
+    return;
+  }
+  // Format date and time (without fractional seconds)
+  size_t len = strftime(buf, buflen, "%Y-%m-%dT%H:%M:%S", &tm_utc);
+  if (len == 0) {
+    buf[0] = '\0';
+    return;
+  }
+  // Append fractional seconds and 'Z'
+  // Ensure enough space for .nnnnnnnnnZ and null terminator
+  if (len + 8 < buflen)
+    snprintf(buf + len, buflen - len, ".%06ldZ", ns_to_ms(ts->tv_nsec));
 }
