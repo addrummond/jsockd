@@ -1348,34 +1348,45 @@ int main(int argc, char *argv[]) {
   }
   atomic_init(&g_global_init_complete, true);
 
-  for (int n = 0; n < n_threads; ++n) {
-    debug_logf(LOG_INFO, "Creating thread %i\n", n);
-    init_socket_state(&g_socket_states[n], g_cmd_args.socket_path[n]);
-    if (0 != init_thread_state(&g_thread_states[n], &g_socket_states[n], n)) {
-      release_logf(LOG_ERROR, "Error initializing thread %i\n", n);
+  int thread_init_n = 0;
+  for (thread_init_n = 0; thread_init_n < n_threads; ++thread_init_n) {
+    debug_logf(LOG_INFO, "Creating thread %i\n", thread_init_n);
+    init_socket_state(&g_socket_states[thread_init_n],
+                      g_cmd_args.socket_path[thread_init_n]);
+    if (0 != init_thread_state(&g_thread_states[thread_init_n],
+                               &g_socket_states[thread_init_n],
+                               thread_init_n)) {
+      release_logf(LOG_ERROR, "Error initializing thread %i\n", thread_init_n);
       if (g_module_bytecode_size != 0 && g_module_bytecode)
         munmap_or_warn((void *)g_module_bytecode, g_module_bytecode_size);
       destroy_log_mutex();
       pthread_mutex_destroy(&g_cached_functions_mutex);
-      for (int i = n - 1; i >= 0; --i)
+      for (int i = thread_init_n - 1; i >= 0; --i)
         destroy_thread_state(&g_thread_states[i]);
       wait_group_destroy(&g_thread_ready_wait_group);
       return EXIT_FAILURE;
     }
     pthread_attr_t attr;
-    int pr = 0;
-    pr |= pthread_attr_init(&attr);
-    pr |= pthread_attr_setstacksize(&attr, QUICKS_THREAD_STACK_SIZE);
-    pr |= pthread_create(&g_threads[n], &attr, listen_thread_func,
-                         &g_thread_states[n]);
-    if (pr != 0) {
+    if (0 != pthread_attr_init(&attr)) {
+      release_logf(LOG_ERROR, "pthread_attr_init failed: %s\n",
+                   strerror(errno));
+      goto thread_init_error;
+    }
+    if (0 != pthread_attr_setstacksize(&attr, QUICKS_THREAD_STACK_SIZE)) {
+      release_logf(LOG_ERROR, "pthread_attr_setstacksize failed: %s\n",
+                   strerror(errno));
+      pthread_attr_destroy(&attr); // can fail, but no point in checking
+      goto thread_init_error;
+    }
+    if (0 != pthread_create(&g_threads[thread_init_n], &attr,
+                            listen_thread_func,
+                            &g_thread_states[thread_init_n])) {
       release_logf(LOG_ERROR, "pthread_create failed; exiting: %s",
                    strerror(errno));
-      for (int i = 0; i <= n; ++i)
-        destroy_thread_state(&g_thread_states[i]);
-      global_cleanup();
-      return EXIT_FAILURE;
+      pthread_attr_destroy(&attr); // can fail, but no point in checking
+      goto thread_init_error;
     }
+    pthread_attr_destroy(&attr); // can fail, but no point in checking
   }
 
   // Wait for all threads to be ready
@@ -1439,6 +1450,12 @@ int main(int argc, char *argv[]) {
     return EXIT_FAILURE;
 
   return EXIT_SUCCESS;
+
+thread_init_error:
+  for (int i = 0; i <= thread_init_n; ++i)
+    destroy_thread_state(&g_thread_states[i]);
+  global_cleanup();
+  return EXIT_FAILURE;
 }
 
 // supress the annoying warning that inttypes.h is not used directly
