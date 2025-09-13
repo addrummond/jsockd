@@ -1359,12 +1359,7 @@ int main(int argc, char *argv[]) {
       release_logf(LOG_ERROR, "Error initializing thread %i\n", thread_init_n);
       if (g_module_bytecode_size != 0 && g_module_bytecode)
         munmap_or_warn((void *)g_module_bytecode, g_module_bytecode_size);
-      destroy_log_mutex();
-      pthread_mutex_destroy(&g_cached_functions_mutex);
-      for (int i = thread_init_n - 1; i >= 0; --i)
-        destroy_thread_state(&g_thread_states[i]);
-      wait_group_destroy(&g_thread_ready_wait_group);
-      return EXIT_FAILURE;
+      goto thread_init_error;
     }
     pthread_attr_t attr;
     if (0 != pthread_attr_init(&attr)) {
