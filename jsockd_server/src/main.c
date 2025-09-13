@@ -1362,8 +1362,13 @@ int main(int argc, char *argv[]) {
       wait_group_destroy(&g_thread_ready_wait_group);
       return EXIT_FAILURE;
     }
-    if (0 != pthread_create(&g_threads[n], NULL, listen_thread_func,
-                            &g_thread_states[n])) {
+    pthread_attr_t attr;
+    int pr = 0;
+    pr |= pthread_attr_init(&attr);
+    pr |= pthread_attr_setstacksize(&attr, QUICKS_THREAD_STACK_SIZE);
+    pr |= pthread_create(&g_threads[n], &attr, listen_thread_func,
+                         &g_thread_states[n]);
+    if (pr != 0) {
       release_logf(LOG_ERROR, "pthread_create failed; exiting: %s",
                    strerror(errno));
       for (int i = 0; i <= n; ++i)

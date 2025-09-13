@@ -29,4 +29,16 @@
 #define PUBLIC_KEY_FILE_SUFFIX ".pubkey"
 #define PRIVATE_KEY_FILE_SUFFIX ".privkey"
 
+// Following Linux conventions for default pthread stack size stops things
+// blowing up unexpectedly. (E.g. QuickJS implicitly assumes that it has
+// more stack space available than a defaultly configured pthread will have
+// on MacOS.)
+//
+// ------------------------------ IMPORTANT -----------------------------------
+// This allocation is a virtual memory allocation, so reducing it will not
+// reduce the actual memory usage of QuickJS interpreter threads.
+// ----------------------------------------------------------------------------
+#define QUICKS_THREAD_STACK_SIZE                                               \
+  (sizeof(int) == 8 ? (1024 * 1024 * 8) : (1024 * 1024 * 2))
+
 #endif
