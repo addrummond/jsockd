@@ -29,15 +29,13 @@ int compile_module_file(const char *module_filename,
 
   rt = JS_NewRuntime();
   if (!rt) {
-    release_log(LOG_ERROR,
-                "Failed to create JS runtime when compiling module file\n");
+    fprintf(stderr, "Failed to create JS runtime when compiling module file\n");
     ret = EXIT_FAILURE;
     goto end;
   }
   ctx = JS_NewContext(rt);
   if (!ctx) {
-    release_log(LOG_ERROR,
-                "Failed to create JS context when compiling module file\n");
+    fprintf(stderr, "Failed to create JS context when compiling module file\n");
     ret = EXIT_FAILURE;
     goto end;
   }
@@ -45,14 +43,14 @@ int compile_module_file(const char *module_filename,
   size_t buf_len;
   buf = js_load_file(ctx, &buf_len, module_filename);
   if (!buf) {
-    release_logf(LOG_ERROR, "Could not load '%s'\n", module_filename);
+    fprintf(stderr, "Could not load '%s'\n", module_filename);
     ret = EXIT_FAILURE;
     goto end;
   }
   obj = JS_Eval(ctx, (const char *)buf, buf_len, module_filename,
                 JS_EVAL_FLAG_COMPILE_ONLY | JS_EVAL_TYPE_MODULE);
   if (JS_IsException(obj)) {
-    release_logf(LOG_ERROR, "Error compiling module '%s'\n", module_filename);
+    fprintf(stderr, "Error compiling module '%s'\n", module_filename);
     js_std_dump_error(ctx);
     ret = EXIT_FAILURE;
     goto end;
@@ -64,27 +62,27 @@ int compile_module_file(const char *module_filename,
   char public_key_hex[ED25519_PUBLIC_KEY_SIZE * 2] = {0};
   char private_key_hex[ED25519_PRIVATE_KEY_SIZE * 2] = {0};
   if (!privkey_filename) {
-    release_logf(LOG_WARN, "No key file specified; module will be unsigned\n");
+    fprintf(stderr,
+            "WARNING: No key file specified; module will be unsigned\n");
   } else {
     kf = fopen(privkey_filename, "r");
     if (!kf) {
-      release_logf(LOG_ERROR, "Error opening key file %s: %s\n",
-                   privkey_filename, strerror(errno));
+      fprintf(stderr, "Error opening key file %s: %s\n", privkey_filename,
+              strerror(errno));
       ret = EXIT_FAILURE;
       goto end;
     }
     if (fread(public_key_hex, sizeof(public_key_hex) / sizeof(char), 1, kf) <
         1) {
-      release_logf(LOG_ERROR, "Error reading public key from key file %s: %s\n",
-                   privkey_filename, strerror(errno));
+      fprintf(stderr, "Error reading public key from key file %s: %s\n",
+              privkey_filename, strerror(errno));
       ret = EXIT_FAILURE;
       goto end;
     }
     if (fread(private_key_hex, sizeof(private_key_hex) / sizeof(char), 1, kf) <
         1) {
-      release_logf(LOG_ERROR,
-                   "Error reading private key from key file %s: %s\n",
-                   privkey_filename, strerror(errno));
+      fprintf(stderr, "Error reading private key from key file %s: %s\n",
+              privkey_filename, strerror(errno));
       ret = EXIT_FAILURE;
       goto end;
     }
@@ -104,8 +102,8 @@ int compile_module_file(const char *module_filename,
 
   mf = fopen(output_filename, "w");
   if (!mf) {
-    release_logf(LOG_ERROR, "Error creating output file %s: %s\n",
-                 output_filename, strerror(errno));
+    fprintf(stderr, "Error creating output file %s: %s\n", output_filename,
+            strerror(errno));
     ret = EXIT_FAILURE;
     goto end;
   }
@@ -117,7 +115,7 @@ int compile_module_file(const char *module_filename,
   }
   char vstring[VERSION_STRING_SIZE] = {0};
   if (strlen(version) >= VERSION_STRING_SIZE) {
-    release_logf(LOG_ERROR, "VERSION string too long\n");
+    fprintf(stderr, "VERSION string too long\n");
     ret = EXIT_FAILURE;
     goto end;
   }
@@ -175,12 +173,12 @@ int output_key_file(const char *key_file_prefix) {
   FILE *privkey_file = fopen(privkey_filename, "wx");
   FILE *pubkey_file = fopen(pubkey_filename, "wx");
   if (!privkey_file) {
-    release_logf(LOG_ERROR, "Error creating private key file %s: %s\n",
-                 privkey_filename, strerror(errno));
+    fprintf(stderr, "Error creating private key file %s: %s\n",
+            privkey_filename, strerror(errno));
   }
   if (!pubkey_file) {
-    release_logf(LOG_ERROR, "Error creating public key file %s: %s\n",
-                 pubkey_filename, strerror(errno));
+    fprintf(stderr, "Error creating public key file %s: %s\n", pubkey_filename,
+            strerror(errno));
   }
   if (!(privkey_file && pubkey_file)) {
     ret = EXIT_FAILURE;
@@ -191,15 +189,15 @@ int output_key_file(const char *key_file_prefix) {
   unsigned char pubkey[ED25519_PUBLIC_KEY_SIZE];
   unsigned char privkey[ED25519_PRIVATE_KEY_SIZE];
   if (0 != ed25519_create_seed(seed)) {
-    release_log(LOG_ERROR, "Error creating random seed.\n");
+    fprintf(stderr, "Error creating random seed.\n");
     ret = EXIT_FAILURE;
     goto end;
   }
   ed25519_create_keypair(pubkey, privkey, seed);
 
   if (0 != hex_encode(pubkey, ED25519_PUBLIC_KEY_SIZE, pubkey_file)) {
-    release_logf(LOG_ERROR, "Error writing to public key file %s: %s",
-                 pubkey_filename, strerror(errno));
+    fprintf(stderr, "Error writing to public key file %s: %s", pubkey_filename,
+            strerror(errno));
     ret = EXIT_FAILURE;
     goto end;
   }
@@ -208,14 +206,14 @@ int output_key_file(const char *key_file_prefix) {
   // trivial to extract public keys from private keys, prepend the public key to
   // the private key.
   if (0 != hex_encode(pubkey, ED25519_PUBLIC_KEY_SIZE, privkey_file)) {
-    release_logf(LOG_ERROR, "Error writing to private key file %s: %s",
-                 privkey_filename, strerror(errno));
+    fprintf(stderr, "Error writing to private key file %s: %s",
+            privkey_filename, strerror(errno));
     ret = EXIT_FAILURE;
     goto end;
   }
   if (0 != hex_encode(privkey, ED25519_PRIVATE_KEY_SIZE, privkey_file)) {
-    release_logf(LOG_ERROR, "Error writing to private key file %s: %s",
-                 privkey_filename, strerror(errno));
+    fprintf(stderr, "Error writing to private key file %s: %s",
+            privkey_filename, strerror(errno));
     ret = EXIT_FAILURE;
     goto end;
   }
