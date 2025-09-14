@@ -53,7 +53,6 @@ case $output in
     "$uid exception "*)
         output=$(printf %s "$output" | dd bs=1 skip=43 2>/dev/null)
 
-        echo "Pretty-printed error from jsockd:"
         jq --version > /dev/null
         if [ $? -ne 0 ]; then
             echo "jq is not installed; cannot pretty-print JSON error"
@@ -62,7 +61,7 @@ case $output in
             exit 1
         fi
 
-        printf "%s" "$output" | jq -r .pretty
+        printf "Pretty-printed error from jsockd:\n%s" "$output" | jq -r .pretty
         printf "\nRaw JSON error: %s\n" "$output"
 
         ;;
