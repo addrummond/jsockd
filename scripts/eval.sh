@@ -25,7 +25,7 @@ rm -f /tmp/${uuid}.jsockd_sock_ready
             esac
         done
     )
-) 2>&1 >/dev/null &
+) >/dev/null 2>&1 &
 jsockd_pid=$!
 
 sleep 0.001 2>/dev/null
@@ -61,7 +61,8 @@ case $output in
             exit 1
         fi
 
-        printf "Pretty-printed error from jsockd:\n%s" "$output" | jq -r .pretty
+        echo "Pretty-printed error from jsockd:"
+        printf "%s" "$output" | jq -r .pretty
         printf "\nRaw JSON error: %s\n" "$output"
 
         ;;

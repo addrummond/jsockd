@@ -49,7 +49,7 @@ export function formatBacktrace(sourcemap, backtrace) {
 }
 
 function formatParsedBacktrace(backtrace) {
-  return `
+  let bt = `
 ${backtrace.errorMessage}:
   ${backtrace.trace.map((entry) => {
     return `  at ${entry.functionName ?? "<unknown>"} (${entry.source ?? "<unknown>"}${entry.line !== null ? `:${entry.line}` : ""}${entry.column !== null ? `:${entry.column}` : ""})${(() => {
@@ -58,6 +58,11 @@ ${backtrace.errorMessage}:
       return "";
     })()}`;
   })}`;
+
+  bt = bt.trimEnd();
+  if (bt.length > 0 && bt[bt.length - 1] == ":")
+    bt = bt.substring(0, bt.length - 1);
+  return bt;
 }
 
 // WARNING: AI-generated code from this point down. Haven't checked it very
