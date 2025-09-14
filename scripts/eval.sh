@@ -16,20 +16,38 @@ shift
 
 rm -f /tmp/${uuid}.jsockd_sock_ready
 (
-    $JSOCKD -b 1e -s $socket $@ | (
+    $JSOCKD -b 1e -s $socket $@ 2>&1 | (
         while IFS= read -r line; do
+            echo "LINE $line"
             case $line in
                 "READY 1")
                     touch /tmp/${uuid}.jsockd_sock_ready
                     break;;
+                *)
+                    if printf "%s" "$line" | grep -Eq '^jsockd [^ ]+ \[ERROR\]'; then
+                        echo "$line" >&2
+                        rm -f /tmp/${uuid}.jsockd_sock_ready
+                        break;
+                    fi
+                    ;;
             esac
         done
+        echo "DONE"
     )
 ) >/dev/null 2>&1 &
 jsockd_pid=$!
 
+echo "HERE!!"
+
+# This will happen if we detected an error above
+if ! [ -f /tmp/${uuid}.jsockd_sock_ready ]; then
+   exit 1
+fi
+
 sleep 0.001 2>/dev/null
 sleep_frac_exit_code=$?
+
+echo "HERE!!"
 
 i=0
 while ! [ -e /tmp/${uuid}.jsockd_sock_ready ]; do
