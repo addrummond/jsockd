@@ -47,7 +47,7 @@ done
 
 # Some versions of awk are funny about setting RS to the null byte, so use
 # the ASCII record sep char instead.
-output=$(printf "$uid\x1e%s\x1e0\x1e?quit\x00" "$command" | nc -U $socket  )
+output=$(printf "$uid\x1e%s\x1e0\x1e?quit\x00" "$command" | nc -U $socket)
 
 case $output in
     "$uid exception "*)
