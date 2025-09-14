@@ -17,32 +17,38 @@ shift
 ( $JSOCKD -b 1e -s $socket $@ 2>&1 >/dev/null ) &
 jsockd_pid=$!
 
+i=0
 while ! [ -e $socket ]; do
-    sleep 0.01
+   i=$(($i + 1))
+   if [ $i -gt 10000000 ]; then
+       echo "Timed out waiting for jsockd to create socket $socket"
+       exit 1
+   fi
 done
 
 # Some versions of awk are funny about setting RS to the null byte, so use
 # the ASCII record sep char instead.
-output=$(printf "$uid\x1e%s\x1e0\x1e?quit\x00" "$command" | nc -w 5 -U $socket | awk "BEGIN { RS=\"\\x1e\"; FS=\"\" } /^${uid}/ { print \$0 }" )
+output=$(printf "$uid\x1e%s\x1e0\x1e?quit\x00" "$command" | nc -w 5 -U $socket  )
 
 case $output in
     "$uid exception "*)
-        output=$(echo "$output" | dd bs=1 skip=43 2>/dev/null)
+        output=$(printf %s "$output" | dd bs=1 skip=43 2>/dev/null)
 
-        echo "Error from jsockd:"
-
+        echo "Pretty-printed error from jsockd:"
         jq --version > /dev/null
         if [ $? -ne 0 ]; then
             echo "jq is not installed; cannot pretty-print JSON error"
             echo
-            echo "$output"
+            printf "%s" "$output"
             exit 1
         fi
 
-        echo "$output" #| jq -r .raw
+        printf "%s" "$output" | jq -r .pretty
+        printf "\nRaw JSON error: %s\n" "$output"
+
         ;;
     *)
-        echo "$output"
+        printf "%s" "$output"
         ;;
 esac
 
