@@ -14,14 +14,25 @@ socket="/tmp/${uuid}.jsockd_sock"
 command="$1"
 shift
 
-( $JSOCKD -b 1e -s $socket $@ 2>&1 >/dev/null ) &
+rm -f /tmp/${uuid}.jsockd_sock_ready
+(
+    $JSOCKD -b 1e -s $socket $@ | (
+        while IFS= read -r line; do
+            case $line in
+                "READY 1")
+                    touch /tmp/${uuid}.jsockd_sock_ready
+                    break;;
+            esac
+        done
+    )
+) 2>&1 >/dev/null &
 jsockd_pid=$!
 
 i=0
-while ! [ -e $socket ]; do
+while ! [ -e /tmp/${uuid}.jsockd_sock_ready ]; do
    i=$(($i + 1))
    if [ $i -gt 10000000 ]; then
-       echo "Timed out waiting for jsockd to create socket $socket"
+       echo "Timed out waiting for jsockd to be ready"
        exit 1
    fi
 done
