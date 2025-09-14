@@ -1,0 +1,16 @@
+import React from "react";
+import ReactDOM from "react-dom/server.edge";
+
+globalThis.setTimeout = (f) => f();
+
+export function MyComponent() {
+  return React.createElement("div", {});
+}
+
+export function myRenderToString(node) {
+  return ReactDOM.renderToReadableStream(node);
+}
+
+export function cmd() {
+  return myRenderToString(React.createElement(MyComponent, {}));
+}
