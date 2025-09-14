@@ -572,7 +572,7 @@ static const char *get_backtrace(ThreadState *ts, const char *backtrace,
     release_log(LOG_ERROR, "Error parsing backtrace:\n");
     dump_error(ts->ctx);
     release_logf(LOG_ERROR, "The backtrace that could not be parsed:\n%.*s",
-                 backtrace_length, backtrace);
+                 (int)backtrace_length, backtrace);
     bt_str = NULL;
   } else {
     bt_str = JS_ToCStringLen(ts->ctx, out_json_backtrace_length,
@@ -647,7 +647,7 @@ static int init_thread_state(ThreadState *ts, SocketState *socket_state,
     if (!bt_str) {
       release_logf(LOG_ERROR, "<no backtrace available>\n");
     } else {
-      release_logf(LOG_ERROR, "%.*s\n", bt_length, bt_str);
+      release_logf(LOG_ERROR, "%.*s\n", (int)bt_length, bt_str);
       JS_FreeCString(ts->ctx, bt_str);
     }
 
