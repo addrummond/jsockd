@@ -71,4 +71,6 @@ case $output in
         ;;
 esac
 
+rm -f /tmp/${uuid}.jsockd_sock_ready
+
 wait $jsockd_pid
