@@ -28,13 +28,21 @@ rm -f /tmp/${uuid}.jsockd_sock_ready
 ) 2>&1 >/dev/null &
 jsockd_pid=$!
 
+sleep 0.001 2>/dev/null
+sleep_frac_exit_code=$?
+
 i=0
 while ! [ -e /tmp/${uuid}.jsockd_sock_ready ]; do
-   i=$(($i + 1))
-   if [ $i -gt 10000000 ]; then
+   if [ $sleep_frac_exit_code -ne 0 ]; then
+       sleep 1
+   else
+       sleep 0.01
+   fi
+   if { [ $sleep_frac_exit_code -eq 0 ] && [ $i -gt 500 ]; } || { [ $sleep_frac_exit_code -ne 0 ] && [ $i -gt 5 ]; }; then
        echo "Timed out waiting for jsockd to be ready"
        exit 1
    fi
+   i=$(($i + 1))
 done
 
 # Some versions of awk are funny about setting RS to the null byte, so use
@@ -59,7 +67,7 @@ case $output in
 
         ;;
     *)
-        printf "%s" "$output"
+        printf "%s\n" "$output" | dd bs=1 skip=33 2>/dev/null
         ;;
 esac
 
