@@ -9,19 +9,30 @@
 JSOCKD=${JSOCKD:-jsockd}
 
 uid=$(xxd -l16 -ps /dev/urandom)
-socket="/tmp/${uuid}.jsockd_sock"
+socket="/tmp/${uid}.jsockd_sock"
 
 command="$1"
 shift
 
-rm -f /tmp/${uuid}.jsockd_sock_ready
+rm -f /tmp/${uid}.jsockd_sock_ready
+printf "0" > /tmp/${uid}.jsockd_status
+printf "" > /tmp/${uid}.jsockd_status_emsg
+
 (
-    $JSOCKD -b 1e -s $socket $@ | (
-        while IFS= read -r line; do
+    $JSOCKD -b 1e -s $socket $@ 2>&1 | (
+        IFS=
+        while read -r line; do
             case $line in
                 "READY 1")
-                    touch /tmp/${uuid}.jsockd_sock_ready
-                    break;;
+                    touch /tmp/${uid}.jsockd_sock_ready
+                    ;;
+                *)
+                    if printf "%s" "$line" | grep -Eq '^jsockd [^ ]+ \[ERROR\]'; then
+                        echo "1" > /tmp/${uid}.jsockd_status
+                        printf "$line" > /tmp/${uid}.jsockd_status_emsg
+                        break
+                    fi
+                    ;;
             esac
         done
     )
@@ -32,7 +43,14 @@ sleep 0.001 2>/dev/null
 sleep_frac_exit_code=$?
 
 i=0
-while ! [ -e /tmp/${uuid}.jsockd_sock_ready ]; do
+while ! [ -e /tmp/${uid}.jsockd_sock_ready ]; do
+   if [ $(cat /tmp/${uid}.jsockd_status) -ne 0 ]; then
+       echo "jsockd failed to start up:"
+       cat /tmp/${uid}.jsockd_status_emsg
+       rm -f /tmp/${uid}.jsockd_status /tmp/${uid}.jsockd_status_emsg
+       exit 1
+   fi
+
    if [ $sleep_frac_exit_code -ne 0 ]; then
        sleep 1
    else
@@ -71,6 +89,6 @@ case $output in
         ;;
 esac
 
-rm -f /tmp/${uuid}.jsockd_sock_ready
+rm -f /tmp/${uid}.jsockd_sock_ready /tmp/${uid}.jsockd_status /tmp/${uid}.jsockd_status_emsg
 
 wait $jsockd_pid
