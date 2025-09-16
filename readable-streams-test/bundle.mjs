@@ -14690,13 +14690,13 @@ var require_server_edge = __commonJS({
 var import_react = __toESM(require_react(), 1);
 var import_server = __toESM(require_server_edge(), 1);
 globalThis.setTimeout = (f) => {
-  f();
   return 0;
 };
 function MyComponent() {
   return import_react.default.createElement("div", {});
 }
 function myRenderToString(node) {
+  return import_server.default.renderToString(node);
   return import_server.default.renderToReadableStream(node);
 }
 function cmd() {

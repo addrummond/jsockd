@@ -2,7 +2,6 @@ import React from "react";
 import ReactDOM from "react-dom/server.edge";
 
 globalThis.setTimeout = (f) => {
-  f();
   return 0;
 };
 
@@ -11,6 +10,7 @@ export function MyComponent() {
 }
 
 export function myRenderToString(node) {
+  return ReactDOM.renderToString(node);
   return ReactDOM.renderToReadableStream(node);
 }
 
