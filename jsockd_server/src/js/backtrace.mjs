@@ -51,13 +51,15 @@ export function formatBacktrace(sourcemap, backtrace) {
 function formatParsedBacktrace(backtrace) {
   let bt = `
 ${backtrace.errorMessage}:
-  ${backtrace.trace.map((entry) => {
+${backtrace.trace
+  .map((entry) => {
     return `  at ${entry.functionName ?? "<unknown>"} (${entry.source ?? "<unknown>"}${entry.line !== null ? `:${entry.line}` : ""}${entry.column !== null ? `:${entry.column}` : ""})${(() => {
       if (entry.mapped)
         return ` -> ${entry.mapped.functionName ?? "<unknown>"} (${entry.mapped.source ?? "<unknown>"}${entry.mapped.line !== null ? `:${entry.mapped.line}` : ""}${entry.mapped.column !== null ? `:${entry.mapped.column}` : ""})`;
       return "";
     })()}`;
-  })}`;
+  })
+  .join("\n")}`;
 
   bt = bt.trimEnd();
   if (bt.length > 0 && bt[bt.length - 1] == ":")
