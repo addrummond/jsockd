@@ -18,6 +18,8 @@ rm -f /tmp/${uid}.jsockd_sock_ready
 printf "0" > /tmp/${uid}.jsockd_status
 printf "" > /tmp/${uid}.jsockd_status_emsg
 
+echo $JSOCKD -b 1e -s $socket $@
+
 (
     $JSOCKD -b 1e -s $socket $@ 2>&1 | (
         IFS=

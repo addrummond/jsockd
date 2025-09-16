@@ -1,0 +1,23 @@
+diff --git a/quickjs-libc.c b/quickjs-libc.c
+index 54a7a15..b683910 100644
+--- a/quickjs-libc.c
++++ b/quickjs-libc.c
+@@ -4277,8 +4277,17 @@ JSValue js_std_await(JSContext *ctx, JSValue obj)
+             if (err == 0) {
+                 js_std_promise_rejection_check(ctx);
+ 
++                // Alex D: Attempt to guard agasint an infinite loop that I caused by
++                // setting globalThis.setTimeout = () => {}. This infinite loop is
++                // nasty because it's immune to JS_SetInterrupt. User code shouldn't
++                // be able to lock the interpreter like this (however dumb it is).
++                int r = -1;
+                 if (os_poll_func)
+-                    os_poll_func(ctx);
++                    r = os_poll_func(ctx);
++                if (r == -1) {
++                    JS_FreeValue(ctx, obj);
++                    return JS_EXCEPTION;
++                }
+             }
+         } else {
+             /* not a promise */
