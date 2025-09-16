@@ -55,7 +55,7 @@ ${backtrace.trace
   .map((entry) => {
     return `  at ${entry.functionName ?? "<unknown>"} (${entry.source ?? "<unknown>"}${entry.line !== null ? `:${entry.line}` : ""}${entry.column !== null ? `:${entry.column}` : ""})${(() => {
       if (entry.mapped)
-        return ` -> ${entry.mapped.functionName ?? "<unknown>"} (${entry.mapped.source ?? "<unknown>"}${entry.mapped.line !== null ? `:${entry.mapped.line}` : ""}${entry.mapped.column !== null ? `:${entry.mapped.column}` : ""})`;
+        return ` -> ${entry.mapped.functionName ? `${entry.mapped.functionName} (` : ""}${entry.mapped.source ?? "<unknown>"}${entry.mapped.line !== null ? `:${entry.mapped.line}` : ""}${entry.mapped.column !== null ? `:${entry.mapped.column}` : ""}${entry.mapped.functionName ? ")" : ""}`;
       return "";
     })()}`;
   })
