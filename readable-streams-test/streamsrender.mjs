@@ -1,7 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/server.edge";
 
-globalThis.setTimeout = (f) => f();
+//globalThis.setTimeout = (f) => f();
 
 export function MyComponent() {
   return React.createElement("div", {});

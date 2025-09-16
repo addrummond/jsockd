@@ -7,5 +7,7 @@ export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=dangerously_allow_invalid_signatures
     set -e
     cd ../jsockd_server
     ./mk.sh Debug
+    build_Debug/jsockd -c ../readable-streams-test/bundle.mjs ../readable-streams-test/bundle.qjsbc
     JSOCKD=build_Debug/jsockd ../scripts/eval.sh 'x => x.cmd()' -m ../readable-streams-test/bundle.qjsbc
+    #build_Debug/jsockd -- -m ../readable-streams-test/bundle.qjsbc -s /tmp/sock
 )
