@@ -1,8 +1,9 @@
 import React from "react";
 import ReactDOM from "react-dom/server.edge";
 
-globalThis.setTimeout = (_) => {
-  throw new Error("setTimeout not implemented");
+globalThis.setTimeout = (f) => {
+  f();
+  return 0;
 };
 
 export function MyComponent() {
