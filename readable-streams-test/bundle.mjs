@@ -14689,6 +14689,9 @@ var require_server_edge = __commonJS({
 // streamsrender.mjs
 var import_react = __toESM(require_react(), 1);
 var import_server = __toESM(require_server_edge(), 1);
+globalThis.setTimeout = (_) => {
+  throw new Error("setTimeout not implemented");
+};
 function MyComponent() {
   return import_react.default.createElement("div", {});
 }
