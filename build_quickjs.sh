@@ -16,6 +16,7 @@ cd .scratch
 git clone https://github.com/bellard/quickjs
 cd quickjs
 git checkout $QUICKJS_COMMIT
+git apply ../../quickjs-patch.patch
 
 # Unicode tables fetch script uses wget, which is not available on all systems.
 # Modify to use curl.

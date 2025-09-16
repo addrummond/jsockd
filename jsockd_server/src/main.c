@@ -501,7 +501,7 @@ static int interrupt_handler(JSRuntime *rt, void *opaque) {
     if (0 != clock_gettime(MONOTONIC_CLOCK, &now)) {
       release_logf(LOG_ERROR, "Error getting time in interrupt handler: %s\n",
                    strerror(errno));
-      return 0;
+      return 1;
     }
     int64_t delta_ns = ns_time_diff(&now, start);
     if (delta_ns > 0 &&
