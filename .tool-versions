@@ -1,4 +1,4 @@
 cmake 4.0.2
-node 22.16.0
+nodejs 22.16.0
 elixir 1.18.4
 erlang 28.0.1
