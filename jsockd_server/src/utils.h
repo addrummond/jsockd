@@ -7,6 +7,7 @@
 
 #include <pthread.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <time.h>
 
 #define ISO8601_MAX_LEN 29
@@ -18,6 +19,7 @@ void destroy_log_mutex(void);
 void mutex_lock_(pthread_mutex_t *m, const char *file, int line);
 void mutex_unlock_(pthread_mutex_t *m, const char *file, int line);
 void mutex_init_(pthread_mutex_t *m, const char *file, int line);
+void print_log_prefix(LogLevel log_level, FILE *f, int line);
 void release_logf(LogLevel level, const char *fmt, ...);
 void release_log(LogLevel level, const char *s);
 void munmap_or_warn(const void *addr, size_t length);

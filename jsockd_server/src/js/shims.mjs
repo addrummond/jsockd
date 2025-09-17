@@ -1,8 +1,12 @@
-export const console = {
-  log: () => {},
-  warn: () => {},
-  error: () => {},
-};
+export const console = {};
+
+// console.log will be filled in in main.c
+console.warn =
+  console.error =
+  console.log =
+  console.info =
+  console.debug =
+    console.log;
 
 // https://gitlab.com/t-affeldt/text-encoding-shim/-/blob/master/index.js?ref_type=heads
 const utf8Encodings = ["utf8", "utf-8", "unicode-1-1-utf-8"];

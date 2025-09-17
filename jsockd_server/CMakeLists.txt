@@ -105,6 +105,7 @@ set(JSOCKD_SERVER_SOURCES
   src/cmdargs.c
   src/mmap_file.c
   src/modcompiler.c
+  src/console.c
   src/js/gen_backtrace.c
   src/js/gen_shims.c
   ${ED25519_LIB_SOURCES}
