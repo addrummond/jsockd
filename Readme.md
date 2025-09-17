@@ -14,12 +14,12 @@ The server receives commands over one or more UNIX domain sockets. The motivatin
 
 ### 1.1 Adding JSockD to your application
 
-Applications should generally connect to JSockD via a client library that manages the JSockD server process. At the moment, this repo contains one example of such a library in `clients/elixir/jsockd_client`. At this level of abstraction, JSockD is a simple command execution service.
+Applications should generally connect to JSockD via a client library that manages the JSockD server process. At the moment, this repo contains one example of a client library in `clients/elixir/jsockd_client`.
 Steps to add JSockD to your application:
 
 * Bundle all of the required Javascript library code into a single ES6 module (using e.g. [esbuild](https://esbuild.github.io/api/)).
 * Generate an ED25519 public/private key pair for signing your code (see section 2).
-* Compile the ES6 module into a QuickJS bytecode file using `jsockd -c` command (see section 2).
+* Compile the ES6 module into a QuickJS bytecode file using the `jsockd -c` command (see section 2).
 * Configure your client library with the path to the bytecode file and the public key used to sign it.
 * Use the client library to send commands to the JSockD server.
 
@@ -81,6 +81,9 @@ export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=$(cat my_key_file.pubkey)
 ```
 
 ### 2.2 [optional] Using openssl to sign bytecode
+
+If you don't trust JSockD to generate keys and signatures, you can use openssl to sign your module bytecode.
+See `docs/signing_with_openssl.md` for details.
 
 _**On Mac you may need to install openssl via homebrew to get support for ED25519 signatures.**_
 
