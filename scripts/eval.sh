@@ -17,6 +17,7 @@ shift
 rm -f /tmp/${uid}.jsockd_sock_ready
 printf "0" > /tmp/${uid}.jsockd_status
 printf "" > /tmp/${uid}.jsockd_status_emsg
+printf "" > /tmp/${uid}.jsockd_output
 
 (
     $JSOCKD -b 1e -s $socket $@ 2>&1 | (
@@ -32,7 +33,7 @@ printf "" > /tmp/${uid}.jsockd_status_emsg
                         printf "$line" > /tmp/${uid}.jsockd_status_emsg
                         break
                     else
-                        printf "%s" $line
+                        printf "%s" $line > /tmp/${uid}.jsockd_output
                     fi
                     ;;
             esac
@@ -68,6 +69,9 @@ done
 # Some versions of awk are funny about setting RS to the null byte, so use
 # the ASCII record sep char instead.
 output=$(printf "$uid\x1e%s\x1e0\x1e?quit\x00" "$command" | nc -U $socket)
+
+cat /tmp/${uid}.jsockd_output
+echo
 
 case $output in
     "$uid exception "*)
