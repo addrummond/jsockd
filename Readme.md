@@ -153,8 +153,7 @@ by a separator byte:
 ```
 
 The separator byte is `\n` by default. It can be changed using the `-b XX` command line option, where `XX` is a two-digit hexadecimal value.
-A useful value is `00`, as the null byte cannot be present in valid JSON or JavaScript
-(assuming UTF-8 encoding).
+A useful value is `00`, as the null byte cannot be present in valid UTF-8-encoded JSON or JavaScript.
 
 A unique command ID is any non-empty sequence of 32 or fewer bytes that does not contain a space character or a separator byte.
 
