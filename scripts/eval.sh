@@ -29,7 +29,7 @@ echo $JSOCKD -b 1e -s $socket $@
                     touch /tmp/${uid}.jsockd_sock_ready
                     ;;
                 *)
-                    if printf "%s" "$line" | grep -Eq '^jsockd [^ ]+ \[ERROR\]'; then
+                    if printf "%s" "$line" | grep -Eq '^[*.] jsockd [^ ]+ \[ERROR\]'; then
                         echo "1" > /tmp/${uid}.jsockd_status
                         printf "$line" > /tmp/${uid}.jsockd_status_emsg
                         break
