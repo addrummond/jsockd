@@ -4,6 +4,7 @@ JSockD provides a lightweight multi-threaded server for executing parameterized 
 The server receives commands over one or more UNIX domain sockets. The motivating use case is server-side rendering of React components.
 
 - Uses the lightweight [QuickJS](https://bellard.org/quickjs/) JavaScript engine
+- Runs on Linux, MacOS, FreeBSD
 - Loads precompiled bytecode for fast startup and execution
 - Caches command bytecode
 - Low memory usage
