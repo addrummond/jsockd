@@ -628,7 +628,6 @@ static int init_thread_state(ThreadState *ts, SocketState *socket_state,
   JSValue global_obj = JS_GetGlobalObject(ts->ctx);
   assert(JS_IsObject(global_obj));
   JSValue console = JS_GetPropertyStr(ts->ctx, global_obj, "console");
-  printf("TYPEOF %i\n", JS_IsUndefined(console));
   assert(JS_IsObject(console));
   JS_FreeValue(ts->ctx, JS_GetPropertyStr(ts->ctx, console, "log"));
   assert(1 == JS_SetPropertyStr(
