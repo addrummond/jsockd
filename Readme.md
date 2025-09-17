@@ -7,7 +7,6 @@ The server receives commands over one or more UNIX domain sockets. The motivatin
 - Runs on Linux, MacOS, FreeBSD
 - Loads precompiled bytecode for fast startup and execution
 - Caches command bytecode
-- Low memory usage
 - Valgrind tests, fuzz tests
 - Memory-safe [Fil-C](https://github.com/pizlonator/llvm-project-deluge/) build available on Linux/x86_64 for the safety conscious.
 
