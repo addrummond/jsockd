@@ -31,14 +31,11 @@ static void js_print_value_write(void *opaque, const char *buf, size_t len) {
   len = remove_trailing_ws(buf, len);
 
   int line = 1;
-  print_log_prefix(LOG_INFO, fo, line);
-  fputs("<console.*>: ", fo);
   size_t start = 0;
   size_t i;
   for (i = 0; i < len; ++i) {
     if (buf[i] == '\n') {
-      fwrite(buf + start, 1, i - start, fo);
-      fputc('\n', stderr);
+      fwrite(buf + start, 1, i - start + 1, fo);
       ++line;
       start = i + 1;
       print_log_prefix(LOG_INFO, fo, line);
@@ -52,6 +49,8 @@ static JSValue js_print(JSContext *ctx, JSValueConst this_val, int argc,
   int i;
   JSValueConst v;
 
+  print_log_prefix(LOG_INFO, stderr, 1);
+  fputs("<console.*>: ", stderr);
   for (i = 0; i < argc; i++) {
     if (i != 0)
       fputc(' ', stderr);

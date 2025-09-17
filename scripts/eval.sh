@@ -30,10 +30,10 @@ printf "" > /tmp/${uid}.jsockd_output
                 *)
                     if printf "%s" "$line" | grep -Eq '^[*.] jsockd [^ ]+ \[ERROR\]'; then
                         echo "1" > /tmp/${uid}.jsockd_status
-                        printf "$line" > /tmp/${uid}.jsockd_status_emsg
+                        printf "%s\n" "$line" > /tmp/${uid}.jsockd_status_emsg
                         break
                     else
-                        printf "%s" $line > /tmp/${uid}.jsockd_output
+                        printf "%s\n" "$line" >> /tmp/${uid}.jsockd_output
                     fi
                     ;;
             esac
@@ -71,6 +71,7 @@ done
 output=$(printf "$uid\x1e%s\x1e0\x1e?quit\x00" "$command" | nc -U $socket)
 
 cat /tmp/${uid}.jsockd_output
+rm /tmp/${uid}.jsockd_output
 echo
 
 case $output in
