@@ -16,7 +16,7 @@ index 54a7a15..2bfd8b9 100644
 +                    if (os_poll_func(ctx))
 +                        break;
 +                } else {
-+                    break;
++                    return JS_EXCEPTION;
 +                }
              }
          } else {
