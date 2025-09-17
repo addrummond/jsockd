@@ -3,14 +3,13 @@
 #include <stdarg.h>
 #include <stdatomic.h>
 #include <stdbool.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
 #include <unistd.h>
 
-static pthread_mutex_t g_log_mutex;
-static atomic_bool g_log_mutex_initialized;
+pthread_mutex_t g_log_mutex;
+atomic_bool g_log_mutex_initialized = false;
 
 void init_log_mutex(void) {
   int r = pthread_mutex_init(&g_log_mutex, NULL);
@@ -53,7 +52,7 @@ void mutex_init_(pthread_mutex_t *m, const char *file, int line) {
   }
 }
 
-static void print_log_prefix(LogLevel log_level) {
+void print_log_prefix(LogLevel log_level, FILE *f, int line) {
   struct timespec ts;
   if (0 == clock_gettime(CLOCK_REALTIME, &ts)) {
     char timebuf[ISO8601_MAX_LEN];
@@ -70,7 +69,7 @@ static void print_log_prefix(LogLevel log_level) {
       ll = "ERROR";
       break;
     }
-    fprintf(stderr, "jsockd %s [%s] ", timebuf, ll);
+    fprintf(stderr, "%s jsockd %s [%s] ", line == 1 ? "*" : ".", timebuf, ll);
   }
 }
 
@@ -80,7 +79,7 @@ void release_logf(LogLevel log_level, const char *fmt, ...) {
 
   if (g_log_mutex_initialized)
     mutex_lock(&g_log_mutex);
-  print_log_prefix(log_level);
+  print_log_prefix(log_level, stderr, 1);
   vfprintf(stderr, fmt, args);
   if (g_log_mutex_initialized)
     mutex_unlock(&g_log_mutex);

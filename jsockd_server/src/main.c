@@ -4,6 +4,7 @@
 
 #include "cmdargs.h"
 #include "config.h"
+#include "console.h"
 #include "custom_module_loader.h"
 #include "fchmod.h"
 #include "hash_cache.h"
@@ -438,6 +439,7 @@ static JSContext *JS_NewCustomContext(JSRuntime *rt) {
     return NULL;
   js_init_module_std(ctx, "std");
   js_init_module_os(ctx, "os");
+
   return ctx;
 }
 
@@ -621,6 +623,19 @@ static int init_thread_state(ThreadState *ts, SocketState *socket_state,
                                             g_shims_module_bytecode_size);
   assert(!JS_IsException(shims_module));
   JS_FreeValue(ts->ctx, shims_module); // imported just for side effects
+
+  // Override console.log
+  JSValue global_obj = JS_GetGlobalObject(ts->ctx);
+  assert(JS_IsObject(global_obj));
+  JSValue console = JS_GetPropertyStr(ts->ctx, global_obj, "console");
+  printf("TYPEOF %i\n", JS_IsUndefined(console));
+  assert(JS_IsObject(console));
+  JS_FreeValue(ts->ctx, JS_GetPropertyStr(ts->ctx, console, "log"));
+  assert(1 == JS_SetPropertyStr(
+                  ts->ctx, console, "log",
+                  JS_NewCFunction(ts->ctx, my_js_console_log, "log", 1)));
+  JS_FreeValue(ts->ctx, console);
+  JS_FreeValue(ts->ctx, global_obj);
 
   ts->backtrace_module = load_binary_module(
       ts->ctx, g_backtrace_module_bytecode, g_backtrace_module_bytecode_size);
