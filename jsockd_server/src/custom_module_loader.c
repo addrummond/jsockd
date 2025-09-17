@@ -11,6 +11,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+static const char *allowed_modules[] = {"os", "std"};
+
 // Adapted from 'js_module_loader' and 'js_std_eval_binary' in quickjs-libc.c
 // See also
 // https://github.com/chqrlie/quickjs-ng/blob/78910046ada3f3b58d9b690ee233ac8280965246/qjs.c#L75
@@ -50,6 +52,15 @@ JSValue load_binary_module(JSContext *ctx, const uint8_t *buf, size_t buf_len) {
 
 JSModuleDef *jsockd_js_module_loader(JSContext *ctx, const char *module_name,
                                      void *opaque, JSValueConst attributes) {
-  JS_ThrowReferenceError(ctx, "JSockD doesn't allow module imports");
+  for (size_t i = 0; i < sizeof(allowed_modules) / sizeof(allowed_modules[0]);
+       ++i) {
+    fprintf(stderr, "CMP %s %s\n", module_name, allowed_modules[i]);
+    if (!strcmp(module_name, allowed_modules[i])) {
+      fprintf(stderr, "IMPORTING\n");
+      return js_module_loader(ctx, module_name, opaque, attributes);
+    }
+  }
+  JS_ThrowReferenceError(
+      ctx, "JSockD doesn't allow module imports other than 'os' and 'std'");
   return NULL;
 }

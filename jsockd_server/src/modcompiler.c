@@ -39,6 +39,8 @@ int compile_module_file(const char *module_filename,
     ret = EXIT_FAILURE;
     goto end;
   }
+  js_init_module_std(ctx, "std");
+  js_init_module_os(ctx, "os");
 
   size_t buf_len;
   buf = js_load_file(ctx, &buf_len, module_filename);
