@@ -672,8 +672,7 @@ static int init_thread_state(ThreadState *ts, SocketState *socket_state,
     WBuf emb = {
         .buf = error_msg_buf, .index = 0, .length = ERROR_MSG_MAX_BYTES};
     JSValue exception = JS_GetException(ts->ctx);
-    JS_PrintValue(ts->ctx, write_to_buf, &emb.buf, exception,
-                  NULL);
+    JS_PrintValue(ts->ctx, write_to_buf, &emb.buf, exception, NULL);
     JS_FreeValue(ts->ctx, exception);
     size_t bt_length;
     const char *bt_str =
