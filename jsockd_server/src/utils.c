@@ -123,10 +123,10 @@ void release_logf(LogLevel log_level, const char *fmt, ...) {
     memset(log_buf, 0, (size_t)n);
   }
 
-  vsnprintf(log_buf, n, fmt, args2);
-
   if (g_log_mutex_initialized)
     mutex_lock(&g_log_mutex);
+
+  vsnprintf(log_buf, n, fmt, args2);
 
   print_log_prefix(LOG_INFO, stderr, 1);
   log_with_prefix_for_subsequent_lines(
