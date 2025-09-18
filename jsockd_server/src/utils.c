@@ -108,29 +108,28 @@ void release_logf(LogLevel log_level, const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
 
-  vfprintf(stderr, fmt, args);
-  return; /*
+  static char log_buf_[8192];
+  char *log_buf = log_buf_;
 
-   static char log_buf_[8192];
-   char *log_buf = log_buf_;
+  if (g_log_mutex_initialized)
+    mutex_lock(&g_log_mutex);
 
-   if (g_log_mutex_initialized)
-     mutex_lock(&g_log_mutex);
+  int n = vsnprintf(NULL, 0, fmt, args);
+  if ((size_t)n > sizeof(log_buf_) / sizeof(log_buf_[0])) {
+    memset(log_buf, 0, (size_t)n);
+    log_buf = (char *)calloc((size_t)n, sizeof(char));
+  }
+  n = vsnprintf(log_buf, n, fmt, args);
+  print_log_prefix(LOG_INFO, stderr, 1);
+  log_with_prefix_for_subsequent_lines(
+      stderr, log_buf,
+      (size_t)(n - 1)); // n includes null terminator
 
-   int n = vsnprintf(NULL, 0, fmt, args);
-   if ((size_t)n > sizeof(log_buf_) / sizeof(log_buf_[0]))
-     log_buf = (char *)calloc((size_t)n, sizeof(char));
-   n = vsnprintf(log_buf, n, fmt, args);
-   print_log_prefix(LOG_INFO, stderr, 1);
-   log_with_prefix_for_subsequent_lines(
-       stderr, log_buf,
-       (size_t)(n - 1)); // n includes null terminator
+  if (log_buf != log_buf_)
+    free(log_buf);
 
-   if (log_buf != log_buf_)
-     free(log_buf);
-
-   if (g_log_mutex_initialized)
-   mutex_unlock(&g_log_mutex);*/
+  if (g_log_mutex_initialized)
+    mutex_unlock(&g_log_mutex);
 }
 
 void release_log(LogLevel log_level, const char *s) {
