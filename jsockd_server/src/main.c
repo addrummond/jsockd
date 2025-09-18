@@ -592,7 +592,25 @@ static int init_thread_state(ThreadState *ts, SocketState *socket_state,
                              int thread_index) {
   debug_logf(LOG_INFO, "Calling init_thread_state for thread %i\n",
              thread_index);
+
   ts->thread_index = thread_index;
+  ts->socket_state = socket_state;
+  // set to nonzero if program should eventually exit with non-zero exit code
+  ts->exit_status = 0;
+  ts->line_n = 0;
+  ts->compiled_query = JS_UNDEFINED;
+  ts->last_js_execution_start.tv_sec = 0;
+  ts->last_js_execution_start.tv_nsec = 0;
+  ts->current_uuid[0] = '\0';
+  ts->current_uuid_len = 0;
+  ts->memory_check_count = 0;
+  ts->memory_increase_count = 0;
+  ts->last_memory_usage = 0;
+  ts->last_n_cached_functions = 1;
+  ts->truncated = false;
+  ts->last_command_exec_time_ns = 0;
+  ts->my_replacement = NULL;
+  atomic_init(&ts->replacement_thread_state, REPLACEMENT_THREAD_STATE_NONE);
 
   if (0 != clock_gettime(MONOTONIC_CLOCK, &ts->last_active_time)) {
     release_logf(LOG_ERROR,
@@ -653,8 +671,10 @@ static int init_thread_state(ThreadState *ts, SocketState *socket_state,
     char *error_msg_buf = calloc(ERROR_MSG_MAX_BYTES, sizeof(char));
     WBuf emb = {
         .buf = error_msg_buf, .index = 0, .length = ERROR_MSG_MAX_BYTES};
-    JS_PrintValue(ts->ctx, write_to_buf, &emb.buf, JS_GetException(ts->ctx),
+    JSValue exception = JS_GetException(ts->ctx);
+    JS_PrintValue(ts->ctx, write_to_buf, &emb.buf, exception,
                   NULL);
+    JS_FreeValue(ts->ctx, exception);
     size_t bt_length;
     const char *bt_str =
         get_backtrace(ts, emb.buf, emb.index, &bt_length, BACKTRACE_PRETTY);
@@ -674,24 +694,6 @@ static int init_thread_state(ThreadState *ts, SocketState *socket_state,
   }
 
   JS_SetInterruptHandler(ts->rt, interrupt_handler, ts);
-
-  ts->socket_state = socket_state;
-  // set to nonzero if program should eventually exit with non-zero exit code
-  ts->exit_status = 0;
-  ts->line_n = 0;
-  ts->compiled_query = JS_UNDEFINED;
-  ts->last_js_execution_start.tv_sec = 0;
-  ts->last_js_execution_start.tv_nsec = 0;
-  ts->current_uuid[0] = '\0';
-  ts->current_uuid_len = 0;
-  ts->memory_check_count = 0;
-  ts->memory_increase_count = 0;
-  ts->last_memory_usage = 0;
-  ts->last_n_cached_functions = 1;
-  ts->truncated = false;
-  ts->last_command_exec_time_ns = 0;
-  ts->my_replacement = NULL;
-  atomic_init(&ts->replacement_thread_state, REPLACEMENT_THREAD_STATE_NONE);
 
 #ifdef CMAKE_BUILD_TYPE_DEBUG
   ts->manually_trigger_thread_state_reset = false;

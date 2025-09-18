@@ -13,35 +13,8 @@ typedef struct {
   size_t pos;
 } LogState;
 
-static size_t remove_trailing_ws(const char *buf, size_t len) {
-  if (len == 0)
-    return 0;
-  --len;
-  do {
-    if (buf[len] != ' ' && buf[len] != '\t' && buf[len] != '\n' &&
-        buf[len] != '\r')
-      break;
-  } while (len-- > 0);
-  return len + 1;
-}
-
 static void js_print_value_write(void *opaque, const char *buf, size_t len) {
-  FILE *fo = opaque;
-
-  len = remove_trailing_ws(buf, len);
-
-  int line = 1;
-  size_t start = 0;
-  size_t i;
-  for (i = 0; i < len; ++i) {
-    if (buf[i] == '\n') {
-      fwrite(buf + start, 1, i - start + 1, fo);
-      ++line;
-      start = i + 1;
-      print_log_prefix(LOG_INFO, fo, line);
-    }
-  }
-  fwrite(buf + start, 1, i - start, fo);
+  log_with_prefix((FILE *)opaque, buf, len);
 }
 
 static JSValue js_print(JSContext *ctx, JSValueConst this_val, int argc,
@@ -61,7 +34,7 @@ static JSValue js_print(JSContext *ctx, JSValueConst this_val, int argc,
       str = JS_ToCStringLen(ctx, &len, v);
       if (!str)
         return JS_EXCEPTION;
-      js_print_value_write((void *)stderr, str, len);
+      log_with_prefix(stderr, str, len);
       JS_FreeCString(ctx, str);
     } else {
       JS_PrintValue(ctx, js_print_value_write, stderr, v, NULL);

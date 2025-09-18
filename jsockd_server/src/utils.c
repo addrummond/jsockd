@@ -73,14 +73,54 @@ void print_log_prefix(LogLevel log_level, FILE *f, int line) {
   }
 }
 
+static size_t remove_trailing_ws(const char *buf, size_t len) {
+  if (len == 0)
+    return 0;
+  --len;
+  do {
+    if (buf[len] != ' ' && buf[len] != '\t' && buf[len] != '\n' &&
+        buf[len] != '\r')
+      break;
+  } while (len-- > 0);
+  return len + 1;
+}
+
+void log_with_prefix(FILE *fo, const char *buf, size_t len) {
+  len = remove_trailing_ws(buf, len);
+
+  int line = 1;
+  size_t start = 0;
+  size_t i;
+  for (i = 0; i < len; ++i) {
+    if (buf[i] == '\n') {
+      fwrite(buf + start, 1, i - start + 1, fo);
+      ++line;
+      start = i + 1;
+      print_log_prefix(LOG_INFO, fo, line);
+    }
+  }
+  fwrite(buf + start, 1, i - start, fo);
+}
+
 void release_logf(LogLevel log_level, const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
 
+  static char log_buf_[8192];
+  char *log_buf = log_buf_;
+
   if (g_log_mutex_initialized)
     mutex_lock(&g_log_mutex);
-  print_log_prefix(log_level, stderr, 1);
-  vfprintf(stderr, fmt, args);
+
+  int n = vsnprintf("", 0, fmt, args);
+  if ((size_t)n > sizeof(log_buf_)/sizeof(log_buf_[0]))
+    log_buf = (char *)calloc((size_t)n, sizeof(char));
+  n = vsnprintf(log_buf, n, fmt, args);
+  log_with_prefix(stderr, log_buf, (size_t)(n-1)); // n includes null terminator
+
+  if (log_buf != log_buf_)
+     free(log_buf);
+
   if (g_log_mutex_initialized)
     mutex_unlock(&g_log_mutex);
 }
