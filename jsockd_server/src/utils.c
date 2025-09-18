@@ -54,23 +54,27 @@ void mutex_init_(pthread_mutex_t *m, const char *file, int line) {
 
 void print_log_prefix(LogLevel log_level, FILE *f, int line) {
   struct timespec ts;
+  char timebuf[ISO8601_MAX_LEN];
+
   if (0 == clock_gettime(CLOCK_REALTIME, &ts)) {
-    char timebuf[ISO8601_MAX_LEN];
     timespec_to_iso8601(&ts, timebuf, sizeof(timebuf) / sizeof(timebuf[0]));
-    const char *ll = "";
-    switch (log_level) {
-    case LOG_INFO:
-      ll = "INFO";
-      break;
-    case LOG_WARN:
-      ll = "WARN";
-      break;
-    case LOG_ERROR:
-      ll = "ERROR";
-      break;
-    }
-    fprintf(stderr, "%s jsockd %s [%s] ", line == 1 ? "*" : ".", timebuf, ll);
+  } else {
+    strcpy(timebuf, "<unknown time>");
   }
+
+  const char *ll = "";
+  switch (log_level) {
+  case LOG_INFO:
+    ll = "INFO";
+    break;
+  case LOG_WARN:
+    ll = "WARN";
+    break;
+  case LOG_ERROR:
+    ll = "ERROR";
+    break;
+  }
+  fprintf(stderr, "%s jsockd %s [%s] ", line == 1 ? "*" : ".", timebuf, ll);
 }
 
 static size_t remove_trailing_ws(const char *buf, size_t len) {
