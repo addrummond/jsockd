@@ -1,6 +1,8 @@
 #ifndef LOG_H_
 #define LOG_H_
 
+#include <pthread.h>
+#include <stdatomic.h>
 #include <stdio.h>
 
 #define ISO8601_MAX_LEN 29
@@ -23,5 +25,8 @@ void log_with_prefix_for_subsequent_lines(FILE *fo, const char *buf,
 #define debug_logf(log_level, fmt, ...) 0
 #define debug_log(log_level, s) 0
 #endif
+
+extern pthread_mutex_t g_log_mutex;
+extern atomic_bool g_log_mutex_initialized;
 
 #endif

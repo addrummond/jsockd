@@ -1,13 +1,9 @@
 #include "log.h"
 #include "quickjs.h"
 #include "utils.h"
-#include <stdatomic.h>
 #include <stdio.h>
 
 #include <stdlib.h>
-
-extern pthread_mutex_t g_log_mutex;
-extern atomic_bool g_log_mutex_initialized;
 
 typedef struct {
   const char *data;
