@@ -116,8 +116,8 @@ void release_logf(LogLevel log_level, const char *fmt, ...) {
 
   int n = vsnprintf(NULL, 0, fmt, args);
   if ((size_t)n > sizeof(log_buf_) / sizeof(log_buf_[0])) {
-    memset(log_buf, 0, (size_t)n);
     log_buf = (char *)calloc((size_t)n, sizeof(char));
+    memset(log_buf, 0, (size_t)n);
   }
   n = vsnprintf(log_buf, n, fmt, args);
   print_log_prefix(LOG_INFO, stderr, 1);
