@@ -10,6 +10,7 @@
 #include "hash_cache.h"
 #include "hex.h"
 #include "line_buf.h"
+#include "log.h"
 #include "mmap_file.h"
 #include "modcompiler.h"
 #include "quickjs-libc.h"

@@ -1,3 +1,4 @@
+#include "log.h"
 #include "quickjs.h"
 #include "utils.h"
 #include <stdatomic.h>
