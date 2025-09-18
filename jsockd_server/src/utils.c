@@ -110,6 +110,9 @@ void log_with_prefix_for_subsequent_lines(FILE *fo, const char *buf,
 
 void release_logf(LogLevel log_level, const char *fmt, ...) {
   va_list args, args2;
+
+  // Cannot use args twice in the two subsequent vsnprintf calls, so copy it.
+  // https://stackoverflow.com/a/55274498/376854
   va_start(args, fmt);
   va_copy(args2, args);
 
