@@ -85,7 +85,8 @@ static size_t remove_trailing_ws(const char *buf, size_t len) {
   return len + 1;
 }
 
-void log_with_prefix(FILE *fo, const char *buf, size_t len) {
+void log_with_prefix_for_subsequent_lines(FILE *fo, const char *buf,
+                                          size_t len) {
   len = remove_trailing_ws(buf, len);
 
   int line = 1;
@@ -100,6 +101,7 @@ void log_with_prefix(FILE *fo, const char *buf, size_t len) {
     }
   }
   fwrite(buf + start, 1, i - start, fo);
+  fputc('\n', stderr);
 }
 
 void release_logf(LogLevel log_level, const char *fmt, ...) {
@@ -112,12 +114,14 @@ void release_logf(LogLevel log_level, const char *fmt, ...) {
   if (g_log_mutex_initialized)
     mutex_lock(&g_log_mutex);
 
-  int n = vsnprintf("", 0, fmt, args);
+  int n = vsnprintf(NULL, 0, fmt, args);
   if ((size_t)n > sizeof(log_buf_) / sizeof(log_buf_[0]))
     log_buf = (char *)calloc((size_t)n, sizeof(char));
   n = vsnprintf(log_buf, n, fmt, args);
-  log_with_prefix(stderr, log_buf,
-                  (size_t)(n - 1)); // n includes null terminator
+  print_log_prefix(LOG_INFO, stderr, 1);
+  log_with_prefix_for_subsequent_lines(
+      stderr, log_buf,
+      (size_t)(n - 1)); // n includes null terminator
 
   if (log_buf != log_buf_)
     free(log_buf);

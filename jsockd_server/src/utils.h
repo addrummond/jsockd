@@ -28,7 +28,8 @@ void memswap_small(void *m1, void *m2, size_t size);
 int string_ends_with(const char *str, const char *suffix);
 int make_temp_dir(char out[], size_t out_size, const char *template);
 void timespec_to_iso8601(const struct timespec *ts, char *buf, size_t buflen);
-void log_with_prefix(FILE *fo, const char *buf, size_t len);
+void log_with_prefix_for_subsequent_lines(FILE *fo, const char *buf,
+                                          size_t len);
 
 #define mutex_lock(m) mutex_lock_((m), __FILE__, __LINE__)
 #define mutex_unlock(m) mutex_unlock_((m), __FILE__, __LINE__)
