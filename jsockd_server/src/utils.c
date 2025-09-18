@@ -109,10 +109,11 @@ void log_with_prefix_for_subsequent_lines(FILE *fo, const char *buf,
 }
 
 void release_logf(LogLevel log_level, const char *fmt, ...) {
-  va_list args;
+  va_list args, args2;
   va_start(args, fmt);
+  va_copy(args2, args);
 
-  char log_buf_[8192] = {0};
+  static char log_buf_[8192];
   char *log_buf = log_buf_;
 
   int n = vsnprintf(NULL, 0, fmt, args);
@@ -122,7 +123,7 @@ void release_logf(LogLevel log_level, const char *fmt, ...) {
     memset(log_buf, 0, (size_t)n);
   }
 
-  vsnprintf(log_buf, n, fmt, args);
+  vsnprintf(log_buf, n, fmt, args2);
 
   if (g_log_mutex_initialized)
     mutex_lock(&g_log_mutex);
