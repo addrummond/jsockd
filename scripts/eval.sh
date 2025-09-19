@@ -87,7 +87,7 @@ case $output in
         fi
 
         echo "Pretty-printed error from jsockd:"
-        printf "%s" "$output" | jq -r .pretty
+        printf "%s" "$output" | jq -r 'if type == "object" and has("pretty") then .pretty else . end'
         printf "\nRaw JSON error: %s\n" "$output"
 
         ;;
