@@ -80,6 +80,7 @@ void release_logf(LogLevel log_level, const char *fmt, ...) {
   log_with_prefix_for_subsequent_lines(
       stderr, log_buf,
       (size_t)(n - 1)); // n includes null terminator
+  fputc('\n', stderr);
 
   if (log_buf != log_buf_)
     free(log_buf);
@@ -120,5 +121,4 @@ void log_with_prefix_for_subsequent_lines(FILE *fo, const char *buf,
     }
   }
   fwrite(buf + start, 1, i - start, fo);
-  fputc('\n', stderr);
 }
