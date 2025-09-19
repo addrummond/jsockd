@@ -6,7 +6,7 @@ MAKE=${MAKE:-make}
 
 __BUST_CACHE=1 # increment to bust QuickJS build cache manually if needed
 
-QUICKJS_COMMIT=20d2b404af65edc5d66ee6f11a59f930ea3d1b88
+QUICKJS_COMMIT=de4d3927b8edff5fbfee1f69cfeef840844259e9
 
 FILC_VERSION=0.670
 
