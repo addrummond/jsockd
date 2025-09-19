@@ -18,3 +18,4 @@ public_signing_key
 jsockd_binary_private_signing_key.pem
 jsockd_server/src/js/gen_*
 clients/elixir/jsockd_client/priv/
+jsockd_server/src/js/shims/bundle.mjs

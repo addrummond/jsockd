@@ -1,3 +1,5 @@
+import "web-streams-polyfill/polyfill";
+
 export const console = {};
 
 // console.log will be filled in in main.c
