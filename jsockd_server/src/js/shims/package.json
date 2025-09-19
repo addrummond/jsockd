@@ -9,7 +9,6 @@
   "license": "ISC",
   "description": "",
   "devDependencies": {
-    "esbuild": "^0.25.9",
     "web-streams-polyfill": "github:MattiasBuelens/web-streams-polyfill#46d22cc"
   }
 }

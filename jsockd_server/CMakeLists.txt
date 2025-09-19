@@ -85,7 +85,7 @@ add_custom_command(
 # Bundle the shims module
 add_custom_command(
     OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/src/js/shims/bundle.mjs
-    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/src/js/shims/node_modules/.bin/esbuild ${CMAKE_CURRENT_SOURCE_DIR}/src/js/shims/shims.mjs --bundle --outfile=${CMAKE_CURRENT_SOURCE_DIR}/src/js/shims/bundle.mjs --format=esm
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/node_modules/.bin/esbuild ${CMAKE_CURRENT_SOURCE_DIR}/src/js/shims/shims.mjs --bundle --outfile=${CMAKE_CURRENT_SOURCE_DIR}/src/js/shims/bundle.mjs --format=esm
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/js/shims/shims.mjs
 )
 

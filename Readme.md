@@ -255,6 +255,7 @@ The JS server is built using CMake 4. The `mk.sh` wrapper script invokes CMake w
 Run the following commands from within the `jsockd_server` directory:
 
 ```sh
+npm i # install esbuild and clang-format
 ./mk.sh Debug # Debug build
 ./mk.sh Release # Release build
 ```
