@@ -221,6 +221,8 @@ When an idle thread is woken, the typical time to initialize a new QuickJS runti
 
 ## 4. Bundling your JavaScript code
 
+### 4.1 Using a bundler
+
 JSockD can be used with any bundler that can output an ES6 module (or with no bundler at all if your JS code is contained in a single file). The following is an example of how to bundle you code using [esbuild](https://esbuild.github.io/). The `root_module.mjs` module should contain all the code that you want to execute in the JSockD server. It can import other modules as needed.
 
 ```
@@ -235,6 +237,12 @@ import { blagFoo } from "./library2"
 
 export { flubBar, blagFoo }
 ````
+
+### 4.2 The JSockD runtime environment
+
+* The [QuickJS standard library](https://bellard.org/quickjs/quickjs.html#Standard-library) is available.
+* A polyfill for [Web Streams](https://developer.mozilla.org/en-US/docs/Web/API/Streams_API) is included.
+* `setTimeout` and `setInterval` are not available. As JSockD does not support long-running commands, you would generally want to shim these if any of your library code depends on them.
 
 ## 5. Building from source
 
