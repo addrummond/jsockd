@@ -5,7 +5,6 @@ See `docs/signing_with_openssl.md` for details.
 
 _**On Mac you may need to install openssl via homebrew to get support for ED25519 signatures.**_
 
-If you don't trust JSockD to generate keys and signatures, you can use openssl to sign your module bytecode.
 Generate public and private keys as follows:
 
 ```sh
