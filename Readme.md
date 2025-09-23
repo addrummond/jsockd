@@ -241,7 +241,10 @@ export { flubBar, blagFoo }
 ### 4.2 The JSockD runtime environment
 
 * The [QuickJS standard library](https://bellard.org/quickjs/quickjs.html#Standard-library) is available.
-* A polyfill for [Web Streams](https://developer.mozilla.org/en-US/docs/Web/API/Streams_API) is included.
+* Polyfills are included for the following:
+  * [Web Streams](https://developer.mozilla.org/en-US/docs/Web/API/Streams_API)
+  * `TextEncoder`
+  * `TextDecoder`
 * `setTimeout` and `setInterval` are not available. As JSockD does not support long-running commands, you would generally want to shim these if any of your library code depends on them.
 
 ## 5. Building from source
