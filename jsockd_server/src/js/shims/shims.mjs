@@ -1,5 +1,5 @@
+import { TextDecoder, TextEncoder } from 'fastestsmallesttextencoderdecoder';
 import "web-streams-polyfill/polyfill";
-import { TextDecoder, TextEncoder } from "./textencoder.mjs";
 
 export const console = {};
 
@@ -11,6 +11,6 @@ console.warn =
   console.debug =
     console.log;
 
-globalThis.console = console;
 globalThis.TextEncoder = TextEncoder;
 globalThis.TextDecoder = TextDecoder;
+globalThis.console = console;
