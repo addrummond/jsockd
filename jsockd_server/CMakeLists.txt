@@ -74,19 +74,12 @@ add_custom_command(
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/js/backtrace.mjs
   )
 
-# Install the node modules for the shims module
-add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/src/js/shims/node_modules
-    COMMAND npm install
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/js/shims
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/js/shims/package.json ${CMAKE_CURRENT_SOURCE_DIR}/src/js/shims/package-lock.json
-)
-
 # Bundle the shims module
 add_custom_command(
     OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/src/js/shims/bundle.mjs
-    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/node_modules/.bin/esbuild ${CMAKE_CURRENT_SOURCE_DIR}/src/js/shims/shims.mjs --bundle --outfile=${CMAKE_CURRENT_SOURCE_DIR}/src/js/shims/bundle.mjs --format=esm
+    COMMAND sh -c "( cd ${CMAKE_CURRENT_SOURCE_DIR} && npm i ) && ${CMAKE_CURRENT_SOURCE_DIR}/node_modules/.bin/esbuild ${CMAKE_CURRENT_SOURCE_DIR}/src/js/shims/shims.mjs --bundle --outfile=${CMAKE_CURRENT_SOURCE_DIR}/src/js/shims/bundle.mjs --format=esm"
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/js/shims/shims.mjs
+    VERBATIM
 )
 
 # Generate the QuickJS bytecode source file for the shims module
