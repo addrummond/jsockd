@@ -233,6 +233,12 @@ The `<DATETIME>` is in ISO 8601 format (or is the string `<unknown time>` in the
 
 The `<LOG_LEVEL>` is one of `INFO`, `WARN`, or `ERROR` in release builds; debug builds also log at the `DEBUG` level.
 
+An example log line:
+
+```
+* jsockd 2025-09-24T21:15:45.644776Z [DEBUG] Creating thread 0
+```
+
 ## 4. Bundling your JavaScript code
 
 ### 4.1 Using a bundler
