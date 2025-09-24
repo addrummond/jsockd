@@ -8,8 +8,19 @@ cd jsockd_server
 
 ./mk.sh Debug
 
+cat <<END >/tmp/jsockd_memory_increase_test_example_module.mjs
+export const getAValue = () => ({
+  foo: "bar",
+});
+export const myIdentityFunction = (x) => x;
+export const throwError = () => {
+  "a line";
+  throw new Error("foo!");
+};
+END
+
 # Compile the example module to QuickJS bytecode.
-build_Debug/jsockd -c ../example_module.mjs /tmp/jsockd_memory_increase_test_example_module.qjsb
+build_Debug/jsockd -c /tmp/jsockd_memory_increase_test_example_module.mjs /tmp/jsockd_memory_increase_test_example_module.qjsb
 
 # Generate input for a series of commands/param pairs like
 #   (m, p) => { (global_var=(globalThis.global_var ?? { })); globalVar[p] = { }; return "foo"; }

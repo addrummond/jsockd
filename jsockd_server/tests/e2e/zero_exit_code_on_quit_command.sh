@@ -7,8 +7,19 @@ export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=dangerously_allow_invalid_signatures
 cd jsockd_server
 ./mk.sh Debug
 
+cat <<END > /tmp/jsockd_zero_exit_code_on_quit_command_example_module.mjs
+export const getAValue = () => ({
+  foo: "bar",
+});
+export const myIdentityFunction = (x) => x;
+export const throwError = () => {
+  "a line";
+  throw new Error("foo!");
+};
+END
+
 # Compile the example module to QuickJS bytecode.
-build_Debug/jsockd -c ../example_module.mjs /tmp/jsockd_memory_increase_test_example_module.qjsb
+build_Debug/jsockd -c /tmp/jsockd_zero_exit_code_on_quit_command_example_module.mjs /tmp/jsockd_memory_increase_test_example_module.qjsb
 
 echo "?quit" > /tmp/jsockd_memory_increase_test_input
 
