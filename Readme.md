@@ -126,7 +126,7 @@ jsockd -c <module_file> <output_bytecode_file> [-k <private_key_file>]
 
 Compiles the specified ES6 module file to a QuickJS bytecode file. If the `-k` option is not given, the module is not signed. Unsigned modules can be used only by debug builds of `jsockd` when the `JSOCKD_BYTECODE_MODULE_PUBLIC_KEY` env var is set to `dangerously_allow_invalid_signatures`.
 
-#### Server
+#### Run the server
 
 | Option      | Argument(s)                 | Description                                                                  | Default       | Repeatable | Required |
 |-------------|-----------------------------|------------------------------------------------------------------------------|---------------|------------|----------|
