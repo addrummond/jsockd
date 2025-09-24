@@ -272,7 +272,7 @@ The version of CMake required for the build is listed in `.tool-versions`, and c
 
 QuickJS is built by running `./build_quickjs.sh`. This script downloads and builds the QuickJS library. The QuickJS build is kept separate from the main JSockD build because it needs to be run only once, and the QuickJS build system is a bit finicky to configure for different environments.
 
-On systems where `make` is a non-GNU Make, set the `MAKE` env var to `gmake` when running the script.
+On systems where `make` is a non-GNU Make, the script tries `gmake` by default. You can override this by setting the `MAKE` env var to the name of the GMake command on your system.
 
 ### 5.2 Building the JS server
 

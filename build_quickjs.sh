@@ -2,7 +2,17 @@
 
 set -e
 
-MAKE=${MAKE:-make}
+if [ -z "$MAKE" ]; then
+    MAKE=make
+    if [ "GNU Make" != $( ( make --version 2>/dev/null || true ) | head -n 1 | awk '{print $1,$2}' ) ]; then
+        if [ "GNU Make" = $( ( gmake --version 2>/dev/null || true ) | head -n 1 | awk '{print $1,$2}' ) ]; then
+            MAKE=gmake
+        else
+            echo "Cannot find GNU Make. Please install it or set the MAKE environment variable to point to it."
+            exit 1
+        fi
+    fi
+fi
 
 __BUST_CACHE=1 # increment to bust QuickJS build cache manually if needed
 
