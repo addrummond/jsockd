@@ -93,7 +93,8 @@ void jsockd_logf(LogLevel log_level, const char *fmt, ...) {
   va_end(args2);
 
   print_log_prefix(log_level, stderr, 1);
-  log_with_prefix_for_subsequent_lines(log_level, stderr, log_buf, MIN(n, m));
+  log_with_prefix_for_subsequent_lines(log_level, stderr, log_buf,
+                                       MIN(n - 1, m));
   fputc('\n', stderr);
 
   if (log_buf != log_buf_)
