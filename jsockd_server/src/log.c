@@ -80,8 +80,8 @@ void jsockd_logf(LogLevel log_level, const char *fmt, ...) {
   int n = vsnprintf(NULL, 0, fmt, args);
   va_end(args);
 
-  if (n > ABSOLUTE_MAX_LOG_BUF_SIZE)
-    n = ABSOLUTE_MAX_LOG_BUF_SIZE;
+  // if (n > ABSOLUTE_MAX_LOG_BUF_SIZE)
+  //   n = ABSOLUTE_MAX_LOG_BUF_SIZE;
 
   if ((size_t)n > sizeof(log_buf_) / sizeof(log_buf_[0]))
     log_buf = (char *)calloc((size_t)n, sizeof(char));
