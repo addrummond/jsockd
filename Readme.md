@@ -219,6 +219,20 @@ If any socket except the first is unused for a significant period of time (as sp
 
 When an idle thread is woken, the typical time to initialize a new QuickJS runtime is on the order of a few milliseconds. If this latency is unacceptable, the client can omit the `-i` option or set it to `0`, in which case no idle threads are ever shut down.
 
+### 3.7 Server log format
+
+When executed as a server (i.e. with the `-s` option), JSockD logs messages to standard error in the following format (all characters literal except `<VAR>` variables):
+
+```
+<PREFIX> jsockd <DATETIME> [<LOG_LEVEL>] <LOG MESSAGE>
+```
+
+The `<PREFIX>` is `*` for the first line of a log message and `.` for subsequent lines.
+
+The `<DATETIME>` is in ISO 8601 format.
+
+The `<LOG_LEVEL>` is one of `INFO`, `WARN`, or `ERROR`.
+
 ## 4. Bundling your JavaScript code
 
 ### 4.1 Using a bundler
