@@ -1,4 +1,5 @@
 #include "log.h"
+#include "config.h"
 #include "utils.h"
 #include <stdarg.h>
 #include <stdbool.h>
@@ -79,6 +80,9 @@ void jsockd_logf(LogLevel log_level, const char *fmt, ...) {
   int n = vsnprintf(NULL, 0, fmt, args);
   va_end(args);
 
+  if (n > ABSOLUTE_MAX_LOG_BUF_SIZE)
+    n = ABSOLUTE_MAX_LOG_BUF_SIZE;
+
   if ((size_t)n > sizeof(log_buf_) / sizeof(log_buf_[0]))
     log_buf = (char *)calloc((size_t)n, sizeof(char));
 
@@ -91,7 +95,7 @@ void jsockd_logf(LogLevel log_level, const char *fmt, ...) {
   print_log_prefix(log_level, stderr, 1);
   log_with_prefix_for_subsequent_lines(
       log_level, stderr, log_buf,
-      (size_t)(n - 1)); // n includes null terminator
+      (size_t)n); // n dos not include null terminator
   fputc('\n', stderr);
 
   if (log_buf != log_buf_)
