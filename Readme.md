@@ -231,7 +231,7 @@ The `<PREFIX>` is `*` for the first line of a log message and `.` for subsequent
 
 The `<DATETIME>` is in ISO 8601 format (or is the string `<unknown time>` in the unlikely event of a failed call to `clock_gettime`).
 
-The `<LOG_LEVEL>` is one of `INFO`, `WARN`, or `ERROR` in release builds; debug builds also log at the `DEBUG` level.
+The `<LOG_LEVEL>` is one of `INFO`, `WARN`, or `ERROR` in release builds, or also `DEBUG` in debug builds.
 
 An example log line:
 
