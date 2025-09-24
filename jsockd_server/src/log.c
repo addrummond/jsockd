@@ -90,7 +90,7 @@ void jsockd_logf(LogLevel log_level, const char *fmt, ...) {
 
   print_log_prefix(log_level, stderr, 1);
   log_with_prefix_for_subsequent_lines(
-      stderr, log_buf,
+      log_level, stderr, log_buf,
       (size_t)(n - 1)); // n includes null terminator
   fputc('\n', stderr);
 
@@ -117,8 +117,8 @@ static size_t remove_trailing_ws(const char *buf, size_t len) {
   return len + 1;
 }
 
-void log_with_prefix_for_subsequent_lines(FILE *fo, const char *buf,
-                                          size_t len) {
+void log_with_prefix_for_subsequent_lines(LogLevel log_level, FILE *fo,
+                                          const char *buf, size_t len) {
   len = remove_trailing_ws(buf, len);
 
   int line = 1;
@@ -129,7 +129,7 @@ void log_with_prefix_for_subsequent_lines(FILE *fo, const char *buf,
       fwrite(buf + start, 1, i - start + 1, fo);
       ++line;
       start = i + 1;
-      print_log_prefix(LOG_INFO, fo, line);
+      print_log_prefix(log_level, fo, line);
     }
   }
   fwrite(buf + start, 1, i - start, fo);
