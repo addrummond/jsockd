@@ -88,7 +88,7 @@ void jsockd_logf(LogLevel log_level, const char *fmt, ...) {
   vsnprintf(log_buf, n, fmt, args2);
   va_end(args2);
 
-  print_log_prefix(LOG_INFO, stderr, 1);
+  print_log_prefix(log_level, stderr, 1);
   log_with_prefix_for_subsequent_lines(
       stderr, log_buf,
       (size_t)(n - 1)); // n includes null terminator
