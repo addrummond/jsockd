@@ -8,6 +8,12 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
+#ifdef CMAKE_BUILD_TYPE_DEBUG
+#define CMAKE_BUILD_TYPE_IS_DEBUG 1
+#else
+#define CMAKE_BUILD_TYPE_IS_DEBUG 0
+#endif
+
 pthread_mutex_t g_log_mutex;
 atomic_bool g_log_mutex_initialized = false;
 
@@ -29,6 +35,9 @@ void destroy_log_mutex(void) {
 }
 
 void print_log_prefix(LogLevel log_level, FILE *f, int line) {
+  if (log_level == LOG_DEBUG && !CMAKE_BUILD_TYPE_IS_DEBUG)
+    return;
+
   struct timespec ts;
   char timebuf[ISO8601_MAX_LEN];
 
@@ -40,6 +49,9 @@ void print_log_prefix(LogLevel log_level, FILE *f, int line) {
 
   const char *ll = "";
   switch (log_level) {
+  case LOG_DEBUG:
+    ll = "DEBUG";
+    break;
   case LOG_INFO:
     ll = "INFO";
     break;
@@ -53,7 +65,7 @@ void print_log_prefix(LogLevel log_level, FILE *f, int line) {
   fprintf(stderr, "%s jsockd %s [%s] ", line == 1 ? "*" : ".", timebuf, ll);
 }
 
-void release_logf(LogLevel log_level, const char *fmt, ...) {
+void jsockd_logf(LogLevel log_level, const char *fmt, ...) {
   va_list args, args2;
 
   // Cannot use args twice in the two subsequent vsnprintf calls, so copy it.
@@ -89,8 +101,8 @@ void release_logf(LogLevel log_level, const char *fmt, ...) {
     mutex_unlock(&g_log_mutex);
 }
 
-void release_log(LogLevel log_level, const char *s) {
-  release_logf(log_level, "%s", s);
+void jsockd_log(LogLevel log_level, const char *s) {
+  jsockd_logf(log_level, "%s", s);
 }
 
 static size_t remove_trailing_ws(const char *buf, size_t len) {

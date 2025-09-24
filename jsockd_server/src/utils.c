@@ -47,8 +47,8 @@ int write_all(int fd, const char *buf, size_t len) {
 
 void munmap_or_warn(const void *addr, size_t length) {
   if (munmap((void *)addr, length) < 0) {
-    debug_logf(LOG_ERROR, "Error unmapping memory at %p of size %zu: %s\n",
-               addr, length, strerror(errno));
+    jsockd_logf(LOG_DEBUG, "Error unmapping memory at %p of size %zu: %s\n",
+                addr, length, strerror(errno));
   }
 }
 

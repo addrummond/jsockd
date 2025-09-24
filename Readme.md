@@ -229,9 +229,9 @@ When executed as a server (i.e. with the `-s` option), JSockD logs messages to s
 
 The `<PREFIX>` is `*` for the first line of a log message and `.` for subsequent lines.
 
-The `<DATETIME>` is in ISO 8601 format.
+The `<DATETIME>` is in ISO 8601 format (or is the string `<unknown time>` in the unlikely event of a failed call to `clock_gettime`).
 
-The `<LOG_LEVEL>` is one of `INFO`, `WARN`, or `ERROR`.
+The `<LOG_LEVEL>` is one of `INFO`, `WARN`, or `ERROR` in release builds; debug builds also log at the `DEBUG` level.
 
 ## 4. Bundling your JavaScript code
 
