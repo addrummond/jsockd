@@ -79,10 +79,8 @@ void jsockd_logf(LogLevel log_level, const char *fmt, ...) {
   int n = vsnprintf(NULL, 0, fmt, args);
   va_end(args);
 
-  if ((size_t)n > sizeof(log_buf_) / sizeof(log_buf_[0])) {
+  if ((size_t)n > sizeof(log_buf_) / sizeof(log_buf_[0]))
     log_buf = (char *)calloc((size_t)n, sizeof(char));
-    memset(log_buf, 0, (size_t)n);
-  }
 
   if (g_log_mutex_initialized)
     mutex_lock(&g_log_mutex);
