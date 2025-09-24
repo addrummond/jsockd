@@ -760,7 +760,7 @@ static void *reset_thread_state_cleanup_old_runtime_thread(void *data) {
 static int handle_line_1_message_uid(ThreadState *ts, const char *line,
                                      int len) {
   if (len > MESSAGE_UUID_MAX_BYTES) {
-    jsockd_logf(LOG_DEBUG,
+    jsockd_logf(LOG_WARN,
                 "Error: message UUID has length %i and will be truncated to "
                 "first %i bytes\n",
                 len, MESSAGE_UUID_MAX_BYTES);
