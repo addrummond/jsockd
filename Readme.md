@@ -259,6 +259,7 @@ export { flubBar, blagFoo }
   * [Web Streams](https://developer.mozilla.org/en-US/docs/Web/API/Streams_API)
   * `TextEncoder`
   * `TextDecoder`
+* `console.log`, `console.error`, etc. log to the JSockD server log (stderr).
 * `setTimeout` and `setInterval` are not available. As JSockD does not support long-running commands, you would generally want to shim these if any of your library code depends on them.
 
 ## 5. Building from source
