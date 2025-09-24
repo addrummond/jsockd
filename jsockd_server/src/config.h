@@ -29,8 +29,6 @@
 #define PUBLIC_KEY_FILE_SUFFIX ".pubkey"
 #define PRIVATE_KEY_FILE_SUFFIX ".privkey"
 
-#define ABSOLUTE_MAX_LOG_BUF_SIZE (1024 * 1024)
-
 // Following Linux conventions for default pthread stack size stops things
 // blowing up unexpectedly. (E.g. QuickJS implicitly assumes that it has
 // more stack space available than a defaultly configured pthread will have

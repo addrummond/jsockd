@@ -11,7 +11,7 @@ typedef struct {
 } LogState;
 
 static void js_print_value_write(void *opaque, const char *buf, size_t len) {
-  log_with_prefix_for_subsequent_lines(LOG_INFO, (FILE *)opaque, buf, len);
+  log_with_prefix_for_subsequent_lines((FILE *)opaque, buf, len);
 }
 
 static JSValue js_print(JSContext *ctx, JSValueConst this_val, int argc,
@@ -31,7 +31,7 @@ static JSValue js_print(JSContext *ctx, JSValueConst this_val, int argc,
       str = JS_ToCStringLen(ctx, &len, v);
       if (!str)
         return JS_EXCEPTION;
-      log_with_prefix_for_subsequent_lines(LOG_INFO, stderr, str, len);
+      log_with_prefix_for_subsequent_lines(stderr, str, len);
       JS_FreeCString(ctx, str);
     } else {
       JS_PrintValue(ctx, js_print_value_write, stderr, v, NULL);
