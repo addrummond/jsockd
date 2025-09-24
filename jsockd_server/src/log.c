@@ -89,12 +89,11 @@ void jsockd_logf(LogLevel log_level, const char *fmt, ...) {
   if (g_log_mutex_initialized)
     mutex_lock(&g_log_mutex);
 
-  vsnprintf(log_buf, n, fmt, args2);
+  int m = vsnprintf(log_buf, n, fmt, args2);
   va_end(args2);
 
   print_log_prefix(log_level, stderr, 1);
-  log_with_prefix_for_subsequent_lines(log_level, stderr, log_buf,
-                                       (size_t)(n - 1));
+  log_with_prefix_for_subsequent_lines(log_level, stderr, log_buf, MIN(n, m));
   fputc('\n', stderr);
 
   if (log_buf != log_buf_)
