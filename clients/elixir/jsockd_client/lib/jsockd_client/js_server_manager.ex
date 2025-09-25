@@ -113,18 +113,21 @@ defmodule JSockDClient.JsServerManager do
       nil ->
         # It's a log message written to stderr (which has been redirected to stdout).
         # Scan it to determine the log level and then forward it to Logger
-        case Regex.run(~r/[^*.] jsockd ([^ ]+) \[([^][]+)\] (.*)/, msg) do
-          [_, time, "ERROR", msg] ->
-            Logger.error("jsockd #{time} #{String.trim_trailing(msg)}")
+        case Regex.run(~r/(\*|\.) jsockd ([^ ]+) \[([^][]+)\] (.*)/, msg) do
+          [_, l, time, "ERROR", msg] ->
+            Logger.error("#{l} jsockd #{time} #{String.trim_trailing(msg)}")
 
-          [_, time, "WARN", msg] ->
-            Logger.warning("jsockd #{time} #{String.trim_trailing(msg)}")
+          [_, l, time, "WARN", msg] ->
+            Logger.warning("#{l} jsockd #{time} #{String.trim_trailing(msg)}")
 
-          [_, time, _, msg] ->
-            Logger.info("jsockd #{time} #{String.trim_trailing(msg)}")
+          [_, l, time, "DEBUG", msg] ->
+            Logger.debug("#{l} jsockd #{time} #{String.trim_trailing(msg)}")
+
+          [_, l, time, _, msg] ->
+            Logger.info("#{l} jsockd #{time} #{String.trim_trailing(msg)}")
 
           _ ->
-            Logger.info("jsockd #{String.trim_trailing(msg)}")
+            Logger.info("* jsockd #{String.trim_trailing(msg)}")
         end
 
         {:noreply, state}
