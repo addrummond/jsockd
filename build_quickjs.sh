@@ -4,8 +4,8 @@ set -e
 
 if [ -z "$MAKE" ]; then
     MAKE=make
-    if [ "GNU Make" != $( ( make --version 2>/dev/null || true ) | head -n 1 | awk '{print $1,$2}' ) ]; then
-        if [ "GNU Make" = $( ( gmake --version 2>/dev/null || true ) | head -n 1 | awk '{print $1,$2}' ) ]; then
+    if [ "GNU Make" != "$( ( make --version 2>/dev/null || true ) | head -n 1 | awk '{print $1,$2}' )" ]; then
+        if [ "GNU Make" = "$( ( gmake --version 2>/dev/null || true ) | head -n 1 | awk '{print $1,$2}' )" ]; then
             MAKE=gmake
         else
             echo "Cannot find GNU Make. Please install it or set the MAKE environment variable to point to it."
