@@ -1,8 +1,8 @@
 #include "log.h"
 #include "quickjs.h"
 #include "utils.h"
+#include <stdbool.h>
 #include <stdio.h>
-
 #include <stdlib.h>
 
 static void js_print_value_write(void *opaque, const char *buf, size_t len) {
@@ -38,12 +38,16 @@ static JSValue js_print(JSContext *ctx, JSValueConst this_val, int argc,
 
 JSValue my_js_console_log(JSContext *ctx, JSValueConst this_val, int argc,
                           JSValueConst *argv) {
-  if (g_log_mutex_initialized)
+  bool lmi =
+      atomic_load_explicit(&g_log_mutex_initialized, memory_order_relaxed);
+  if (lmi)
     mutex_lock(&g_log_mutex);
   JSValue ret;
   ret = js_print(ctx, this_val, argc, argv);
   fflush(stderr);
-  if (g_log_mutex_initialized)
+  // Log mutex won't be destroyed until there's only a single thread, so we're
+  // ok to assume that the mutex hasn't been destroyed since the previous check.
+  if (lmi)
     mutex_unlock(&g_log_mutex);
   return ret;
 }

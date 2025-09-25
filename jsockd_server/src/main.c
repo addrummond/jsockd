@@ -1272,8 +1272,6 @@ static void global_cleanup(void) {
   pthread_mutex_destroy(&g_cached_functions_mutex);
   wait_group_destroy(&g_thread_ready_wait_group);
 
-  destroy_log_mutex();
-
   if (g_module_bytecode_size != 0 && g_module_bytecode)
     munmap_or_warn((void *)g_module_bytecode,
                    g_module_bytecode_size + ED25519_SIGNATURE_SIZE);
@@ -1297,7 +1295,7 @@ static void log_to_stderr(const char *fmt, ...) {
   vfprintf(stderr, fmt, vl);
 }
 
-int main(int argc, char *argv[]) {
+static int inner_main(int argc, char *argv[]) {
   struct sigaction sa = {.sa_handler = SIGINT_handler};
   sigaction(SIGINT, &sa, NULL);
 
@@ -1305,14 +1303,12 @@ int main(int argc, char *argv[]) {
   mutex_init(&g_cached_functions_mutex);
 
   if (0 != parse_cmd_args(argc, argv, log_to_stderr, &g_cmd_args)) {
-    destroy_log_mutex();
     pthread_mutex_destroy(&g_cached_functions_mutex);
     return EXIT_FAILURE;
   }
 
   if (g_cmd_args.version) {
     printf("jsockd %s", STRINGIFY(VERSION));
-    destroy_log_mutex();
     pthread_mutex_destroy(&g_cached_functions_mutex);
     return EXIT_SUCCESS;
   }
@@ -1330,7 +1326,6 @@ int main(int argc, char *argv[]) {
     g_module_bytecode = load_module_bytecode(
         g_cmd_args.es6_module_bytecode_file, &g_module_bytecode_size);
     if (g_module_bytecode == NULL) {
-      destroy_log_mutex();
       pthread_mutex_destroy(&g_cached_functions_mutex);
       return EXIT_FAILURE;
     }
@@ -1357,7 +1352,6 @@ int main(int argc, char *argv[]) {
     if (g_module_bytecode_size != 0 && g_module_bytecode)
       munmap_or_warn((void *)g_module_bytecode,
                      g_module_bytecode_size + ED25519_SIGNATURE_SIZE);
-    destroy_log_mutex();
     pthread_mutex_destroy(&g_cached_functions_mutex);
     return EXIT_FAILURE;
   }
@@ -1451,8 +1445,9 @@ int main(int argc, char *argv[]) {
 
   for (int i = 0; i < atomic_load_explicit(&g_n_threads, memory_order_relaxed);
        ++i) {
-    if (g_thread_states[i].exit_status != 0)
+    if (g_thread_states[i].exit_status != 0) {
       return EXIT_FAILURE;
+    }
   }
 
   if (atomic_load_explicit(&g_sigint_triggered, memory_order_relaxed))
@@ -1465,6 +1460,13 @@ thread_init_error:
     destroy_thread_state(&g_thread_states[i]);
   global_cleanup();
   return EXIT_FAILURE;
+}
+
+int main(int argc, char **argv) {
+  int r = inner_main(argc, argv);
+  if (atomic_load_explicit(&g_log_mutex_initialized, memory_order_relaxed))
+    destroy_log_mutex();
+  return r;
 }
 
 // supress the annoying warning that inttypes.h is not used directly

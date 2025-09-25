@@ -2,6 +2,7 @@
 #include "config.h"
 #include "utils.h"
 #include <stdarg.h>
+#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -86,7 +87,9 @@ void jsockd_logf(LogLevel log_level, const char *fmt, ...) {
   if ((size_t)n > sizeof(log_buf_) / sizeof(log_buf_[0]))
     log_buf = (char *)calloc((size_t)n, sizeof(char));
 
-  if (g_log_mutex_initialized)
+  bool lmi =
+      atomic_load_explicit(&g_log_mutex_initialized, memory_order_relaxed);
+  if (lmi)
     mutex_lock(&g_log_mutex);
 
   int m = vsnprintf(log_buf, n, fmt, args2);
@@ -100,7 +103,9 @@ void jsockd_logf(LogLevel log_level, const char *fmt, ...) {
   if (log_buf != log_buf_)
     free(log_buf);
 
-  if (g_log_mutex_initialized)
+  // Log mutex won't be destroyed until there's only a single thread, so we're
+  // ok to assume that the mutex hasn't been destroyed since the previous check.
+  if (lmi)
     mutex_unlock(&g_log_mutex);
 }
 
