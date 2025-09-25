@@ -53,5 +53,5 @@ defmodule JSockDClient do
     end
   end
 
-  def jsockd_version, do: "0.0.75"
+  def jsockd_version, do: "0.0.76"
 end
