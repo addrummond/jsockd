@@ -743,8 +743,10 @@ static void destroy_thread_state(ThreadState *ts) {
   // has now been joined, so if we're in one of the following states, that means
   // that a new thread state was created but we never got round to using it and
   // then initiating cleanup of the old one before exiting.
-  if (ts->replacement_thread_state == REPLACEMENT_THREAD_STATE_INIT_COMPLETE ||
-      ts->replacement_thread_state == REPLACEMENT_THREAD_STATE_CLEANUP) {
+  int rts =
+      atomic_load_explicit(&ts->replacement_thread_state, memory_order_relaxed);
+  if (rts == REPLACEMENT_THREAD_STATE_INIT_COMPLETE ||
+      rts == REPLACEMENT_THREAD_STATE_CLEANUP) {
     cleanup_old_runtime(ts);
   }
 
@@ -797,7 +799,9 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
                             reset_thread_state_cleanup_old_runtime_thread,
                             ts)) {
       jsockd_logf(LOG_ERROR, "pthread_create failed: %s\n", strerror(errno));
-      ts->replacement_thread_state = REPLACEMENT_THREAD_STATE_NONE;
+      atomic_store_explicit(&ts->replacement_thread_state,
+                            REPLACEMENT_THREAD_STATE_NONE,
+                            memory_order_relaxed);
       return -1;
     }
     jsockd_log(LOG_INFO, "Trampolining to new thread state...\n");
@@ -1047,7 +1051,9 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
                                 reset_thread_state_thread, (void *)ts)) {
           jsockd_logf(LOG_ERROR, "pthread_create failed: %s\n",
                       strerror(errno));
-          ts->replacement_thread_state = REPLACEMENT_THREAD_STATE_NONE;
+          atomic_store_explicit(&ts->replacement_thread_state,
+                                REPLACEMENT_THREAD_STATE_NONE,
+                                memory_order_relaxed);
           return -1;
         }
 
