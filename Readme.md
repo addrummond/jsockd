@@ -46,7 +46,7 @@ The following is a typical example of a command in the context of React SSR. The
 }
 ````
 
-### 1.2 Tips for SSR with React 19
+### 1.3 Tips for SSR with React 19
 
 **TODO: rough notes**
 
