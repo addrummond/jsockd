@@ -298,7 +298,7 @@ The resulting `jsockd` binary can be found in the `build_Release` or `build_Debu
 ./mk.sh Debug run arg1 arg2 ...
 ```
 
-Run unit tests can be as follows:
+Run unit tests as follows:
 
 ```sh
 ./mk.sh Debug test
