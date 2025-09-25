@@ -1445,9 +1445,8 @@ static int inner_main(int argc, char *argv[]) {
 
   for (int i = 0; i < atomic_load_explicit(&g_n_threads, memory_order_relaxed);
        ++i) {
-    if (g_thread_states[i].exit_status != 0) {
+    if (g_thread_states[i].exit_status != 0)
       return EXIT_FAILURE;
-    }
   }
 
   if (atomic_load_explicit(&g_sigint_triggered, memory_order_relaxed))
