@@ -8,7 +8,7 @@ if [ -z "$MAKE" ]; then
         if [ "GNU Make" = "$( ( gmake --version 2>/dev/null || true ) | head -n 1 | awk '{print $1,$2}' )" ]; then
             MAKE=gmake
         else
-            echo "Cannot find GNU Make. Please install it or set the MAKE environment variable to point to it."
+            echo "Cannot find GNU Make. Please install it as 'gmake' or set the MAKE environment variable to point to it."
             exit 1
         fi
     fi
