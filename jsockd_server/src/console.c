@@ -5,11 +5,6 @@
 
 #include <stdlib.h>
 
-typedef struct {
-  const char *data;
-  size_t pos;
-} LogState;
-
 static void js_print_value_write(void *opaque, const char *buf, size_t len) {
   log_with_prefix_for_subsequent_lines(LOG_INFO, (FILE *)opaque, buf, len);
 }
