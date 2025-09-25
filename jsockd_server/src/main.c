@@ -1299,7 +1299,6 @@ static int inner_main(int argc, char *argv[]) {
   struct sigaction sa = {.sa_handler = SIGINT_handler};
   sigaction(SIGINT, &sa, NULL);
 
-  init_log_mutex();
   mutex_init(&g_cached_functions_mutex);
 
   if (0 != parse_cmd_args(argc, argv, log_to_stderr, &g_cmd_args)) {
@@ -1462,9 +1461,12 @@ thread_init_error:
 }
 
 int main(int argc, char **argv) {
+  if (0 != init_log_mutex()) {
+    fprintf(stderr, "Error initializing log mutex\n");
+    return EXIT_FAILURE;
+  }
   int r = inner_main(argc, argv);
-  if (atomic_load_explicit(&g_log_mutex_initialized, memory_order_relaxed))
-    destroy_log_mutex();
+  destroy_log_mutex();
   return r;
 }
 

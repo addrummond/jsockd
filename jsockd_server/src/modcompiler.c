@@ -3,7 +3,6 @@
 #include "hex.h"
 #include "quickjs-libc.h"
 #include "quickjs.h"
-#include "utils.h"
 #include "verify_bytecode.h"
 #include <ed25519/ed25519.h>
 #include <errno.h>

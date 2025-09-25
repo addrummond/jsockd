@@ -2,7 +2,6 @@
 #include "config.h"
 #include "utils.h"
 #include <stdarg.h>
-#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,19 +16,17 @@
 #endif
 
 pthread_mutex_t g_log_mutex;
-atomic_bool g_log_mutex_initialized = false;
 
-void init_log_mutex(void) {
+int init_log_mutex(void) {
   int r = pthread_mutex_init(&g_log_mutex, NULL);
   if (r != 0) {
     fprintf(stderr, "Failed to initalize log mutex\n");
-    exit(1);
+    return r;
   }
-  atomic_store_explicit(&g_log_mutex_initialized, true, memory_order_relaxed);
+  return 0;
 }
 
 void destroy_log_mutex(void) {
-  atomic_store_explicit(&g_log_mutex_initialized, false, memory_order_relaxed);
   if (0 != pthread_mutex_destroy(&g_log_mutex)) {
     fprintf(stderr, "Unable to destroy log mutex\n");
     exit(1);
@@ -87,10 +84,7 @@ void jsockd_logf(LogLevel log_level, const char *fmt, ...) {
   if ((size_t)n > sizeof(log_buf_) / sizeof(log_buf_[0]))
     log_buf = (char *)calloc((size_t)n, sizeof(char));
 
-  bool lmi =
-      atomic_load_explicit(&g_log_mutex_initialized, memory_order_relaxed);
-  if (lmi)
-    mutex_lock(&g_log_mutex);
+  mutex_lock(&g_log_mutex);
 
   int m = vsnprintf(log_buf, n, fmt, args2);
   va_end(args2);
@@ -103,10 +97,7 @@ void jsockd_logf(LogLevel log_level, const char *fmt, ...) {
   if (log_buf != log_buf_)
     free(log_buf);
 
-  // Log mutex won't be destroyed until there's only a single thread, so we're
-  // ok to assume that the mutex hasn't been destroyed since the previous check.
-  if (lmi)
-    mutex_unlock(&g_log_mutex);
+  mutex_unlock(&g_log_mutex);
 }
 
 void jsockd_log(LogLevel log_level, const char *s) {
