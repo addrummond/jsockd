@@ -755,6 +755,50 @@ static void TEST_cmdargs_dash_c_error_if_combined_with_other_flags(void) {
   TEST_ASSERT(strstr(cmdargs_errlog_buf, "-c "));
 }
 
+static void TEST_cmdargs_dash_c_can_be_combined_with_dash_ss(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"jsockd", "-c", "module.mjs", "out.qjsbc", "-ss"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r == 0);
+}
+
+static void TEST_cmdargs_dash_c_can_be_combined_with_dash_sd(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"jsockd", "-c", "module.mjs", "out.qjsbc", "-sd"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r == 0);
+}
+
+static void TEST_cmdargs_dash_ss_must_be_combined_with_dash_c(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"jsockd", "-ss"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r != 0);
+  TEST_ASSERT(strstr(cmdargs_errlog_buf, "-ss "));
+}
+
+static void TEST_cmdargs_dash_sd_must_be_combined_with_dash_c(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"jsockd", "-sd"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r != 0);
+  TEST_ASSERT(strstr(cmdargs_errlog_buf, "-sd "));
+}
+
+static void TEST_cmdargs_dash_ss_and_dash_sd_are_mutually_exclusive(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"jsockd", "-c", "module.mjs", "out.qjsbc", "-sd", "-ss"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r != 0);
+  TEST_ASSERT(strstr(cmdargs_errlog_buf, "-sd "));
+  TEST_ASSERT(strstr(cmdargs_errlog_buf, "-ss "));
+}
+
 /******************************************************************************
     Tests for modcompiler
 ******************************************************************************/
@@ -795,7 +839,8 @@ static void TEST_compile_module_file(void) {
   fclose(keyf);
 
   TEST_ASSERT(EXIT_SUCCESS == compile_module_file(module_filename, key_filename,
-                                                  output_filename, "99.99.0"));
+                                                  output_filename, "99.99.0",
+                                                  0));
 
   FILE *outf = fopen(output_filename, "r");
   TEST_ASSERT(outf);
@@ -855,7 +900,8 @@ static void TEST_compile_module_file_without_key(void) {
   fclose(modulef);
 
   TEST_ASSERT(EXIT_SUCCESS == compile_module_file(module_filename, NULL,
-                                                  output_filename, "99.99.0"));
+                                                  output_filename, "99.99.0",
+                                                  0));
 
   FILE *outf = fopen(output_filename, "r");
   TEST_ASSERT(outf);
@@ -982,6 +1028,11 @@ TEST_LIST = {T(wait_group_inc_and_wait_basic_use_case),
              T(cmdargs_dash_c_error_on_no_args),
              T(cmdargs_dash_c_error_on_only_one_arg),
              T(cmdargs_dash_c_error_if_combined_with_other_flags),
+             T(cmdargs_dash_ss_and_dash_sd_are_mutually_exclusive),
+             T(cmdargs_dash_sd_must_be_combined_with_dash_c),
+             T(cmdargs_dash_ss_must_be_combined_with_dash_c),
+             T(cmdargs_dash_c_can_be_combined_with_dash_sd),
+             T(cmdargs_dash_c_can_be_combined_with_dash_ss),
              T(compile_module_file),
              T(compile_module_file_without_key),
              T(output_key_file),

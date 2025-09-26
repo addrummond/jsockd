@@ -13,7 +13,9 @@ static int n_flags_set(const CmdArgs *cmdargs) {
          (cmdargs->socket_sep_char_set != false) + (cmdargs->version != false) +
          (cmdargs->max_command_runtime_us != 0) +
          (int)(cmdargs->max_idle_time_set) +
-         (cmdargs->key_file_prefix != NULL) + (cmdargs->mod_to_compile != NULL);
+         (cmdargs->key_file_prefix != NULL) +
+         (cmdargs->mod_to_compile != NULL) +
+         (cmdargs->compile_opts != COMPILE_OPTS_NONE);
 }
 
 static int parse_cmd_args_helper(int argc, char **argv,
@@ -159,6 +161,15 @@ static int parse_cmd_args_helper(int argc, char **argv,
       cmdargs->mod_to_compile = argv[i];
       ++i;
       cmdargs->mod_output_file = argv[i];
+    } else if (0 == strcmp(argv[i], "-ss") || 0 == strcmp(argv[i], "-sd")) {
+      if (cmdargs->compile_opts != COMPILE_OPTS_NONE) {
+        errlog("Error: -ss and -sd are mutually exclusive and can be specified "
+               "at most once\n");
+        return -1;
+      }
+      cmdargs->compile_opts = (0 == strcmp(argv[i], "-ss"))
+                                  ? COMPILE_OPTS_STRIP_SOURCE
+                                  : COMPILE_OPTS_STRIP_DEBUG;
     } else if (argv[i][0] == '-') {
       errlog("Error: unrecognized option: %s\n", argv[i]);
       return -1;
@@ -173,17 +184,26 @@ static int parse_cmd_args_helper(int argc, char **argv,
     errlog("Error: -v (version) cannot be used with other flags.\n");
     return -1;
   }
-  if (cmdargs->key_file_prefix &&
-      !(n_flags == 1 || (n_flags == 2 && cmdargs->mod_to_compile))) {
+
+  if (cmdargs->key_file_prefix && !(n_flags == 1 || cmdargs->mod_to_compile)) {
     errlog("Error: -k (key file) option must be used either alone (to "
            "generate a key pair) or with the -c option.\n");
     return -1;
   }
-  if (cmdargs->mod_to_compile &&
-      !(n_flags == 1 || (n_flags == 2 && cmdargs->key_file_prefix))) {
-    errlog("Error: -c (compile module) must be used only with -k (private key "
-           "file ) option.\n");
+
+  if (cmdargs->compile_opts != COMPILE_OPTS_NONE && !cmdargs->mod_to_compile) {
+    errlog("Error: -ss or -sd flags must be used only with the -c option.\n");
     return -1;
+  }
+
+  if (cmdargs->mod_to_compile) {
+    if (1 < n_flags - (cmdargs->key_file_prefix != 0) -
+                (cmdargs->compile_opts != COMPILE_OPTS_NONE)) {
+      errlog(
+          "Error: -c (compile module) must be used only with -k (private key "
+          "file) option and -ss or -sd flags.\n");
+      return -1;
+    }
   }
 
   if (cmdargs->version || cmdargs->key_file_prefix || cmdargs->mod_to_compile)

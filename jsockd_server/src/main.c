@@ -1318,10 +1318,15 @@ static int inner_main(int argc, char *argv[]) {
     return EXIT_SUCCESS;
   }
 
+  int strip_flags = 0;
+  if (g_cmd_args.compile_opts == COMPILE_OPTS_STRIP_DEBUG)
+    strip_flags = JS_STRIP_DEBUG;
+  else if (g_cmd_args.compile_opts == COMPILE_OPTS_STRIP_SOURCE)
+    strip_flags = JS_STRIP_SOURCE;
   if (g_cmd_args.mod_to_compile) {
-    return compile_module_file(g_cmd_args.mod_to_compile,
-                               g_cmd_args.key_file_prefix,
-                               g_cmd_args.mod_output_file, STRINGIFY(VERSION));
+    return compile_module_file(
+        g_cmd_args.mod_to_compile, g_cmd_args.key_file_prefix,
+        g_cmd_args.mod_output_file, STRINGIFY(VERSION), strip_flags);
   }
 
   if (g_cmd_args.key_file_prefix)

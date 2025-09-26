@@ -9,6 +9,12 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+typedef enum {
+  COMPILE_OPTS_NONE = 0,
+  COMPILE_OPTS_STRIP_SOURCE,
+  COMPILE_OPTS_STRIP_DEBUG
+} CompileOpts;
+
 typedef struct {
   const char *es6_module_bytecode_file;
   const char *socket_path[MAX_THREADS];
@@ -23,6 +29,7 @@ typedef struct {
   const char *key_file_prefix;
   const char *mod_to_compile;
   const char *mod_output_file;
+  CompileOpts compile_opts;
 } CmdArgs;
 
 int parse_cmd_args(int argc, char **argv, void (*errlog)(const char *fmt, ...),

@@ -85,6 +85,14 @@ export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=$(cat my_key_file.pubkey)
 If you don't trust JSockD to generate keys and signatures, you can use openssl to sign your module bytecode.
 See `docs/signing_with_openssl.md` for details.
 
+### 2.3 Reducing the size of compiled modules
+
+Minifying the module before compiling it will reduce the size of the compiled bytecode because the bytecode includes source information.
+
+To further reduce bytecode size, you can use the `-ss` flag to strip source code from the bytecode file or the `-sd` flag to strip all debug info including source code. Note that stripping source code means that error backtraces will not include line numbers or source code snippets. It may also break some JavaScript code which relies on inspecting function source code.
+
+For general use, I recommend minifiying your bundle but **not** using `-ss` or `-sd`. This way you can substantially reduce the size of the bytecode while still allowing useful error backtraces via source maps (see section 3.5).
+
 ## 3. The JSockD server
 
 ### 3.1 Starting the server
@@ -121,12 +129,18 @@ Outputs two files: `<key_file_prefix>.pubkey` (the public key) and `<key_file_pr
 #### Compile a module file
 
 ```sh
-jsockd -c <module_file> <output_bytecode_file> [-k <private_key_file>]
+jsockd -c <module_file> <output_bytecode_file> [-k <private_key_file>] [-ss] [-sd]
 ```
 
 Compiles the specified ES6 module file to a QuickJS bytecode file. If the `-k` option is not given, the module is not signed. Unsigned modules can be used only by debug builds of `jsockd` when the `JSOCKD_BYTECODE_MODULE_PUBLIC_KEY` env var is set to `dangerously_allow_invalid_signatures`.
 
+The `-ss` and `-sd` options are mutually exclusive. Setting `-ss` strips all source code from the bytecode file, while `-sd` strips all debug info including source code.
+
 #### Run the server
+
+```sh
+jsockd -s <socket1> [<socket2> ...] [-m <module_bytecode_file>] [-sm <source_map_file>] [-t <microseconds>] [-i <microseconds>] [-b <XX>]
+```
 
 | Option      | Argument(s)                 | Description                                                                  | Default       | Repeatable | Required |
 |-------------|-----------------------------|------------------------------------------------------------------------------|---------------|------------|----------|

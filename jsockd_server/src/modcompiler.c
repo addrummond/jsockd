@@ -16,7 +16,8 @@
 
 int compile_module_file(const char *module_filename,
                         const char *privkey_filename,
-                        const char *output_filename, const char *version) {
+                        const char *output_filename, const char *version,
+                        int qjsc_strip_flags) {
   int ret = EXIT_SUCCESS;
   uint8_t *buf = NULL;
   uint8_t *out_buf = NULL;
@@ -32,6 +33,7 @@ int compile_module_file(const char *module_filename,
     ret = EXIT_FAILURE;
     goto end;
   }
+  JS_SetStripInfo(rt, qjsc_strip_flags);
   ctx = JS_NewContext(rt);
   if (!ctx) {
     fprintf(stderr, "Failed to create JS context when compiling module file\n");
