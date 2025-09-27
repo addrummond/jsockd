@@ -150,7 +150,7 @@ jsockd -s <socket1> [<socket2> ...] [-m <module_bytecode_file>] [-sm <source_map
 | `-t`        | `<microseconds>`            | Maximum command runtime in microseconds (must be integer > 0).               | 250000        | No         | No       |
 | `-i`        | `<microseconds>`            | Maximum time in microseconds that thread can remain idle before QuickJS runtime is shut down, or 0 for no idle timeout (must be integer ≥ 0). | 0             | No         | No       |
 | `-b`        | `<XX>`                      | Separator byte as two hex digits (e.g. `0A`).                                | `0A` (= `\n`) | No         | No       |
-| `--`        | *(none)*                    | Indicates end of options for `-s` (allows socket paths starting with `-`).   |               | N/A        | No       |
+| `--`        |                             | Indicates end of options for `-s` (allows socket paths starting with `-`).   |               | N/A        | No       |
 
 ### 3.3 The socket protocol
 
