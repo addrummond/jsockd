@@ -88,7 +88,8 @@ defmodule JSockDClient.JsServerManager do
        port_id: port_id,
        unix_socket_paths: unix_socket_paths,
        unix_sockets_with_threads: [],
-       pending_calls: %{}
+       pending_calls: %{},
+       current_line: []
      }}
   end
 
@@ -106,53 +107,12 @@ defmodule JSockDClient.JsServerManager do
   end
 
   @impl true
-  def handle_info({_port, {:data, {_, msg}}}, state) do
-    msg = List.to_string(msg)
-    IO.puts("ORIG: #{msg}")
-
-    case Regex.run(~r/^READY (\d+)/, msg) do
-      nil ->
-        # It's a log message written to stderr (which has been redirected to stdout).
-        # Scan it to determine the log level and then forward it to Logger
-        case Regex.run(~r/(\*|\.) jsockd ([^ ]+) \[([^][]+)\] (.*)/, msg) do
-          [_, l, time, "ERROR", msg] ->
-            Logger.error("#{l} jsockd #{time} #{String.trim_trailing(msg)}")
-
-          [_, l, time, "WARN", msg] ->
-            Logger.warning("#{l} jsockd #{time} #{String.trim_trailing(msg)}")
-
-          [_, l, time, "DEBUG", msg] ->
-            Logger.debug("#{l} jsockd #{time} #{String.trim_trailing(msg)}")
-
-          [_, l, time, _, msg] ->
-            Logger.info("#{l} jsockd #{time} #{String.trim_trailing(msg)}")
-
-          _ ->
-            Logger.info("* jsockd #{String.trim_trailing(msg)}")
-        end
-
-        {:noreply, state}
-
-      [_, n_threads] ->
-        if state.unix_sockets_with_threads != [] do
-          raise "Unexpected READY message received from jsockd: #{inspect(msg)}"
-        end
-
-        n_threads = String.to_integer(n_threads)
-
-        Process.flag(:trap_exit, true)
-
-        # Start one process to own IO access to each socket.
-        unix_sockets_with_threads =
-          state.unix_socket_paths
-          |> Enum.take(n_threads)
-          |> Enum.map(fn unix_socket_path ->
-            sock = make_unix_socket(unix_socket_path)
-            pid = start_socket_thread(sock)
-            {{unix_socket_path, sock}, pid}
-          end)
-
-        {:noreply, %{state | unix_sockets_with_threads: unix_sockets_with_threads}}
+  def handle_info({_port, {:data, {eol, msg}}}, state) do
+    if eol == :eol do
+      state = handle_jsockd_msg(String.trim(List.to_string(Enum.reverse([msg|state.current_line]))), state)
+      {:noreply, %{ state | current_line: []}}
+    else
+      {:noreply, %{ state | current_line: [msg|state.current_line]}}
     end
   end
 
@@ -218,6 +178,55 @@ defmodule JSockDClient.JsServerManager do
     send(usockpid, {:send, message_uuid, function, argument_string, from, self()})
 
     {:noreply, %{state | pending_calls: Map.put(state.pending_calls, from, message_uuid)}}
+  end
+
+  defp handle_jsockd_msg("", state), do: state
+
+  defp handle_jsockd_msg(msg, state) do
+    case Regex.run(~r/^READY (\d+)/, msg) do
+      nil ->
+        # It's a log message written to stderr (which has been redirected to stdout).
+        # Scan it to determine the log level and then forward it to Logger
+        case Regex.run(~r/(\*|\.) jsockd ([^ ]+) \[([^][]+)\] (.*)/, msg) do
+          [_, l, time, "ERROR", msg] ->
+            Logger.error("#{l} jsockd #{time} #{String.trim_trailing(msg)}")
+
+          [_, l, time, "WARN", msg] ->
+            Logger.warning("#{l} jsockd #{time} #{String.trim_trailing(msg)}")
+
+          [_, l, time, "DEBUG", msg] ->
+            Logger.debug("#{l} jsockd #{time} #{String.trim_trailing(msg)}")
+
+          [_, l, time, _, msg] ->
+            Logger.info("#{l} jsockd #{time} #{String.trim_trailing(msg)}")
+
+          _ ->
+            Logger.info("* jsockd #{String.trim_trailing(msg)}")
+        end
+
+        state
+
+      [_, n_threads] ->
+        if state.unix_sockets_with_threads != [] do
+          raise "Unexpected READY message received from jsockd: #{inspect(msg)}"
+        end
+
+        n_threads = String.to_integer(n_threads)
+
+        Process.flag(:trap_exit, true)
+
+        # Start one process to own IO access to each socket.
+        unix_sockets_with_threads =
+          state.unix_socket_paths
+          |> Enum.take(n_threads)
+          |> Enum.map(fn unix_socket_path ->
+            sock = make_unix_socket(unix_socket_path)
+            pid = start_socket_thread(sock)
+            {{unix_socket_path, sock}, pid}
+          end)
+
+        %{state | unix_sockets_with_threads: unix_sockets_with_threads}
+    end
   end
 
   defp start_socket_thread(sock) do
