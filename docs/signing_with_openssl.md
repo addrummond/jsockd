@@ -1,7 +1,6 @@
 # Using openssl to sign bytecode
 
 If you don't trust JSockD to generate keys and signatures, you can use openssl to sign your module bytecode.
-See `docs/signing_with_openssl.md` for details.
 
 _**On Mac you may need to install openssl via homebrew to get support for ED25519 signatures.**_
 
