@@ -78,20 +78,20 @@ void jsockd_logf(LogLevel log_level, const char *fmt, ...) {
   int n = vsnprintf(NULL, 0, fmt, args);
   va_end(args);
 
-  if (n > ABSOLUTE_MAX_LOG_BUF_SIZE)
-    n = ABSOLUTE_MAX_LOG_BUF_SIZE;
+  if (n > ABSOLUTE_MAX_LOG_BUF_SIZE-1)
+    n = ABSOLUTE_MAX_LOG_BUF_SIZE-1;
 
   if ((size_t)n > sizeof(log_buf_) / sizeof(log_buf_[0]))
     log_buf = (char *)calloc((size_t)n, sizeof(char));
 
   mutex_lock(&g_log_mutex);
 
-  int m = vsnprintf(log_buf, n, fmt, args2);
+  int m = vsnprintf(log_buf, n+1, fmt, args2);
   va_end(args2);
 
   print_log_prefix(log_level, stderr, 1);
   log_with_prefix_for_subsequent_lines(log_level, stderr, log_buf,
-                                       MIN(n - 1, m));
+                                       MIN(n, m));
   fputc('\n', stderr);
 
   if (log_buf != log_buf_)
@@ -131,5 +131,5 @@ void log_with_prefix_for_subsequent_lines(LogLevel log_level, FILE *fo,
       print_log_prefix(log_level, fo, line);
     }
   }
-  fwrite(buf + start, 1, i - start, fo);
+  fwrite(buf + start, 1, i - start + 1, fo);
 }
