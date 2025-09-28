@@ -44,7 +44,7 @@ defmodule JSockDClient.JsServerManager do
         :stderr_to_stdout,
         :in,
         :exit_status,
-        line: Infinity,
+        line: 80,
         # required for Fil-C exec
         cd: Path.dirname(exec),
         args:
