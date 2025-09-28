@@ -12,16 +12,14 @@ defmodule JSockDClient.Application do
     n_threads =
       Application.fetch_env!(:jsockd_client, :n_threads)
 
-    bytecode_module_file = get_bytecode_module_file()
+    bytecode_module_file = get_file_from_config(:bytecode_module_file)
 
     bytecode_module_public_key =
       Application.get_env(:jsockd_client, :bytecode_module_public_key)
 
-    jsockd_exec =
-      Application.get_env(:jsockd_client, :jsockd_exec)
+    jsockd_exec = get_file_from_config(:jsockd_exec)
 
-    source_map =
-      Application.get_env(:jsockd_client, :source_map)
+    source_map = get_file_from_config(:source_map)
 
     max_command_runtime_us =
       Application.get_env(:jsockd_client, :max_command_runtime_us)
@@ -53,16 +51,11 @@ defmodule JSockDClient.Application do
     :ok
   end
 
-  defp get_bytecode_module_file do
-    fetch_bytecode_module_file_from_config()
+  defp get_file_from_config(key) do
+    Application.fetch_env!(:jsockd_client, key)
     |> case do
       {:priv, application, file} -> Path.join([:code.priv_dir(application), file])
       file -> file
     end
-  end
-
-  defp fetch_bytecode_module_file_from_config do
-    mf = Application.fetch_env!(:jsockd_client, :bytecode_module_file)
-    if mf == "", do: nil, else: mf
   end
 end
