@@ -282,6 +282,7 @@ export { flubBar, blagFoo }
   * `TextDecoder`
 * `console.log`, `console.error`, etc. log to the JSockD server log (stderr).
 * `setTimeout` and `setInterval` are not available. As JSockD does not support long-running commands, you would generally want to shim these if any of your library code depends on them.
+* `globalThis` is available as the global object.
 
 ## 5. Building from source
 
