@@ -108,6 +108,7 @@ defmodule JSockDClient.JsServerManager do
   @impl true
   def handle_info({_port, {:data, {_, msg}}}, state) do
     msg = List.to_string(msg)
+    IO.puts("ORIG: #{msg}")
 
     case Regex.run(~r/^READY (\d+)/, msg) do
       nil ->
