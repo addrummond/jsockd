@@ -1238,7 +1238,7 @@ static const uint8_t *load_module_bytecode(const char *filename,
     pubkey = "";
 
   if (CMAKE_BUILD_TYPE_IS_DEBUG &&
-      !strcmp(pubkey, "dangerously_allow_invalid_signatures")) {
+      !strcmp(pubkey, MAGIC_KEY_TO_ALLOW_INVALID_SIGNATURES)) {
     *out_size = *out_size - VERSION_STRING_SIZE - ED25519_SIGNATURE_SIZE;
     return module_bytecode;
   }

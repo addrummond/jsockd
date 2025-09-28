@@ -1,21 +1,10 @@
 # ExampleApp
 
-**TODO: Add description**
+An bare-bones example of an Elixir app that uses the `jsockd` client library.
 
-## Installation
+For ease of experimentation, this uses a debug build of jsockd and sets
+`bytecode_module_public_key: "dangerously_allow_invalid_signatures"` in `config.exs`.
+In real world usage, `bytecode_module_public_key` should be set to a real public
+key and `jsockd_exec` should be unset.
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `example_app` to your list of dependencies in `mix.exs`:
-
-```elixir
-def deps do
-  [
-    {:example_app, "~> 0.1.0"}
-  ]
-end
-```
-
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at <https://hexdocs.pm/example_app>.
-
+Run `./bundle.sh` to generate bytecode from the example module in `example_module.mjs`.
