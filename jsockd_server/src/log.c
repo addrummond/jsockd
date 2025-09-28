@@ -34,9 +34,6 @@ void destroy_log_mutex(void) {
 }
 
 void print_log_prefix(LogLevel log_level, FILE *f, int line) {
-  if (log_level == LOG_DEBUG && !CMAKE_BUILD_TYPE_IS_DEBUG)
-    return;
-
   struct timespec ts;
   char timebuf[ISO8601_MAX_LEN];
 
@@ -65,6 +62,9 @@ void print_log_prefix(LogLevel log_level, FILE *f, int line) {
 }
 
 void jsockd_logf(LogLevel log_level, const char *fmt, ...) {
+  if (log_level == LOG_DEBUG && !CMAKE_BUILD_TYPE_IS_DEBUG)
+    return;
+
   va_list args, args2;
 
   // Cannot use args twice in the two subsequent vsnprintf calls, so copy it.
