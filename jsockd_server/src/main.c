@@ -1221,7 +1221,7 @@ static const uint8_t *load_module_bytecode(const char *filename,
       (!(!strcmp(version_string, "unknown_version") &&
          !strcmp(STRINGIFY(VERSION), "unknown_version") &&
          CMAKE_BUILD_TYPE_IS_DEBUG))) {
-    for (int i = 0; i < VERSION_STRING_SIZE; ++i) {
+    for (int i = 0; i < VERSION_STRING_SIZE && version_string[i] != '\0'; ++i) {
       if (version_string[i] < 32 || version_string[i] > 126)
         version_string[i] = '?';
     }
