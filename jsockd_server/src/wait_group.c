@@ -52,9 +52,7 @@ int wait_group_n_remaining(WaitGroup *wg) {
 }
 
 int wait_group_timed_wait(WaitGroup *wg, uint64_t timeout_ns) {
-  int r;
-
-  r = pthread_mutex_lock(&wg->mutex);
+  int r = pthread_mutex_lock(&wg->mutex);
   if (r != 0)
     return r;
 
