@@ -207,7 +207,7 @@ case $1 in
             echo "$JSOCKD_RELEASE_ARTEFACT_PRIVATE_SIGNING_KEY" | sed 's/[[:space:]]//g' | base64 -d > jsockd_binary_private_signing_key.pem
             for f in jsockd-*.tar.gz; do
                openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out /dev/stdout -rawin -in $f | base64 | tr -d '\n' >> ed25519_signatures.txt
-               printf "\t$f" >> ed25519_signatures.txt
+               printf "\t%s" "$f" >> ed25519_signatures.txt
                printf "\n" >> ed25519_signatures.txt
             done
         )
