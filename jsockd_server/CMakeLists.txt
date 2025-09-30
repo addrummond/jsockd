@@ -72,7 +72,7 @@ add_custom_command(
   OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/src/js/gen_backtrace.c
   COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../tools-bin/qjsc -c -o ${CMAKE_CURRENT_SOURCE_DIR}/src/js/gen_backtrace.c -N g_backtrace_module_bytecode ${CMAKE_CURRENT_SOURCE_DIR}/src/js/backtrace.mjs
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/js/backtrace.mjs
-  )
+)
 
 # Bundle the shims module
 add_custom_command(
@@ -87,7 +87,7 @@ add_custom_command(
   OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/src/js/gen_shims.c
   COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../tools-bin/qjsc -c -o ${CMAKE_CURRENT_SOURCE_DIR}/src/js/gen_shims.c -N g_shims_module_bytecode ${CMAKE_CURRENT_SOURCE_DIR}/src/js/shims/bundle.mjs
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/js/shims/bundle.mjs
-  )
+)
 
 set(ED25519_LIB_SOURCES
   src/lib/ed25519/add_scalar.c
@@ -118,7 +118,7 @@ set(JSOCKD_SERVER_SOURCES
   src/js/gen_backtrace.c
   src/js/gen_shims.c
   ${ED25519_LIB_SOURCES}
-  )
+)
 
 # This lib is just here to stop CMake building most of the sources twice, once
 # for the main executable and once for the tests.
