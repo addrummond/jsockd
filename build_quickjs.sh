@@ -18,7 +18,7 @@ __BUST_CACHE=1 # increment to bust QuickJS build cache manually if needed
 
 QUICKJS_COMMIT=de4d3927b8edff5fbfee1f69cfeef840844259e9
 
-FILC_VERSION=0.670
+FILC_VERSION=0.671
 
 rm -rf .scratch
 mkdir -p .scratch
