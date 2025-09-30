@@ -3,3 +3,4 @@
 - Debug builds do some ad hoc logging without the log line prefix
 - Format check for Elixir client code in CI
 - Full documentation for Elixir client
+- Vendor JS dependencies
