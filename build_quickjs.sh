@@ -16,7 +16,7 @@ fi
 
 __BUST_CACHE=1 # increment to bust QuickJS build cache manually if needed
 
-QUICKJS_COMMIT=de4d3927b8edff5fbfee1f69cfeef840844259e9
+QUICKJS_COMMIT=4af5b1ea7e6e2b33a2cd8b8593d2a23a81cc78f9
 
 FILC_VERSION=0.671
 
