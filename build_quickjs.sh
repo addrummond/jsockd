@@ -85,7 +85,6 @@ for platform in $platforms; do
             cp qjs ../../tools-bin
             cp qjsc ../../tools-bin
             mv libquickjs.a /tmp/libquickjs_${OS}_${ARCH}_Debug.a
-
             # Release build for quickjs library
             $MAKE clean
             CFLAGS="$RELEASE_CFLAGS" $MAKE CONFIG_LTO=y
@@ -111,7 +110,7 @@ for platform in $platforms; do
             fi
             # Debug
             CFLAGS="$DEBUG_CFLAGS" $MAKE CONFIG_LTO=n
-            mv libquickjs.a /tmp/libquickjs_Linux_x86_64_Debug.a # this will get killed by make clean
+            mv libquickjs.a /tmp/libquickjs_Linux_x86_64_Debug.a
             $MAKE clean
             # Release
             CFLAGS="$RELEASE_CFLAGS" $MAKE CONFIG_LTO=y
