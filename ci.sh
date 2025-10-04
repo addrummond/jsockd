@@ -12,7 +12,7 @@ fi
 case $1 in
     setup)
         sudo apt-get update
-        sudo apt-get install -y unzip libncurses-dev valgrind gcc-aarch64-linux-gnu patchelf
+        sudo apt-get install -y unzip libncurses-dev valgrind gcc-aarch64-linux-gnu
         curl -L https://github.com/jdx/mise/releases/download/v2025.8.18/mise-v2025.8.18-linux-x64 --output - | sudo tee -a /usr/local/bin/mise > /dev/null
         if [ $(sha256sum /usr/local/bin/mise | awk '{ print $1 }') != "7265c5f8099bec212009fcd05bdb786423e9a06e316eddb4362a9869a1950c57" ]; then
             echo "Bad checksum for mise"
@@ -179,13 +179,8 @@ case $1 in
 
             # Package Linux x86_64 Fil-C.
             D="jsockd-${VERSION}-linux-x86_64_filc"
-            mkdir -p jsockd-release-artifacts/$D/jsockd
-            patchelf --set-rpath '$ORIGIN' build_Release_TC-fil-c-CI.cmake/jsockd
-            patchelf --set-interpreter ld-yolo-x86_64.so build_Release_TC-fil-c-CI.cmake/jsockd
-            cp build_Release_TC-fil-c-CI.cmake/jsockd jsockd-release-artifacts/$D/jsockd/
-            cp -L /home/runner/filc-${FILC_VERSION}-linux-x86_64/pizfix/lib/ld-yolo-x86_64.so jsockd-release-artifacts/$D/jsockd/ld-yolo-x86_64.so
-            cp -L /home/runner/filc-${FILC_VERSION}-linux-x86_64/pizfix/lib/libc.so jsockd-release-artifacts/$D/jsockd/libc.so
-            cp -L /home/runner/filc-${FILC_VERSION}-linux-x86_64/pizfix/lib/libpizlo.so jsockd-release-artifacts/$D/jsockd/libpizlo.so
+            mkdir -p jsockd-release-artifacts/$D
+            cp build_Release_TC-fil-c-CI.cmake/jsockd jsockd-release-artifacts/$D
             tar -C jsockd-release-artifacts -czf $D.tar.gz $D
 
             # Package Linux ARM64
