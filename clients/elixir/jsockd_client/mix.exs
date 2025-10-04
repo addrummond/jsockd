@@ -68,7 +68,7 @@ defmodule JsockdClient.MixProject do
              File.exists?(
                Path.join([
                  priv_dir,
-                 "jsockd_js_server_version_tag_#{@jsockd_version}"
+                 get_version_tag(use_filc_when_available?)
                ])
              ) do
       ensure_app!(:inets)
@@ -133,7 +133,7 @@ defmodule JsockdClient.MixProject do
         0o500
       )
 
-      File.touch!(Path.join([priv_dir, "jsockd_js_server_version_tag_#{@jsockd_version}"]))
+      File.touch!(Path.join([priv_dir, get_version_tag(use_filc_when_available?)]))
 
       File.rm_rf!(Path.join([priv_dir, "jsockd-release-artifacts"]))
 
@@ -191,5 +191,9 @@ defmodule JsockdClient.MixProject do
   defp verify_signature(signature, challenge) do
     public_key = Base.decode16!(@jsockd_binary_public_key, case: :mixed)
     :crypto.verify(:eddsa, :none, challenge, signature, [public_key, :ed25519])
+  end
+
+  defp get_version_tag(use_filc_when_available?) do
+    "jsockd_js_server_version_tag_#{@jsockd_version}#{if use_filc_when_available?, do: "_filc", else: ""}"
   end
 end
