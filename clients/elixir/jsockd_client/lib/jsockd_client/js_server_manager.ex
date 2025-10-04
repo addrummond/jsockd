@@ -45,8 +45,6 @@ defmodule JSockDClient.JsServerManager do
         :in,
         :exit_status,
         line: 80,
-        # required for Fil-C exec
-        cd: Path.dirname(exec),
         args:
           if source_map do
             ["-sm", source_map]
@@ -109,10 +107,15 @@ defmodule JSockDClient.JsServerManager do
   @impl true
   def handle_info({_port, {:data, {eol, msg}}}, state) do
     if eol == :eol do
-      state = handle_jsockd_msg(String.trim(List.to_string(Enum.reverse([msg|state.current_line]))), state)
-      {:noreply, %{ state | current_line: []}}
+      state =
+        handle_jsockd_msg(
+          String.trim(List.to_string(Enum.reverse([msg | state.current_line]))),
+          state
+        )
+
+      {:noreply, %{state | current_line: []}}
     else
-      {:noreply, %{ state | current_line: [msg|state.current_line]}}
+      {:noreply, %{state | current_line: [msg | state.current_line]}}
     end
   end
 

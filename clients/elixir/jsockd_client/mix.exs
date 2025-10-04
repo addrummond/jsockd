@@ -64,18 +64,6 @@ defmodule JsockdClient.MixProject do
         "jsockd"
       ])
 
-    filc? =
-      String.contains?(platform, "x86_64") and String.contains?(platform, "linux") and
-        use_filc_when_available?
-
-    # The Fil-C build is tucked away inside a jsockd folder with its .so friends.
-    js_server_binary_filename =
-      if filc? do
-        Path.join(js_server_binary_filename, "jsockd")
-      else
-        js_server_binary_filename
-      end
-
     unless File.exists?(js_server_binary_filename) and
              File.exists?(
                Path.join([
