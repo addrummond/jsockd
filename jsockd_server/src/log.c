@@ -35,7 +35,7 @@ void destroy_log_mutex(void) {
 
 void print_log_prefix(LogLevel log_level, FILE *f, int line) {
   struct timespec ts;
-  char timebuf[ISO8601_MAX_LEN];
+  char timebuf[ISO8601_MAX_LEN + 1];
 
   if (0 == clock_gettime(CLOCK_REALTIME, &ts)) {
     timespec_to_iso8601(&ts, timebuf, sizeof(timebuf) / sizeof(timebuf[0]));
