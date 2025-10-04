@@ -235,7 +235,7 @@ int parse_cmd_args(int argc, char **argv, void (*errlog)(const char *fmt, ...),
            "<socket1_path> "
            "[<socket2_path> ...]\n       %s -c <module_to_compile> "
            "<output_file> [-k "
-           "<private_key_file>]\n       %s -k <key_file_prefix>",
+           "<private_key_file>]\n       %s -k <key_file_prefix>\n",
            cmdname, cmdname, cmdname);
     return -1;
   }
