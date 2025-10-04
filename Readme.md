@@ -36,7 +36,7 @@ The parameter can be any JSON-serializable value. A command should return either
 
 Commands are cached in the same sort of way that a SQL server caches queries. When a command is executed, the server first checks if the command has been executed before. If it has and the bytecode remains in the cache, then the server executes the cached bytecode with the specified parameter. If not, the server first compiles the command and caches the bytecode for future use.
 
-Commands should not depend on persistent global state. Global state may or may not persist across command executions. JSockD reserves the right to reset global state at any time.
+Commands should not depend on persistent global state. Global state may or may not persist across command executions. JSockD reserves the right to reset global state at any time (except during command execution).
 
 The following is a typical example of a command in the context of React SSR. The bundled module exports some key React functions such as `renderToString` and `createElement`. The parameter supplies one of the props for the `UserDetails` component.
 
