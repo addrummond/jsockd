@@ -16,6 +16,7 @@ defmodule JSockDClient.JsServerManager do
           source_map: source_map,
           max_command_runtime_us: max_command_runtime_us,
           max_idle_time_us: max_idle_time_us,
+          timeout_ms: timeout_ms,
           use_filc_when_available?: use_filc_when_available?
         }
       ) do
@@ -78,7 +79,9 @@ defmodule JSockDClient.JsServerManager do
         ]
       ])
 
-    # we now wait for the handle_info call for the ready message
+    # We now wait for the handle_info call for the ready message.
+
+    Process.send_after(self(), :timeout_waiting_for_jsockd_ready, timeout_ms)
 
     {:ok,
      %{
@@ -168,6 +171,15 @@ defmodule JSockDClient.JsServerManager do
     Port.close(state.port_id)
     {:ok, state} = init(state.opts)
     {:noreply, nil, state}
+  end
+
+  @impl true
+  def handle_info(:timeout_waiting_for_jsockd_ready, state) do
+    if state.unix_sockets_with_threads == [] do
+      raise "Timeout waiting for READY message from jsockd"
+    end
+
+    {:noreply, state}
   end
 
   @impl true
