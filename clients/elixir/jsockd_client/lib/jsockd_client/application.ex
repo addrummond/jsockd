@@ -27,6 +27,9 @@ defmodule JSockDClient.Application do
     max_idle_time_us =
       Application.get_env(:jsockd_client, :max_idle_time_us)
 
+    timeout_ms =
+      Application.get_env(:jsockd_client, :timeout_ms, 15_000)
+
     use_filc_when_available? =
       Application.get_env(:jsockd_client, :use_filc_when_available?, false)
 
@@ -40,6 +43,7 @@ defmodule JSockDClient.Application do
          source_map: source_map,
          max_command_runtime_us: max_command_runtime_us,
          max_idle_time_us: max_idle_time_us,
+         timeout_ms: timeout_ms,
          use_filc_when_available?: use_filc_when_available?
        }}
     ]
