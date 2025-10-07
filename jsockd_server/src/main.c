@@ -334,6 +334,7 @@ static void command_loop(ThreadState *ts,
   LineBuf line_buf = {.buf = line_buf_buffer, .size = LINE_BUF_BYTES};
 
   if (0 != initialize_and_listen_on_unix_socket(ts->socket_state)) {
+    jsockd_log(LOG_ERROR, "Error initializing UNIX socket\n");
     ts->exit_status = -1;
     goto error;
   }
@@ -361,12 +362,14 @@ static void command_loop(ThreadState *ts,
     ts->socket_state->streamfd =
         accept(ts->socket_state->sockfd,
                (struct sockaddr *)&ts->socket_state->addr, &streamfd_size);
-    jsockd_logf(LOG_DEBUG, "Accepted on ts->socket thread %i\n",
-                ts->thread_index);
     if (ts->socket_state->streamfd < 0) {
+      jsockd_logf(LOG_ERROR, "accept failed on UNIX socket: %s\n",
+                  strerror(errno));
       ts->exit_status = -1;
       goto error_no_inc;
     }
+    jsockd_logf(LOG_DEBUG, "Accepted on ts->socket thread %i\n",
+                ts->thread_index);
     if (0 != clock_gettime(MONOTONIC_CLOCK, &ts->last_active_time)) {
       jsockd_logf(LOG_ERROR, "Error getting time after accept: %s",
                   strerror(errno));
