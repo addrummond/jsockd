@@ -329,5 +329,5 @@ The `format.sh` script in `jsockd_server` formats C source files using `clang-fo
 
 **TODO: rough notes**
 
-* `./build_quickjs.sh linux_x86_64_filc`
+* `FILC_CLANG=/path/to/fil-c/clang ./build_quickjs.sh linux_x86_64_filc`
 * [In `jsockd_server`] `TOOLCHAIN_FILE=TC-fil-c.cmake ./mk.sh Debug`

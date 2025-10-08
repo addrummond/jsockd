@@ -19,6 +19,7 @@ __BUST_CACHE=1 # increment to bust QuickJS build cache manually if needed
 QUICKJS_COMMIT=de4d3927b8edff5fbfee1f69cfeef840844259e9
 
 FILC_VERSION=0.671
+FILC_CLANG="${FILC_CLANG:-$HOME/filc-${FILC_VERSION}-linux-x86_64/build/bin/clang}"
 
 rm -rf .scratch
 mkdir -p .scratch
@@ -133,11 +134,11 @@ for platform in $platforms; do
             # Debug
             # See https://github.com/pizlonator/pizlonated-quickjs/commit/258a4a291fd0f080614e5b345528478c31e51705#diff-45f1ae674139f993bf8a99c382c1ba4863272a6fec2f492d76d7ff1b2cfcfbe2R56-R5187 for diff the patch is based on
             git apply ../../fil-c-quickjs.patch
-            CFLAGS="$DEBUG_CFLAGS -static" LDFLAGS="-static" $MAKE CC=~/filc-${FILC_VERSION}-linux-x86_64/build/bin/clang CONFIG_LTO= CONFIG_CLANG=y
+            CFLAGS="$DEBUG_CFLAGS -static" LDFLAGS="-static" $MAKE CC=$FILC_CLANG CONFIG_LTO= CONFIG_CLANG=y
             mv libquickjs.a /tmp/libquickjs_Linux_x86_64_filc_Debug.a
             # Release
             $MAKE clean
-            CFLAGS="$FILC_RELEASE_CFLAGS -static" LDFLAGS="-static" $MAKE CC=~/filc-${FILC_VERSION}-linux-x86_64/build/bin/clang CONFIG_LTO= CONFIG_CLANG=y
+            CFLAGS="$FILC_RELEASE_CFLAGS -static" LDFLAGS="-static" $MAKE CC=$FILC_CLANG CONFIG_LTO= CONFIG_CLANG=y
             git apply -R ../../fil-c-quickjs.patch
             mv libquickjs.a /tmp/libquickjs_Linux_x86_64_filc_Release.a
             ;;
