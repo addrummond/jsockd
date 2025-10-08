@@ -33,6 +33,9 @@ defmodule JSockDClient.Application do
     use_filc_when_available? =
       Application.get_env(:jsockd_client, :use_filc_when_available?, false)
 
+    skip_jsockd_version_check? =
+      Application.get_env(:jsockd_client, :skip_jsockd_version_check?, false)
+
     children = [
       {JSockDClient.JsServerManager,
        %{
@@ -44,7 +47,8 @@ defmodule JSockDClient.Application do
          max_command_runtime_us: max_command_runtime_us,
          max_idle_time_us: max_idle_time_us,
          timeout_ms: timeout_ms,
-         use_filc_when_available?: use_filc_when_available?
+         use_filc_when_available?: use_filc_when_available?,
+         skip_jsockd_version_check?: skip_jsockd_version_check?
        }}
     ]
 

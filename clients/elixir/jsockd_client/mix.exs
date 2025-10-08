@@ -32,7 +32,8 @@ defmodule JsockdClient.MixProject do
         max_command_runtime_us: nil,
         max_idle_time_us: nil,
         timeout_ms: 15_000,
-        use_filc_when_available?: false
+        use_filc_when_available?: false,
+        skip_jsockd_version_check?: false
       ]
     ]
   end

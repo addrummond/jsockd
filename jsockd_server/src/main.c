@@ -1420,7 +1420,7 @@ static int inner_main(int argc, char *argv[]) {
     return EXIT_FAILURE;
   }
 
-  printf("READY %i\n", n_threads);
+  printf("READY %i %s\n", n_threads, STRINGIFY(VERSION));
   fflush(stdout);
 
   // pthread_join can fail, but we can't do any useful error handling

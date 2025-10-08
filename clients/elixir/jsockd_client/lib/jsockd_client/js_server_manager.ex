@@ -17,7 +17,8 @@ defmodule JSockDClient.JsServerManager do
           max_command_runtime_us: max_command_runtime_us,
           max_idle_time_us: max_idle_time_us,
           timeout_ms: timeout_ms,
-          use_filc_when_available?: use_filc_when_available?
+          use_filc_when_available?: use_filc_when_available?,
+          skip_jsockd_version_check?: skip_jsockd_version_check?
         }
       ) do
     n_threads = n_threads || :erlang.system_info(:logical_processors_online)
@@ -90,7 +91,8 @@ defmodule JSockDClient.JsServerManager do
        unix_socket_paths: unix_socket_paths,
        unix_sockets_with_threads: [],
        pending_calls: %{},
-       current_line: []
+       current_line: [],
+       skip_jsockd_version_check?: skip_jsockd_version_check?
      }}
   end
 
@@ -198,7 +200,7 @@ defmodule JSockDClient.JsServerManager do
   defp handle_jsockd_msg("", state), do: state
 
   defp handle_jsockd_msg(msg, state) do
-    case Regex.run(~r/^READY (\d+)/, msg) do
+    case Regex.run(~r/^READY (\d+) (.*)$/, msg) do
       nil ->
         # It's a log message written to stderr (which has been redirected to stdout).
         # Scan it to determine the log level and then forward it to Logger
@@ -221,7 +223,11 @@ defmodule JSockDClient.JsServerManager do
 
         state
 
-      [_, n_threads] ->
+      [_, n_threads, version] ->
+        if not state.skip_jsockd_version_check? and version != JSockDClient.jsockd_version() do
+          raise "jsockd version mismatch: expected #{JSockDClient.jsockd_version()}, got #{version}"
+        end
+
         if state.unix_sockets_with_threads != [] do
           raise "Unexpected READY message received from jsockd: #{inspect(msg)}"
         end
