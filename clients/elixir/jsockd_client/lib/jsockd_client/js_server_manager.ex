@@ -216,16 +216,16 @@ defmodule JSockDClient.JsServerManager do
 
                 case level do
                   "ERROR" ->
-                    Logger.error("#{l} jsockd #{time} #{String.trim_trailing(entire_log)}")
+                    Logger.error("jsockd #{time} #{String.trim_trailing(entire_log)}")
 
                   "WARN" ->
-                    Logger.warning("#{l} jsockd #{time} #{String.trim_trailing(entire_log)}")
+                    Logger.warning("jsockd #{time} #{String.trim_trailing(entire_log)}")
 
                   "DEBUG" ->
-                    Logger.debug("#{l} jsockd #{time} #{String.trim_trailing(entire_log)}")
+                    Logger.debug("jsockd #{time} #{String.trim_trailing(entire_log)}")
 
                   _ ->
-                    Logger.info("#{l} jsockd #{time} #{String.trim_trailing(entire_log)}")
+                    Logger.info("jsockd #{time} #{String.trim_trailing(entire_log)}")
                 end
             end
         end
