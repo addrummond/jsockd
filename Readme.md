@@ -249,10 +249,20 @@ The `<DATETIME>` is in ISO 8601 format (or is the string `<unknown time>` in the
 
 The `<LOG_LEVEL>` is one of `INFO`, `WARN`, or `ERROR` in release builds, or also `DEBUG` in debug builds.
 
-An example log line:
+The `<DATETIME>` and `<LOG_LEVEL>` fields are guaranteed to be identical for all lines of a multi-line log message.
+
+An example of a single line log message:
 
 ```
-* jsockd 2025-09-24T21:15:45.644776Z [DEBUG] Creating thread 0
+$ jsockd 2025-09-24T21:15:45.644776Z [DEBUG] Creating thread 0
+```
+
+An example of a multi-line log message:
+
+```
+* jsockd 2025-09-24T21:15:45.644776Z [INFO] Line 1
+* jsockd 2025-09-24T21:15:45.644776Z [INFO] Line 2
+$ jsockd 2025-09-24T21:15:45.644776Z [INFO] Line 3
 ```
 
 ## 4. Bundling your JavaScript code

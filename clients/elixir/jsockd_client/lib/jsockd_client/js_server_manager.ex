@@ -92,7 +92,8 @@ defmodule JSockDClient.JsServerManager do
        unix_sockets_with_threads: [],
        pending_calls: %{},
        current_line: [],
-       skip_jsockd_version_check?: skip_jsockd_version_check?
+       skip_jsockd_version_check?: skip_jsockd_version_check?,
+       current_log_line: []
      }}
   end
 
@@ -205,20 +206,28 @@ defmodule JSockDClient.JsServerManager do
         # It's a log message written to stderr (which has been redirected to stdout).
         # Scan it to determine the log level and then forward it to Logger
         case Regex.run(~r/(\*|\.) jsockd ([^ ]+) \[([^][]+)\] (.*)/, msg) do
-          [_, l, time, "ERROR", msg] ->
-            Logger.error("#{l} jsockd #{time} #{String.trim_trailing(msg)}")
+          [_, l, time, level, msg] ->
+            case l do
+              "*" ->
+                %{state | current_log_line: [msg | state.current_log_line]}
 
-          [_, l, time, "WARN", msg] ->
-            Logger.warning("#{l} jsockd #{time} #{String.trim_trailing(msg)}")
+              "$" ->
+                entire_log = Enum.reverse([msg | state.current_log_line]) |> Enum.join(" ")
 
-          [_, l, time, "DEBUG", msg] ->
-            Logger.debug("#{l} jsockd #{time} #{String.trim_trailing(msg)}")
+                case level do
+                  "ERROR" ->
+                    Logger.error("#{l} jsockd #{time} #{String.trim_trailing(entire_log)}")
 
-          [_, l, time, _, msg] ->
-            Logger.info("#{l} jsockd #{time} #{String.trim_trailing(msg)}")
+                  "WARN" ->
+                    Logger.warning("#{l} jsockd #{time} #{String.trim_trailing(entire_log)}")
 
-          _ ->
-            Logger.info("* jsockd #{String.trim_trailing(msg)}")
+                  "DEBUG" ->
+                    Logger.debug("#{l} jsockd #{time} #{String.trim_trailing(entire_log)}")
+
+                  _ ->
+                    Logger.info("#{l} jsockd #{time} #{String.trim_trailing(entire_log)}")
+                end
+            end
         end
 
         state
