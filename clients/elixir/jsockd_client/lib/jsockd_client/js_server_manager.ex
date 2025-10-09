@@ -227,10 +227,10 @@ defmodule JSockDClient.JsServerManager do
                   _ ->
                     Logger.info("jsockd #{time} #{String.trim_trailing(entire_log)}")
                 end
+
+                %{state | current_log_line: []}
             end
         end
-
-        state
 
       [_, n_threads, version] ->
         if not state.skip_jsockd_version_check? and version != JSockDClient.jsockd_version() do
