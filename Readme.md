@@ -32,7 +32,7 @@ A JSockD command is a JavaScript function that takes two arguments:
 * the module loaded from your bundle (or `undefined` if no bundle was specified), and
 * the parameter passed to the command.
 
-The parameter can be any JSON-serializable value. A command should return either a value that can be serialized to JSON or a promise that resolves to such a value.
+The parameter can be any JSON-serializable value. A command should return either a JSON-serializable value or a promise that resolves to such a value.
 
 Commands are cached in the same sort of way that a SQL server caches queries. When a command is executed, the server first checks if the command has been executed before. If it has and the bytecode remains in the cache, then the server executes the cached bytecode with the specified parameter. If not, the server first compiles the command and caches the bytecode for future use.
 
