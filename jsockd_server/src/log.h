@@ -2,6 +2,7 @@
 #define LOG_H_
 
 #include <pthread.h>
+#include <stdbool.h>
 #include <stdio.h>
 
 #define ISO8601_MAX_LEN 29
@@ -12,7 +13,7 @@ int init_log_mutex(void);
 void destroy_log_mutex(void);
 void jsockd_logf(LogLevel level, const char *fmt, ...);
 void jsockd_log(LogLevel level, const char *s);
-void print_log_prefix(LogLevel log_level, FILE *f, int line);
+void print_log_prefix(LogLevel log_level, FILE *f, bool last_line);
 void log_with_prefix_for_subsequent_lines(LogLevel log_level, FILE *fo,
                                           const char *buf, size_t len);
 

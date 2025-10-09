@@ -243,7 +243,7 @@ When executed as a server (i.e. with the `-s` option), JSockD logs messages to s
 <PREFIX> jsockd <DATETIME> [<LOG_LEVEL>] <LOG MESSAGE>
 ```
 
-The `<PREFIX>` is `*` for the first line of a log message and `.` for subsequent lines.
+The `<PREFIX>` is `$` for the last line of a log message and `*` for all other lines.
 
 The `<DATETIME>` is in ISO 8601 format (or is the string `<unknown time>` in the unlikely event of a failed call to `clock_gettime`).
 

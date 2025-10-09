@@ -33,7 +33,7 @@ void destroy_log_mutex(void) {
   }
 }
 
-void print_log_prefix(LogLevel log_level, FILE *f, int line) {
+void print_log_prefix(LogLevel log_level, FILE *f, bool last_line) {
   struct timespec ts;
   char timebuf[ISO8601_MAX_LEN + 1];
 
@@ -58,7 +58,16 @@ void print_log_prefix(LogLevel log_level, FILE *f, int line) {
     ll = "ERROR";
     break;
   }
-  fprintf(stderr, "%s jsockd %s [%s] ", line == 1 ? "*" : ".", timebuf, ll);
+  fprintf(stderr, "%s jsockd %s [%s] ", last_line ? "$" : "*", timebuf, ll);
+}
+
+static int remove_trailing_ws(const char *buf, int len) {
+  while (--len >= 0) {
+    if (buf[len] != ' ' && buf[len] != '\t' && buf[len] != '\n' &&
+        buf[len] != '\r')
+      break;
+  }
+  return len + 1;
 }
 
 void jsockd_logf(LogLevel log_level, const char *fmt, ...) {
@@ -88,9 +97,11 @@ void jsockd_logf(LogLevel log_level, const char *fmt, ...) {
 
   int m = vsnprintf(log_buf, n + 1, fmt, args2);
   va_end(args2);
+  m = MIN(m, n);
+  m = remove_trailing_ws(log_buf, m);
 
-  print_log_prefix(log_level, stderr, 1);
-  log_with_prefix_for_subsequent_lines(log_level, stderr, log_buf, MIN(n, m));
+  print_log_prefix(log_level, stderr, NULL == memchr(log_buf, '\n', (size_t)m));
+  log_with_prefix_for_subsequent_lines(log_level, stderr, log_buf, m);
   fputc('\n', stderr);
   fflush(stderr);
 
@@ -104,32 +115,17 @@ void jsockd_log(LogLevel log_level, const char *s) {
   jsockd_logf(log_level, "%s", s);
 }
 
-static size_t remove_trailing_ws(const char *buf, size_t len) {
-  if (len == 0)
-    return 0;
-  --len;
-  do {
-    if (buf[len] != ' ' && buf[len] != '\t' && buf[len] != '\n' &&
-        buf[len] != '\r')
-      break;
-  } while (len-- > 0);
-  return len + 1;
-}
-
 void log_with_prefix_for_subsequent_lines(LogLevel log_level, FILE *fo,
                                           const char *buf, size_t len) {
-  len = remove_trailing_ws(buf, len);
-
-  int line = 1;
   size_t start = 0;
   size_t i;
   for (i = 0; i < len; ++i) {
     if (buf[i] == '\n') {
       fwrite(buf + start, 1, i - start + 1, fo);
-      ++line;
       start = i + 1;
-      print_log_prefix(log_level, fo, line);
+      print_log_prefix(log_level, fo,
+                       NULL == memchr(buf + start, '\n', len - start));
     }
   }
-  fwrite(buf + start, 1, i - start + 1, fo);
+  fwrite(buf + start, 1, i - start, fo);
 }

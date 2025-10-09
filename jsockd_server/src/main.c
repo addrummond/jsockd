@@ -1376,7 +1376,7 @@ static int inner_main(int argc, char *argv[]) {
 
   int thread_init_n = 0;
   for (thread_init_n = 0; thread_init_n < n_threads; ++thread_init_n) {
-    jsockd_logf(LOG_DEBUG, "Creating thread %i\n", thread_init_n);
+    jsockd_logf(LOG_DEBUG, "Creating \nthread %i\n", thread_init_n);
     init_socket_state(&g_socket_states[thread_init_n],
                       g_cmd_args.socket_path[thread_init_n]);
     if (0 != init_thread_state(&g_thread_states[thread_init_n],
