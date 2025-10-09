@@ -1214,6 +1214,10 @@ static const uint8_t *load_module_bytecode(const char *filename,
     return NULL;
   }
 
+  const char *pubkey = getenv("JSOCKD_BYTECODE_MODULE_PUBLIC_KEY");
+  if (!pubkey)
+    pubkey = "";
+
   char version_string[VERSION_STRING_SIZE];
   memcpy(version_string,
          module_bytecode + *out_size - ED25519_SIGNATURE_SIZE -
@@ -1223,7 +1227,9 @@ static const uint8_t *load_module_bytecode(const char *filename,
   if (strcmp(version_string, STRINGIFY(VERSION)) &&
       (!(!strcmp(version_string, "unknown_version") &&
          !strcmp(STRINGIFY(VERSION), "unknown_version") &&
-         CMAKE_BUILD_TYPE_IS_DEBUG))) {
+         CMAKE_BUILD_TYPE_IS_DEBUG)) &&
+      !(!strcmp(pubkey, MAGIC_KEY_TO_ALLOW_INVALID_SIGNATURES) &&
+        CMAKE_BUILD_TYPE_IS_DEBUG)) {
     for (int i = 0; i < VERSION_STRING_SIZE && version_string[i] != '\0'; ++i) {
       if (version_string[i] < 32 || version_string[i] > 126)
         version_string[i] = '?';
@@ -1235,10 +1241,6 @@ static const uint8_t *load_module_bytecode(const char *filename,
     munmap_or_warn((void *)module_bytecode, *out_size);
     return NULL;
   }
-
-  const char *pubkey = getenv("JSOCKD_BYTECODE_MODULE_PUBLIC_KEY");
-  if (!pubkey)
-    pubkey = "";
 
   if (CMAKE_BUILD_TYPE_IS_DEBUG &&
       !strcmp(pubkey, MAGIC_KEY_TO_ALLOW_INVALID_SIGNATURES)) {
@@ -1376,7 +1378,7 @@ static int inner_main(int argc, char *argv[]) {
 
   int thread_init_n = 0;
   for (thread_init_n = 0; thread_init_n < n_threads; ++thread_init_n) {
-    jsockd_logf(LOG_DEBUG, "Creating \nthread %i\n", thread_init_n);
+    jsockd_logf(LOG_DEBUG, "Creating thread %i\n", thread_init_n);
     init_socket_state(&g_socket_states[thread_init_n],
                       g_cmd_args.socket_path[thread_init_n]);
     if (0 != init_thread_state(&g_thread_states[thread_init_n],

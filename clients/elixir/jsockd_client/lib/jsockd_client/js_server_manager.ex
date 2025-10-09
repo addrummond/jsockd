@@ -205,14 +205,14 @@ defmodule JSockDClient.JsServerManager do
       nil ->
         # It's a log message written to stderr (which has been redirected to stdout).
         # Scan it to determine the log level and then forward it to Logger
-        case Regex.run(~r/(\*|\.) jsockd ([^ ]+) \[([^][]+)\] (.*)/, msg) do
+        case Regex.run(~r/(\*|\$) jsockd ([^ ]+) \[([^][]+)\] (.*)/, msg) do
           [_, l, time, level, msg] ->
             case l do
               "*" ->
                 %{state | current_log_line: [msg | state.current_log_line]}
 
               "$" ->
-                entire_log = Enum.reverse([msg | state.current_log_line]) |> Enum.join(" ")
+                entire_log = Enum.reverse([msg | state.current_log_line]) |> Enum.join("\n")
 
                 case level do
                   "ERROR" ->
@@ -230,6 +230,9 @@ defmodule JSockDClient.JsServerManager do
 
                 %{state | current_log_line: []}
             end
+
+          nil ->
+            Logger.info("jsockd <unknown time> [INFO] #{String.trim_trailing(msg)}")
         end
 
       [_, n_threads, version] ->
