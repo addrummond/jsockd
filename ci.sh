@@ -72,6 +72,7 @@ case $1 in
         # before a line containing a version constant, then this script will
         # check that the version constant matches the current git tag.
         (
+            set +e
             cd $GITHUB_WORKSPACE
             tag=$(git describe --tags --exact-match --match 'v[0-9]*' 2>/dev/null)
             if [ -z $? ]; then
