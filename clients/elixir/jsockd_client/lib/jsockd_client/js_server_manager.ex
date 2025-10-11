@@ -170,13 +170,6 @@ defmodule JSockDClient.JsServerManager do
   end
 
   @impl true
-  def handle_info(:hup, state) do
-    Port.close(state.port_id)
-    {:ok, state} = init(state.opts)
-    {:noreply, nil, state}
-  end
-
-  @impl true
   def handle_info(:timeout_waiting_for_jsockd_ready, state) do
     if state.unix_sockets_with_threads == [] do
       raise "Timeout waiting for READY message from jsockd"
@@ -232,11 +225,11 @@ defmodule JSockDClient.JsServerManager do
             end
 
           nil ->
-            Logger.info("jsockd <unknown time> [INFO] #{String.trim_trailing(msg)}")
+            Logger.info("jsockd 0000-00-00T00:00:00.000000Z [INFO] #{String.trim_trailing(msg)}")
         end
 
       [_, n_threads, version] ->
-        if not state.skip_jsockd_version_check? and version != JSockDClient.jsockd_version() do
+        if state.skip_jsockd_version_check? and version != JSockDClient.jsockd_version() do
           raise "jsockd version mismatch: expected #{JSockDClient.jsockd_version()}, got #{version}"
         end
 

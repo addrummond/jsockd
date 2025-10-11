@@ -40,7 +40,7 @@ void print_log_prefix(LogLevel log_level, FILE *f, bool last_line) {
   if (0 == clock_gettime(CLOCK_REALTIME, &ts)) {
     timespec_to_iso8601(&ts, timebuf, sizeof(timebuf) / sizeof(timebuf[0]));
   } else {
-    strcpy(timebuf, "<unknown time>");
+    strcpy(timebuf, "0000-00-00T00:00:00.000000Z");
   }
 
   const char *ll = "";

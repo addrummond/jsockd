@@ -67,6 +67,32 @@ case $1 in
         )
         ;;
 
+    check_jsockd_version_constants)
+        # If you insert a line containing the marker __jsockd_version_check__
+        # before a line containing a version constant, then this script will
+        # check that the version constant matches the current git tag.
+        tag=$(git describe --tags --exact-match --match 'v[0-9]*' 2>/dev/null)
+        if [ -z $? ]; then
+            case "$tag" in
+                "v"*)
+                    echo "Checking that all in-code JSockD version constants match the tag ${tag}..."
+                    find ./ \( -name '*.go' -o -name '*.c' -o -name '*.h' -o -name '*.ex*' -o -name '*.md' \) -exec awk '/__jsockd_version_check__/ { vc=1 } !/__jsockd_version_check__/ { if (vc == 1) { vc = 0; print $0 } }' {} \; | \
+                    sed -e 's/^.*\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*$/\1/' | \
+                    while IFS= read -r v; do
+                        if [ "v$v" != "$tag" ]; then
+                            echo "Version constant $v does not match tag $tag"
+                            exit 1
+                        fi
+                    done
+                    ;;
+                *)
+                    echo "Not performing JSockD version constant check because tag $tag doesn't seem to be a version."
+            esac
+        else
+            echo "Not performing JSockD version constant check because HEAD is not tagged."
+        fi
+        ;;
+
     build_jsockd_server)
         (
             set -e

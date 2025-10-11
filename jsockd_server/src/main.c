@@ -252,7 +252,6 @@ static int lb_read(char *buf, size_t n, void *data) {
 
 static CmdArgs g_cmd_args;
 
-static const int EXIT_ON_QUIT_COMMAND = -999;
 static const int TRAMPOLINE = -9999;
 
 static int initialize_and_listen_on_unix_socket(SocketState *socket_state) {
@@ -405,8 +404,7 @@ static void command_loop(ThreadState *ts,
                           command_loop_line_handler_wrapper, (void *)&louslh);
     }
 
-    if (exit_value < 0 && exit_value != LINE_BUF_READ_EOF &&
-        exit_value != EXIT_ON_QUIT_COMMAND)
+    if (exit_value < 0 && exit_value != LINE_BUF_READ_EOF)
       ts->exit_status = -1;
     if (exit_value < 0)
       goto error_no_inc; // EOF or error
@@ -1108,15 +1106,6 @@ static int line_handler(const char *line, size_t len, ThreadState *ts,
     return 0;
   }
 
-  if (!strcmp("?quit", line)) {
-    if (!JS_IsUndefined(ts->compiled_query)) {
-      JS_FreeValue(ts->ctx, ts->compiled_query);
-      ts->compiled_query = JS_UNDEFINED;
-    }
-    atomic_store_explicit(&g_interrupted_or_error, true, memory_order_relaxed);
-    write_const_to_stream(ts, "quit\n");
-    return EXIT_ON_QUIT_COMMAND;
-  }
   if (!strcmp("?reset", line)) {
     if (!JS_IsUndefined(ts->compiled_query)) {
       JS_FreeValue(ts->ctx, ts->compiled_query);
@@ -1294,14 +1283,25 @@ static void global_cleanup(void) {
     munmap_or_warn((void *)g_source_map, g_source_map_size);
 }
 
-static void SIGINT_handler(int sig) {
+static void SIGINT_and_SIGTERM_handler(int sig) {
+  static atomic_int already_called = 0;
+  int n = atomic_fetch_add_explicit(&already_called, 1, memory_order_relaxed);
+  if (n > 0)
+    return;
+
   atomic_store_explicit(&g_sigint_triggered, true, memory_order_relaxed);
   atomic_store_explicit(&g_interrupted_or_error, true, memory_order_relaxed);
 
   // Using stdio inside an interrupt handler is not safe, but calls to write
   // are explicilty allowed.
-  const char msg[] = "\nSIGINT received, cleaning up...\n";
-  write_all(2, msg, sizeof(msg) - 1);
+  const char int_msg[] = "\n$ jsockd 0000-00-00T00:00:00.000000Z [INFO] SIGINT "
+                         "received, cleaning up...\n";
+  const char term_msg[] = "\n$ jsockd 0000-00-00T00:00:00.000000Z [INFO] "
+                          "SIGTERM received, cleaning up...\n";
+  if (sig == SIGINT)
+    write_all(2, int_msg, sizeof(int_msg) - 1);
+  else
+    write_all(2, term_msg, sizeof(term_msg) - 1);
 }
 
 static void log_to_stderr(const char *fmt, ...) {
@@ -1311,8 +1311,9 @@ static void log_to_stderr(const char *fmt, ...) {
 }
 
 static int inner_main(int argc, char *argv[]) {
-  struct sigaction sa = {.sa_handler = SIGINT_handler};
+  struct sigaction sa = {.sa_handler = SIGINT_and_SIGTERM_handler};
   sigaction(SIGINT, &sa, NULL);
+  sigaction(SIGTERM, &sa, NULL);
 
   mutex_init(&g_cached_functions_mutex);
 
