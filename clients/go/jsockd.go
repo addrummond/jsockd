@@ -304,38 +304,6 @@ func connHandler(conn net.Conn, cmdChan chan command, client *JSockDClient) {
 	}
 }
 
-func readRecord(conn net.Conn) (string, error) {
-	r := bufio.NewReader(conn)
-	record, err := r.ReadString('\n')
-	if err != nil {
-		return "", err
-	}
-	return record, nil
-}
-
-func chooseChan(connChans []chan command) chan command {
-	for i := range len(connChans) {
-		if len(connChans[i]) == 0 {
-			return connChans[i]
-		}
-	}
-	return connChans[rand.Intn(len(connChans))]
-}
-
-func getFatalError(client *JSockDClient) error {
-	client.fatalErrorMutex.Lock()
-	defer client.fatalErrorMutex.Unlock()
-	return client.fatalError
-}
-
-func setFatalError(client *JSockDClient, err error) {
-	client.fatalErrorMutex.Lock()
-	defer client.fatalErrorMutex.Unlock()
-	if client.fatalError == nil {
-		client.fatalError = err
-	}
-}
-
 func readReadyFromStdout(stdout io.Reader, readyCh chan<- int, errCh chan<- error, config Config) {
 	scanner := bufio.NewScanner(stdout)
 	for scanner.Scan() {
@@ -404,5 +372,37 @@ func streamStderrLogs(stderr io.Reader, config Config) {
 		} else {
 			config.Logger(zeroTime, "INFO", line)
 		}
+	}
+}
+
+func readRecord(conn net.Conn) (string, error) {
+	r := bufio.NewReader(conn)
+	record, err := r.ReadString('\n')
+	if err != nil {
+		return "", err
+	}
+	return record, nil
+}
+
+func chooseChan(connChans []chan command) chan command {
+	for i := range len(connChans) {
+		if len(connChans[i]) == 0 {
+			return connChans[i]
+		}
+	}
+	return connChans[rand.Intn(len(connChans))]
+}
+
+func getFatalError(client *JSockDClient) error {
+	client.fatalErrorMutex.Lock()
+	defer client.fatalErrorMutex.Unlock()
+	return client.fatalError
+}
+
+func setFatalError(client *JSockDClient, err error) {
+	client.fatalErrorMutex.Lock()
+	defer client.fatalErrorMutex.Unlock()
+	if client.fatalError == nil {
+		client.fatalError = err
 	}
 }
