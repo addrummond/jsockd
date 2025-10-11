@@ -134,10 +134,7 @@ func InitJSockDClient(config Config, jsockdExec string, sockets []string) (*JSoc
 	readyCh := make(chan int, 1)
 	errCh := make(chan error, 1)
 
-	// Read from stdout
 	go readReadyFromStdout(stdout, readyCh, errCh, config)
-
-	// Read from stderr
 	go streamStderrLogs(stderr, config)
 
 	timeout := time.Duration(config.TimeoutUs) * time.Microsecond
