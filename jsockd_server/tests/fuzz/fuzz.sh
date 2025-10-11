@@ -22,7 +22,7 @@ else
     echo "Generating random test data..."
     awk 'BEGIN{srand(); for (nl = 0; nl < ARGV[1]; nl++) { n_bytes = int(rand()*100); for (i = 0; i < n_bytes; i++) { printf "%02x", int(rand()*255) } } }' $n_lines |
     xxd -r -p > /tmp/jsockd_fuzz_test_random_data
-    printf "\n?reset\nx\nx => x\n\"foo\"\n?quit\n" >> /tmp/jsockd_fuzz_test_random_data
+    printf "\n?reset\nx\nx => x\n\"foo\"\n" >> /tmp/jsockd_fuzz_test_random_data
 fi
 
 export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=dangerously_allow_invalid_signatures

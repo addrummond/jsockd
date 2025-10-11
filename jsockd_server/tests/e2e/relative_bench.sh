@@ -55,7 +55,6 @@ EOF
         new_command_count=$(($new_command_count + 1))
     fi
 done
-echo ?quit >> /tmp/jsockd_filc_relative_bench_sock_command_input
 
 # Time n component renders using node after warmup
 total_nodejs_ns=$( node -e "const m = await import('./tests/e2e/relative_bench/bundle.js'); for (let i = 0; i < 10; ++i) { console.log('OUT', m.renderToString(m.createElement(m.AccordionDemo))); } /* <-- allow warm up before timing */ console.time('render'); for (let i = 0; i < Number(process.argv[1]); ++i) { m.renderToString(m.createElement(m.AccordionDemo, JSON.parse('{}'))) } console.timeEnd('render')" $N_VS_NODE_ITERATIONS | grep '^render' | awk '{print $2}' | perl -e '$line = <>; $_ =~ s/ms$//; print int(($line * 1000000) + 0.5)' )
@@ -66,7 +65,6 @@ while [ $i -lt $N_VS_NODE_ITERATIONS ]; do
    printf "x\nm => m.renderToString(m.createElement(m.AccordionDemo))\n{}\n?exectime\n" >> /tmp/jsockd_relative_bench_vs_node_command_input
    i=$(($i + 1))
 done
-echo "?quit" >> /tmp/jsockd_relative_bench_vs_node_command_input
 
 # Start the server (regular Linux/x86_64)
 ./build_$BUILD/jsockd -m tests/e2e/relative_bench/bundle.qjsbc -s /tmp/jsockd_filc_relative_bench_sock &
