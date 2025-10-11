@@ -4,7 +4,7 @@ JSockD provides a lightweight multi-threaded server for executing parameterized 
 The server receives commands over one or more UNIX domain sockets. The motivating use case is server-side rendering of React components.
 
 - Uses the lightweight [QuickJS](https://bellard.org/quickjs/) JavaScript engine
-- Elixir and Go client libraries includes
+- Elixir and Go client libraries included
 - Runs on Linux, MacOS, FreeBSD
 - Multithreaded (one QuickJS engine per thread)
 - Loads precompiled bytecode for fast startup and execution
