@@ -18,7 +18,7 @@ type Config struct {
 	SourceMap string
 	// The maximum time in microseconds a connection is allowed to be idle before JSockD shuts down its associated QuickJS instance. If 0, no idle timeout is applied.
 	MaxIdleTimeUs int
-	// The maximum time in microseconds a command is allowed to run
+	// The maximum time in microseconds a command is allowed to run (0 for default max time)
 	MaxCommandRuntimeUs int
 	// The timeout in microseconds when communicating with JSockD
 	TimeoutUs int
@@ -35,8 +35,8 @@ func DefaultConfig() Config {
 		BytecodeModuleFile:      "",
 		BytecodeModulePublicKey: "",
 		SourceMap:               "",
-		MaxIdleTimeUs:           -1,
-		MaxCommandRuntimeUs:     -1,
+		MaxIdleTimeUs:           0,
+		MaxCommandRuntimeUs:     0,
 		TimeoutUs:               15000000, // 15 seconds
 	}
 }

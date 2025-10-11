@@ -102,10 +102,10 @@ func InitJSockDClient(config Config, jsockdExec string, sockets []string) (*JSoc
 	if config.SourceMap != "" {
 		cmdargs = append(cmdargs, "-sm", config.SourceMap)
 	}
-	if config.MaxIdleTimeUs != -1 {
+	if config.MaxIdleTimeUs != 0 {
 		cmdargs = append(cmdargs, "-i", strconv.Itoa(config.MaxIdleTimeUs))
 	}
-	if config.MaxCommandRuntimeUs != -1 {
+	if config.MaxCommandRuntimeUs != 0 {
 		cmdargs = append(cmdargs, "-t", strconv.Itoa(config.MaxCommandRuntimeUs))
 	}
 
