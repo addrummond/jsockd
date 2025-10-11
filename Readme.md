@@ -4,6 +4,7 @@ JSockD provides a lightweight multi-threaded server for executing parameterized 
 The server receives commands over one or more UNIX domain sockets. The motivating use case is server-side rendering of React components.
 
 - Uses the lightweight [QuickJS](https://bellard.org/quickjs/) JavaScript engine
+- Elixir and Go client libraries includes
 - Runs on Linux, MacOS, FreeBSD
 - Multithreaded (one QuickJS engine per thread)
 - Loads precompiled bytecode for fast startup and execution
@@ -16,7 +17,7 @@ The server receives commands over one or more UNIX domain sockets. The motivatin
 
 ### 1.1 Adding JSockD to your application
 
-Applications should generally connect to JSockD via a client library that manages the JSockD server process. At the moment, this repo contains one example of a client library in `clients/elixir/jsockd_client`.
+Applications should generally connect to JSockD via a client library that manages the JSockD server process. At the moment, this repo contains two examples of a client libraries in `clients/elixir/jsockd_client` and `clients/go`.
 Steps to add JSockD to your application:
 
 * Bundle all of the required Javascript library code into a single ES6 module (using e.g. [esbuild](https://esbuild.github.io/api/)).
