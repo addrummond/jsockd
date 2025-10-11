@@ -47,6 +47,9 @@ echo "Sending output to server..."
 # We do this so that we don't send the input so quickly that the server doesn't
 # have time to do the expected number of thread state resets.
 perl -e 'use Time::HiRes qw(usleep); while (<>) { print; usleep(2500); }' < /tmp/jsockd_memory_increase_test_input | ( nc -U /tmp/jsockd_memory_increase_test_sock >/dev/null || true )
+# we're piping into nc so it won't close the socket, so send a sigterm to shut down the server
+sleep 1
+kill -s TERM $server_pid
 
 echo "Waiting for server to exit..."
 wait $server_pid
