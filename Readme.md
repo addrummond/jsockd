@@ -197,9 +197,10 @@ The `?reset` command resets the server's command parser to its initial state (so
 
 The `?quit` command causes the server to exit immediately (closing all sockets, not just the socket on which the command was sent).
 
-Clients may shut down the server gracefully by doing either of the
+Clients may shut down the server gracefully by doing any one of the
 following:
 
+* Sending the `?quit` command and waiting for the server to response with `quit`.
 * Closing any one of the server's UNIX domain sockets.
 * Sending a SIGTERM signal to the server process.
 
