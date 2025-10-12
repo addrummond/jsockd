@@ -49,7 +49,7 @@ import (
 const jsockdBinaryPublicKey = "b136fca8fbfc42fe6dc95dedd035b0b50ad93b6a5d6fcaf8fc0552e9d29ee406"
 
 // JSockDVersion specifies the expected version of JSockD [__jsockd_version_check__ <- for automatic CI check]
-const JSockDVersion = "0.0.99"
+const JSockDVersion = "0.0.100"
 
 const chanBufferSize = 64
 
