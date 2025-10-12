@@ -47,7 +47,7 @@ extern const uint8_t g_backtrace_module_bytecode[];
 extern const uint32_t g_shims_module_bytecode_size;
 extern const uint8_t g_shims_module_bytecode[];
 
-static atomic_bool g_sigint_triggered;
+static atomic_int g_sig_triggered;
 
 static const uint8_t *g_module_bytecode;
 static size_t g_module_bytecode_size;
@@ -1289,7 +1289,7 @@ static void SIGINT_and_SIGTERM_handler(int sig) {
   if (n > 0)
     return;
 
-  atomic_store_explicit(&g_sigint_triggered, true, memory_order_relaxed);
+  atomic_store_explicit(&g_sig_triggered, sig, memory_order_relaxed);
   atomic_store_explicit(&g_interrupted_or_error, true, memory_order_relaxed);
 
   // Using stdio inside an interrupt handler is not safe, but calls to write
@@ -1469,7 +1469,7 @@ static int inner_main(int argc, char *argv[]) {
       return EXIT_FAILURE;
   }
 
-  if (atomic_load_explicit(&g_sigint_triggered, memory_order_relaxed))
+  if (SIGINT == atomic_load_explicit(&g_sig_triggered, memory_order_relaxed))
     return EXIT_FAILURE;
 
   return EXIT_SUCCESS;
