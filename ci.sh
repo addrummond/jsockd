@@ -131,6 +131,14 @@ case $1 in
         )
         ;;
 
+    run_jsockd_go_client_tests)
+        (
+            set -e
+            cd jsockd_go_client
+            go test ./...
+        )
+        ;;
+
     build_jsockd_server_linux_arm64)
         (
             set -e
