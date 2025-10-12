@@ -53,8 +53,10 @@ server_pid=$!
 
     if [ -z "$JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX" ]; then
       ./tests/valgrind/gen_test_cases.sh $N_ITERATIONS > $test_input_file
+      echo "?quit" >> $test_input_file
     else
       ./tests/valgrind/gen_test_cases.sh $N_ITERATIONS | awk 1 ORS=$(printf "\x${JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX}") > $test_input_file
+      printf "?quit\x$$JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX}" >> $test_input_file
     fi
 
     # Wait for a second so that the QuickJS env for /tmp/jsockd_test_sock2

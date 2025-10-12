@@ -21,6 +21,7 @@ END
 # Compile the example module to QuickJS bytecode.
 build_Debug/jsockd -c /tmp/jsockd_zero_exit_code_on_quit_command_example_module.mjs /tmp/jsockd_memory_increase_test_example_module.qjsb
 
+echo "?quit" > /tmp/jsockd_memory_increase_test_input
 
 # Start the server
 (

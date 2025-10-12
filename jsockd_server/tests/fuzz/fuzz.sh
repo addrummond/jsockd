@@ -22,7 +22,7 @@ else
     echo "Generating random test data..."
     awk 'BEGIN{srand(); for (nl = 0; nl < ARGV[1]; nl++) { n_bytes = int(rand()*100); for (i = 0; i < n_bytes; i++) { printf "%02x", int(rand()*255) } } }' $n_lines |
     xxd -r -p > /tmp/jsockd_fuzz_test_random_data
-    printf "\n?reset\nx\nx => x\n\"foo\"\n" >> /tmp/jsockd_fuzz_test_random_data
+    printf "\n?reset\nx\nx => x\n\"foo\"\n?quit\n" >> /tmp/jsockd_fuzz_test_random_data
 fi
 
 export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=dangerously_allow_invalid_signatures
@@ -87,12 +87,12 @@ if ! [ -f /tmp/jsockd_fuzz_test_exit_code ]; then
     cat /tmp/jsockd_fuzz_test_server_output
     exit 1
 else
-    echo "The last 2 lines of the server output:"
-    last_two_lines=$(tail -n 2 /tmp/jsockd_fuzz_test_output)
-    echo "$last_two_lines"
-    expected_last_two_lines=$(printf "reset\nx {}\n")
-    if [ "$last_two_lines" != "$expected_last_two_lines" ]; then
-        echo "Unexpected last two lines of server output"
+    echo "The last 3 lines of the server output:"
+    last_three_lines=$(tail -n 3 /tmp/jsockd_fuzz_test_output)
+    echo "$last_three_lines"
+    expected_last_three_lines=$(printf "reset\nx {}\nquit\n")
+    if [ "$last_three_lines" != "$expected_last_three_lines" ]; then
+        echo "Unexpected last three lines of server output"
         exit 1
     fi
 
