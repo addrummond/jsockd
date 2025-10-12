@@ -112,6 +112,9 @@ func getJSockDPath(t *testing.T) string {
 		osName = "macos"
 	}
 	arch := runtime.GOARCH
+	if arch == "amd64" {
+		arch = "x86_64"
+	}
 
 	url := jsockdReleaseTempl
 	url = strings.ReplaceAll(url, "VERSION", JSockDVersion)
