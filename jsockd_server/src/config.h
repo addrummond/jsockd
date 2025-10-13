@@ -41,7 +41,7 @@
 // reduce the actual memory usage of QuickJS interpreter threads.
 // ----------------------------------------------------------------------------
 #define QUICKS_THREAD_STACK_SIZE                                               \
-  (sizeof(void*) == 8 ? (1024 * 1024 * 8) : (1024 * 1024 * 2))
+  (sizeof(void *) == 8 ? (1024 * 1024 * 8) : (1024 * 1024 * 2))
 
 #define MAGIC_KEY_TO_ALLOW_INVALID_SIGNATURES                                  \
   "dangerously_allow_invalid_signatures"

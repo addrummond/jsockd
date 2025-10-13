@@ -561,7 +561,8 @@ static const char *get_backtrace(ThreadState *ts, const char *backtrace,
                               g_source_map_size);
     int c = atomic_fetch_add_explicit(&g_source_map_load_count, 1,
                                       memory_order_relaxed);
-    if (c + 1 == g_n_threads && g_source_map_size != 0 && g_source_map) {
+    if (c + 1 == atomic_load_explicit(&g_n_threads, memory_order_relaxed) &&
+        g_source_map_size != 0 && g_source_map) {
       jsockd_log(LOG_DEBUG,
                  "All threads have loaded the sourcemap, calling munmap...\n");
       munmap_or_warn((void *)g_source_map, g_source_map_size);
@@ -1372,8 +1373,7 @@ static int inner_main(int argc, char *argv[]) {
   }
 
   int n_threads = MIN(g_cmd_args.n_sockets, MAX_THREADS);
-  atomic_store_explicit(&g_n_threads, g_cmd_args.n_sockets,
-                        memory_order_relaxed);
+  atomic_store_explicit(&g_n_threads, n_threads, memory_order_relaxed);
   atomic_store_explicit(&g_n_ready_threads, g_cmd_args.n_sockets,
                         memory_order_relaxed);
 
@@ -1438,8 +1438,7 @@ static int inner_main(int argc, char *argv[]) {
   fflush(stdout);
 
   // pthread_join can fail, but we can't do any useful error handling
-  for (int i = 0; i < atomic_load_explicit(&g_n_threads, memory_order_relaxed);
-       ++i) {
+  for (int i = 0; i < n_threads; ++i) {
     pthread_join(g_threads[i], NULL);
     int rts = atomic_load_explicit(&g_thread_states[i].replacement_thread_state,
                                    memory_order_relaxed);
@@ -1457,8 +1456,7 @@ static int inner_main(int argc, char *argv[]) {
 
   jsockd_log(LOG_DEBUG, "Global cleanup complete\n");
 
-  for (int i = 0; i < atomic_load_explicit(&g_n_threads, memory_order_relaxed);
-       ++i)
+  for (int i = 0; i < n_threads; ++i)
     destroy_thread_state(&g_thread_states[i]);
 
   jsockd_log(LOG_DEBUG, "All thread states destroyed\n");
@@ -1474,8 +1472,7 @@ static int inner_main(int argc, char *argv[]) {
   }
 #endif
 
-  for (int i = 0; i < atomic_load_explicit(&g_n_threads, memory_order_relaxed);
-       ++i) {
+  for (int i = 0; i < n_threads; ++i) {
     if (g_thread_states[i].exit_status != 0)
       return EXIT_FAILURE;
   }
