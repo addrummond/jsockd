@@ -90,7 +90,7 @@ int make_temp_dir(char out[], size_t out_size, const char *template) {
   return 0;
 }
 
-static long ns_to_ms(long ns) { return (ns / 1000) + (ns % 1000 >= 500); }
+static long ns_to_us(long ns) { return (ns / 1000) + (ns % 1000 >= 500); }
 
 void timespec_to_iso8601(const struct timespec *ts, char *buf, size_t buflen) {
   struct tm tm_utc;
@@ -108,5 +108,5 @@ void timespec_to_iso8601(const struct timespec *ts, char *buf, size_t buflen) {
   // Append fractional seconds and 'Z'
   // Ensure enough space for .nnnnnnnnnZ and null terminator
   if (len + 8 < buflen)
-    snprintf(buf + len, buflen - len, ".%06ldZ", ns_to_ms(ts->tv_nsec));
+    snprintf(buf + len, buflen - len, ".%06ldZ", ns_to_us(ts->tv_nsec));
 }
