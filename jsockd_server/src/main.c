@@ -1100,7 +1100,7 @@ static int line_handler(const char *line, size_t len, ThreadState *ts,
         ts->compiled_query = JS_UNDEFINED;
       }
       write_to_stream(ts, ts->current_uuid, ts->current_uuid_len);
-      write_const_to_stream(ts, " exception \"jsockd command was too long\n");
+      write_const_to_stream(ts, " exception \"jsockd command was too long\"\n");
     } else {
       // we'll signal an error once the client has sent the third line
       ts->line_n++;
