@@ -1289,8 +1289,9 @@ static void global_cleanup(void) {
   wait_group_destroy(&g_thread_ready_wait_group);
 
   if (g_module_bytecode_size != 0 && g_module_bytecode)
-    munmap_or_warn((void *)g_module_bytecode,
-                   g_module_bytecode_size + ED25519_SIGNATURE_SIZE);
+    munmap_or_warn((void *)g_module_bytecode, g_module_bytecode_size +
+                                                  VERSION_STRING_SIZE +
+                                                  ED25519_SIGNATURE_SIZE);
   if (g_source_map_size != 0 && g_source_map)
     munmap_or_warn((void *)g_source_map, g_source_map_size);
 }
@@ -1381,8 +1382,9 @@ static int inner_main(int argc, char *argv[]) {
     jsockd_logf(LOG_ERROR, "Error initializing wait group: %s\n",
                 strerror(errno));
     if (g_module_bytecode_size != 0 && g_module_bytecode)
-      munmap_or_warn((void *)g_module_bytecode,
-                     g_module_bytecode_size + ED25519_SIGNATURE_SIZE);
+      munmap_or_warn((void *)g_module_bytecode, g_module_bytecode_size +
+                                                    VERSION_STRING_SIZE +
+                                                    ED25519_SIGNATURE_SIZE);
     pthread_mutex_destroy(&g_cached_functions_mutex);
     return EXIT_FAILURE;
   }
@@ -1398,7 +1400,9 @@ static int inner_main(int argc, char *argv[]) {
                                thread_init_n)) {
       jsockd_logf(LOG_ERROR, "Error initializing thread %i\n", thread_init_n);
       if (g_module_bytecode_size != 0 && g_module_bytecode)
-        munmap_or_warn((void *)g_module_bytecode, g_module_bytecode_size);
+        munmap_or_warn((void *)g_module_bytecode, g_module_bytecode_size +
+                                                      VERSION_STRING_SIZE +
+                                                      ED25519_SIGNATURE_SIZE);
       goto thread_init_error;
     }
     pthread_attr_t attr;
