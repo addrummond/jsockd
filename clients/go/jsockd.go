@@ -46,8 +46,6 @@ import (
 	"time"
 )
 
-const jsockdBinaryPublicKey = "b136fca8fbfc42fe6dc95dedd035b0b50ad93b6a5d6fcaf8fc0552e9d29ee406"
-
 // JSockDVersion specifies the expected version of JSockD [__jsockd_version_check__ <- for automatic CI check]
 const JSockDVersion = "0.0.101"
 
@@ -118,6 +116,10 @@ func InitJSockDClient(config Config, jsockdExec string, sockets []string) (*JSoc
 
 	// Start the process
 	cmd := exec.Command(jsockdExec, cmdargs...)
+	cmd.Env = os.Environ()
+	if config.BytecodeModulePublicKey != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=%s", config.BytecodeModulePublicKey))
+	}
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, fmt.Errorf("stdout pipe: %w", err)
@@ -153,7 +155,7 @@ func InitJSockDClient(config Config, jsockdExec string, sockets []string) (*JSoc
 		return nil, fmt.Errorf("timeout (%s) waiting for READY line", timeout)
 	}
 
-	if readyCount < len(sockets) {
+	if readyCount > len(sockets) {
 		return nil, fmt.Errorf("ready count (%d) exceeds number of sockets specified (%d)", readyCount, len(sockets))
 	}
 
@@ -283,6 +285,10 @@ func connHandler(conn net.Conn, cmdChan chan command, client *JSockDClient) {
 			return
 		}
 		rec, err := readRecord(conn)
+		if err != nil {
+			setFatalError(client, err)
+			return
+		}
 		parts := strings.SplitN(rec, " ", 2)
 		commandId := parts[0]
 		if commandId != cmd.id {
