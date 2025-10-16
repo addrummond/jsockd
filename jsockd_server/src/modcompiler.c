@@ -27,6 +27,12 @@ int compile_module_file(const char *module_filename,
   FILE *mf = NULL;
   FILE *kf = NULL;
 
+  if (strlen(version) >= VERSION_STRING_SIZE) {
+    fprintf(stderr, "VERSION string too long\n");
+    ret = EXIT_FAILURE;
+    goto end;
+  }
+
   rt = JS_NewRuntime();
   if (!rt) {
     fprintf(stderr, "Failed to create JS runtime when compiling module file\n");
@@ -61,6 +67,10 @@ int compile_module_file(const char *module_filename,
 
   size_t out_buf_len;
   out_buf = JS_WriteObject(ctx, &out_buf_len, obj, JS_WRITE_OBJ_BYTECODE);
+  out_buf = js_realloc(ctx, out_buf, out_buf_len + VERSION_STRING_SIZE);
+  memset(out_buf + out_buf_len, 0, VERSION_STRING_SIZE);
+  strcpy((char *)(out_buf + out_buf_len), version);
+  out_buf_len += VERSION_STRING_SIZE;
 
   char public_key_hex[ED25519_PUBLIC_KEY_SIZE * 2] = {0};
   char private_key_hex[ED25519_PRIVATE_KEY_SIZE * 2] = {0};
@@ -113,18 +123,6 @@ int compile_module_file(const char *module_filename,
 
   if (fwrite(out_buf, out_buf_len, 1, mf) < 1) {
     fprintf(stderr, "Error writing bytecode to output file\n");
-    ret = EXIT_FAILURE;
-    goto end;
-  }
-  char vstring[VERSION_STRING_SIZE] = {0};
-  if (strlen(version) >= VERSION_STRING_SIZE) {
-    fprintf(stderr, "VERSION string too long\n");
-    ret = EXIT_FAILURE;
-    goto end;
-  }
-  strcpy(vstring, version);
-  if (fwrite(vstring, sizeof(vstring) / sizeof(char), 1, mf) < 1) {
-    fprintf(stderr, "Error writing version string to output file\n");
     ret = EXIT_FAILURE;
     goto end;
   }
