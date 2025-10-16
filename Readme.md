@@ -237,9 +237,10 @@ It is recommended to specify a source map only for development and testing purpo
 
 The client should request a number of sockets roughly in line with the number of avaiable CPU cores (or fewer if a light load is anticipated).
 
-If any socket except the first is unused for a significant period of time (as specified by the `-i` command line option), then the QuickJS runtime for that socket is shut down to free up memory. The next command received on that socket causes a new QuickJS runtime to be created. Thus the client may distribute commands over the first n sockets, with n rising and falling with increasing/decreasing load. A good rule of thumb is to route commands to socket n only if sockets 1..n-1 are all busy processing commands.
+The `-i` command line option can be used to adjust the amount of time that a QuickJS runtime is permitted to remain idle before being shut down. By default, idle runtimes are never shut down. If `-i` is set to a non-zero value, then 
+if any socket except the first is unused for a significant period of time, the QuickJS runtime for that socket is shut down to free up memory. The next command received on that socket causes a new QuickJS runtime to be created. Thus the client may distribute commands over the first n sockets, with n rising and falling with increasing/decreasing load. A good rule of thumb is to route commands to socket n only if sockets 1..n-1 are all busy processing commands.
 
-When an idle thread is woken, the typical time to initialize a new QuickJS runtime is on the order of a few milliseconds. If this latency is unacceptable, the client can omit the `-i` option or set it to `0`, in which case no idle threads are ever shut down.
+When an idle thread is woken, the typical time to initialize a new QuickJS runtime is on the order of a few milliseconds.
 
 ### 3.7 Server log format
 
