@@ -83,10 +83,8 @@ The public key is passed to the `jsockd` server process via the `JSOCKD_BYTECODE
 export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=$(cat my_key_file.pubkey)
 ```
 
-### 2.2 [optional] Using openssl to sign bytecode
-
-If you don't trust JSockD to generate keys and signatures, you can use openssl to sign your module bytecode.
-See `docs/signing_with_openssl.md` for details.
+**_If you don't trust JSockD to generate keys and signatures, you can use openssl to sign your module bytecode.
+See `docs/signing_with_openssl.md` for details._**
 
 ### 2.3 Reducing the size of compiled modules
 
