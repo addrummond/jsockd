@@ -93,26 +93,7 @@ type JSockDClient struct {
 // configuration, connects to it via the specified Unix domain sockets, and
 // returns a JSockDClient that can be used to send commands to the server.
 func InitJSockDClient(config Config, jsockdExec string, sockets []string) (*JSockDClient, error) {
-	cmdargs := []string{"-b", "00"}
-	if config.BytecodeModuleFile != "" {
-		cmdargs = append(cmdargs, "-m", config.BytecodeModuleFile)
-	}
-	if config.SourceMap != "" {
-		cmdargs = append(cmdargs, "-sm", config.SourceMap)
-	}
-	if config.MaxIdleTimeUs != 0 {
-		cmdargs = append(cmdargs, "-i", strconv.Itoa(config.MaxIdleTimeUs))
-	}
-	if config.MaxCommandRuntimeUs != 0 {
-		cmdargs = append(cmdargs, "-t", strconv.Itoa(config.MaxCommandRuntimeUs))
-	}
-
-	cmdargs = append(cmdargs, "-s", "--")
-	cmdargs = append(cmdargs, sockets...)
-
-	if jsockdExec == "" {
-		return nil, errors.New("JSockDExec not set in Config")
-	}
+	cmdargs := prepareCmdArgs(config, jsockdExec, sockets)
 
 	// Start the process
 	cmd := exec.Command(jsockdExec, cmdargs...)
@@ -408,4 +389,24 @@ func setFatalError(client *JSockDClient, err error) {
 	if client.fatalError == nil {
 		client.fatalError = err
 	}
+}
+
+func prepareCmdArgs(config Config, jsockdExec string, sockets []string) []string {
+	cmdargs := []string{"-b", "00"}
+	if config.BytecodeModuleFile != "" {
+		cmdargs = append(cmdargs, "-m", config.BytecodeModuleFile)
+	}
+	if config.SourceMap != "" {
+		cmdargs = append(cmdargs, "-sm", config.SourceMap)
+	}
+	if config.MaxIdleTimeUs != 0 {
+		cmdargs = append(cmdargs, "-i", strconv.Itoa(config.MaxIdleTimeUs))
+	}
+	if config.MaxCommandRuntimeUs != 0 {
+		cmdargs = append(cmdargs, "-t", strconv.Itoa(config.MaxCommandRuntimeUs))
+	}
+
+	cmdargs = append(cmdargs, "-s", "--")
+	cmdargs = append(cmdargs, sockets...)
+	return cmdargs
 }
