@@ -98,7 +98,7 @@ For general use, I recommend minifiying your bundle but **not** using `-ss` or `
 
 ### 3.1 Starting the server
 
-**JSockD is not intended to run as a standalone server; it is designed to run as a subprocess of an application that needs to execute JavaScript commands. This section is intended as a reference for developers implementing JSockD client libraries.**
+**_JSockD is not intended to run as a standalone server. It is designed to run as a subprocess of an application that needs to execute JavaScript commands. This section is intended as a reference for developers implementing JSockD client libraries._**
 
 The server is started as follows:
 
