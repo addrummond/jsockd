@@ -66,9 +66,8 @@ type command struct {
 // RawResponse represents the raw response to a command sent to the JSockD
 // server. The ResultJson field contains the JSON string returned by the server.
 type RawResponse struct {
-	Exception   bool
-	ResultJson  string
-	rawResponse string
+	Exception  bool
+	ResultJson string
 }
 
 // Response represents the response to a command sent to the JSockD server. The
