@@ -851,8 +851,7 @@ static void TEST_compile_module_file(void) {
 
   uint8_t signature[64];
   char version[VERSION_STRING_SIZE];
-  size_t bytecode_size =
-      output_file_size - VERSION_STRING_SIZE - ED25519_SIGNATURE_SIZE;
+  size_t bytecode_size = output_file_size - ED25519_SIGNATURE_SIZE;
   uint8_t bytecode[bytecode_size];
   TEST_ASSERT(0 == fseek(outf, -ED25519_SIGNATURE_SIZE, SEEK_END));
   TEST_ASSERT(1 == fread(signature, sizeof(signature) / sizeof(char), 1, outf));
