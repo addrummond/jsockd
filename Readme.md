@@ -198,7 +198,7 @@ The `?quit` command causes the server to exit immediately (closing all sockets, 
 Clients may shut down the server gracefully by doing any one of the
 following:
 
-* Sending the `?quit` command and waiting for the server to response with `quit`.
+* Sending the `?quit` command and waiting for the server to respond with `quit`.
 * Closing any one of the server's UNIX domain sockets.
 * Sending a SIGTERM signal to the server process.
 
