@@ -15,6 +15,7 @@
 #include "modcompiler.h"
 #include "quickjs-libc.h"
 #include "quickjs.h"
+#include "textencodedecode.h"
 #include "utils.h"
 #include "verify_bytecode.h"
 #include "version.h"
@@ -443,6 +444,20 @@ static JSContext *JS_NewCustomContext(JSRuntime *rt) {
     return NULL;
   js_init_module_std(ctx, "std");
   js_init_module_os(ctx, "os");
+
+  JSValue global_obj = JS_GetGlobalObject(ctx);
+
+  if (qjs_add_intrinsic_text_decoder(ctx, global_obj) < 0) {
+    JS_FreeValue(ctx, global_obj);
+    return NULL;
+  }
+
+  if (qjs_add_intrinsic_text_encoder(ctx, global_obj) < 0) {
+    JS_FreeValue(ctx, global_obj);
+    return NULL;
+  }
+
+  JS_FreeValue(ctx, global_obj);
 
   return ctx;
 }

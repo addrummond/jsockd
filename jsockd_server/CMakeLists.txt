@@ -115,6 +115,7 @@ set(JSOCKD_SERVER_SOURCES
   src/modcompiler.c
   src/console.c
   src/log.c
+  src/textencodedecode.c
   src/js/gen_backtrace.c
   src/js/gen_shims.c
   ${ED25519_LIB_SOURCES}

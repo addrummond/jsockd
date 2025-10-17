@@ -20,7 +20,5 @@
     "web-streams-polyfill": "github:MattiasBuelens/web-streams-polyfill#46d22cc"
   },
   "type": "module",
-  "dependencies": {
-    "fastestsmallesttextencoderdecoder": "^1.0.22"
-  }
+  "dependencies": {}
 }
