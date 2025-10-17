@@ -107,7 +107,7 @@ func InitJSockDClient(config Config, jsockdExec string, sockets []string) (*JSoc
 	}
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
-		return nil, fmt.Errorf("stdout pipe: %w", err)
+		return nil, fmt.Errorf("stderr pipe: %w", err)
 	}
 
 	if err := cmd.Start(); err != nil {
