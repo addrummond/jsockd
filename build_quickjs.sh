@@ -16,7 +16,7 @@ fi
 
 __BUST_CACHE=1 # increment to bust QuickJS build cache manually if needed
 
-QUICKJS_COMMIT=de4d3927b8edff5fbfee1f69cfeef840844259e9
+QUICKJS_COMMIT=eb2c89087def1829ed99630cb14b549d7a98408c
 
 FILC_VERSION=0.671
 FILC_CLANG="${FILC_CLANG:-$HOME/filc-${FILC_VERSION}-linux-x86_64/build/bin/clang}"
