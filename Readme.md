@@ -237,7 +237,7 @@ It is recommended to specify a source map only for development and testing purpo
 
 The client should request a number of sockets roughly in line with the number of avaiable CPU cores (or fewer if a light load is anticipated).
 
-The `-i` command line option can be used to adjust the amount of time that a QuickJS runtime is permitted to remain idle before being shut down. By default, idle runtimes are never shut down. If `-i` is set to a non-zero value, then 
+The `-i` command line option can be used to adjust the amount of time that a QuickJS runtime is permitted to remain idle before being shut down. By default, idle runtimes are never shut down. If `-i` is set to a non-zero value, then
 if any socket except the first is unused for a significant period of time, the QuickJS runtime for that socket is shut down to free up memory. The next command received on that socket causes a new QuickJS runtime to be created. Thus the client may distribute commands over the first n sockets, with n rising and falling with increasing/decreasing load. A good rule of thumb is to route commands to socket n only if sockets 1..n-1 are all busy processing commands.
 
 When an idle thread is woken, the typical time to initialize a new QuickJS runtime is on the order of a few milliseconds.
@@ -276,7 +276,7 @@ $ jsockd 2025-09-24T21:15:45.644776Z [INFO] Line 3
 
 ### 4.1 Using a bundler
 
-JSockD can be used with any bundler that can output an ES6 module (or with no bundler at all if your JS code is contained in a single file). The following is an example of how to bundle you code using [esbuild](https://esbuild.github.io/). The `root_module.mjs` module should contain all the code that you want to execute in the JSockD server. It can import other modules as needed.
+JSockD can be used with any bundler that can output an ES6 module (or with no bundler at all if your JS code is contained in a single file). The following is an example of how to bundle your code using [esbuild](https://esbuild.github.io/). The `root_module.mjs` module should contain all the code that you want to execute in the JSockD server. It can import other modules as needed.
 
 ```
 esbuild root_module.mjs --bundle --outfile=bundle.mjs --sourcemap --format=esm
