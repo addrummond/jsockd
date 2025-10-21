@@ -71,14 +71,14 @@ add_subdirectory(src/lib/xxHash/build/cmake xxhash_build EXCLUDE_FROM_ALL)
 add_custom_command(
   OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/src/js/gen_backtrace.c
   COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../tools-bin/qjsc -c -o ${CMAKE_CURRENT_SOURCE_DIR}/src/js/gen_backtrace.c -N g_backtrace_module_bytecode ${CMAKE_CURRENT_SOURCE_DIR}/src/js/backtrace.mjs
-  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/js/backtrace.mjs
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/js/backtrace.mjs ../.scratch/quickjs/quickjs.c
 )
 
 # Bundle the shims module
 add_custom_command(
     OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/src/js/shims/bundle.mjs
     COMMAND sh -c "( cd ${CMAKE_CURRENT_SOURCE_DIR} && npm i ) && ${CMAKE_CURRENT_SOURCE_DIR}/node_modules/.bin/esbuild ${CMAKE_CURRENT_SOURCE_DIR}/src/js/shims/shims.mjs --bundle --outfile=${CMAKE_CURRENT_SOURCE_DIR}/src/js/shims/bundle.mjs --format=esm"
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/js/shims/shims.mjs
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/js/shims/shims.mjs ../.scratch/quickjs/quickjs.c
     VERBATIM
 )
 
@@ -86,7 +86,7 @@ add_custom_command(
 add_custom_command(
   OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/src/js/gen_shims.c
   COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../tools-bin/qjsc -c -o ${CMAKE_CURRENT_SOURCE_DIR}/src/js/gen_shims.c -N g_shims_module_bytecode ${CMAKE_CURRENT_SOURCE_DIR}/src/js/shims/bundle.mjs
-  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/js/shims/bundle.mjs
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/js/shims/bundle.mjs ../.scratch/quickjs/quickjs.c
 )
 
 set(ED25519_LIB_SOURCES
