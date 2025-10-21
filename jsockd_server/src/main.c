@@ -872,29 +872,15 @@ static int handle_line_2_query(ThreadState *ts, const char *line, int len) {
 
 static const char *format_memusage(const JSMemoryUsage *m) {
   const char *fmt =
-      "{\"malloc_count\":%" PRId64 ",\"memory_used_count\":%" PRId64
-      ",\"atom_count\":%" PRId64 ",\"str_count\":%" PRId64
-      ",\"obj_count\":%" PRId64 ",\"prop_count\":%" PRId64
-      ",\"shape_count\":%" PRId64 ",\"js_func_count\":%" PRId64
-      ",\"js_func_pc2line_count\":%" PRId64 ",\"c_func_count\":%" PRId64
-      ",\"fast_array_count\":%" PRId64 ",\"binary_object_count\":%" PRId64 "}";
-#define FORMAT_MEMUSAGE_ARGS                                                   \
-  m->malloc_count, m->memory_used_count, m->atom_count, m->str_count,          \
-      m->obj_count, m->prop_count, m->shape_count, m->js_func_count,           \
-      m->js_func_pc2line_count, m->c_func_count, m->fast_array_count,          \
-      m->binary_object_count
-  int n = snprintf(NULL, 0, fmt, FORMAT_MEMUSAGE_ARGS);
-  char *buf = (char *)malloc((size_t)(n + sizeof(char)));
-  snprintf(buf, n + 1, fmt, FORMAT_MEMUSAGE_ARGS);
-#undef FORMAT_MEMUSAGE_ARGS
+      "{\"malloc_size\":%" PRId64 ",\"malloc_count\":%" PRId64 "}";
+  int n = snprintf(NULL, 0, fmt, m->malloc_size, m->malloc_count);
+  char *buf = (char *)malloc((size_t)(n + 1));
+  snprintf(buf, n + 1, fmt, m->malloc_size, m->malloc_count);
   return buf;
 }
 
 static int64_t memusage(const JSMemoryUsage *m) {
-  return m->malloc_count + m->memory_used_count + m->atom_count + m->str_count +
-         m->obj_count + m->prop_count + m->shape_count + m->js_func_count +
-         m->js_func_pc2line_count + m->c_func_count + m->fast_array_count +
-         m->binary_object_count;
+  return m->malloc_count + m->malloc_size;
 }
 
 static void *reset_thread_state_thread(void *data) {
