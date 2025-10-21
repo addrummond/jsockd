@@ -870,6 +870,26 @@ static int handle_line_2_query(ThreadState *ts, const char *line, int len) {
   return 0;
 }
 
+static const char *format_memusage(const JSMemoryUsage *m) {
+  const char *fmt =
+      "{\"malloc_count\":%" PRId64 ",\"memory_used_count\":%" PRId64
+      ",\"atom_count\":%" PRId64 ",\"str_count\":%" PRId64
+      ",\"obj_count\":%" PRId64 ",\"prop_count\":%" PRId64
+      ",\"shape_count\":%" PRId64 ",\"js_func_count\":%" PRId64
+      ",\"js_func_pc2line_count\":%" PRId64 ",\"c_func_count\":%" PRId64
+      ",\"fast_array_count\":%" PRId64 ",\"binary_object_count\":%" PRId64 "}";
+#define FORMAT_MEMUSAGE_ARGS                                                   \
+  m->malloc_count, m->memory_used_count, m->atom_count, m->str_count,          \
+      m->obj_count, m->prop_count, m->shape_count, m->js_func_count,           \
+      m->js_func_pc2line_count, m->c_func_count, m->fast_array_count,          \
+      m->binary_object_count
+  int n = snprintf(NULL, 0, fmt, FORMAT_MEMUSAGE_ARGS);
+  char *buf = (char *)malloc((size_t)(n + sizeof(char)));
+  snprintf(buf, n + 1, fmt, FORMAT_MEMUSAGE_ARGS);
+#undef FORMAT_MEMUSAGE_ARGS
+  return buf;
+}
+
 static int64_t memusage(const JSMemoryUsage *m) {
   return m->malloc_count + m->memory_used_count + m->atom_count + m->str_count +
          m->obj_count + m->prop_count + m->shape_count + m->js_func_count +
@@ -1152,6 +1172,15 @@ static int line_handler(const char *line, size_t len, ThreadState *ts,
         MIN(exec_time_len,
             (int)(sizeof(exec_time_buf) / sizeof(exec_time_buf[0]) - 1)));
     write_const_to_stream(ts, "\n");
+    return 0;
+  }
+  if (!strcmp("?memusage", line)) {
+    JSMemoryUsage mu;
+    JS_ComputeMemoryUsage(ts->rt, &mu);
+    const char *memusage_str = format_memusage(&mu);
+    write_to_stream(ts, memusage_str, strlen(memusage_str));
+    write_const_to_stream(ts, "\n");
+    free((void *)memusage_str);
     return 0;
   }
 #ifdef CMAKE_BUILD_TYPE_DEBUG
