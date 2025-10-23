@@ -749,10 +749,8 @@ static void cleanup_command_state(ThreadState *ts) {
     JS_FreeValue(ts->ctx, ts->compiled_query);
     ts->compiled_query = JS_UNDEFINED;
   }
-  if (ts->dangling_bytecode) {
-    free(ts->dangling_bytecode);
-    ts->dangling_bytecode = NULL;
-  }
+  free(ts->dangling_bytecode);
+  ts->dangling_bytecode = NULL;
   if (ts->cached_function_in_use) {
     release_cached_function(ts->cached_function_in_use);
     ts->cached_function_in_use = NULL;
