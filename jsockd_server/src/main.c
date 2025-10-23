@@ -122,9 +122,8 @@ static cached_function_t *add_cached_function(HashCacheUid uid,
   g_cached_functions[bi].bytecode_size = bytecode_size;
   g_cached_functions[bi].refcount = 1;
 
-  cached_function_t *cf = &g_cached_functions[bi];
   mutex_unlock(&g_cached_functions_mutex);
-  return cf;
+  return &g_cached_functions[bi];
 }
 
 static cached_function_t *get_cached_function(HashCacheUid uid) {
@@ -134,9 +133,8 @@ static cached_function_t *get_cached_function(HashCacheUid uid) {
   if (b) {
     size_t bi = b - g_cached_function_buckets;
     ++g_cached_functions[bi].refcount;
-    cached_function_t *cf = &g_cached_functions[bi];
     mutex_unlock(&g_cached_functions_mutex);
-    return cf;
+    return &g_cached_functions[bi];
   }
   mutex_unlock(&g_cached_functions_mutex);
   return NULL;
@@ -1130,10 +1128,7 @@ static int handle_line_3_parameter_helper(ThreadState *ts, const char *line,
 
 static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
   int r = handle_line_3_parameter_helper(ts, line, len);
-  release_cached_function(ts->cached_function_in_use);
-  free(ts->dangling_bytecode);
-  ts->cached_function_in_use = NULL;
-  ts->dangling_bytecode = NULL;
+  cleanup_command_state(ts);
   return r;
 }
 
