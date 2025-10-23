@@ -1059,7 +1059,7 @@ static int handle_line_3_parameter_helper(ThreadState *ts, const char *line,
   const char *str = JS_ToCStringLen(ts->ctx, &sz, stringified);
 
   write_to_stream(ts, ts->current_uuid, ts->current_uuid_len);
-  write_const_to_stream(ts, " ");
+  write_const_to_stream(ts, " ok ");
   write_to_stream(ts, str, sz);
   write_const_to_stream(ts, "\n");
 

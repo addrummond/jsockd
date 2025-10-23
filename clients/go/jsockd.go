@@ -282,8 +282,11 @@ func connHandler(conn net.Conn, cmdChan chan command, client *JSockDClient) {
 		}
 		if strings.HasPrefix(parts[1], "exception ") {
 			cmd.responseChan <- RawResponse{Exception: true, ResultJson: strings.TrimPrefix(parts[1], "exception ")}
+		} else if strings.HasPrefix(parts[1], "ok ") {
+			cmd.responseChan <- RawResponse{Exception: false, ResultJson: strings.TrimPrefix(parts[1], "ok ")}
 		} else {
-			cmd.responseChan <- RawResponse{Exception: false, ResultJson: parts[1]}
+			setFatalError(client, fmt.Errorf("malformed command response from JSockD: %q", rec))
+			return
 		}
 	}
 }

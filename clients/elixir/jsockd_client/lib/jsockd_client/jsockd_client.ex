@@ -46,10 +46,15 @@ defmodule JSockDClient do
   end
 
   def parse_response(response) do
-    if String.starts_with?(response, "exception ") do
-      {:error, Jason.decode!(String.trim_leading(response, "exception "))}
-    else
-      {:ok, Jason.decode!(response)}
+    cond do
+      String.starts_with?(response, "exception ") ->
+        {:error, Jason.decode!(String.trim_leading(response, "exception "))}
+
+      String.starts_with?(response, "ok ") ->
+        {:ok, Jason.decode!(response)}
+
+      true ->
+        {:error, "Invalid response from JSockD server: #{response}"}
     end
   end
 
