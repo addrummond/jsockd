@@ -81,6 +81,7 @@ static atomic_bool g_global_init_complete;
 typedef struct {
   const uint8_t *bytecode;
   size_t bytecode_size;
+  int refcount;
 } cached_function_t;
 
 static HashCacheBucket g_cached_function_buckets[CACHED_FUNCTIONS_N_BUCKETS];
@@ -94,7 +95,7 @@ static void dump_error(JSContext *ctx) {
     JS_FreeValue(ctx, JS_GetException(ctx));
 }
 
-static void add_cached_function(HashCacheUid uid, const uint8_t *bytecode,
+static bool add_cached_function(HashCacheUid uid, const uint8_t *bytecode,
                                 size_t bytecode_size) {
   assert(bytecode);
 
@@ -104,28 +105,45 @@ static void add_cached_function(HashCacheUid uid, const uint8_t *bytecode,
                                          CACHED_FUNCTION_HASH_BITS, uid);
   size_t bi = b - g_cached_function_buckets;
   if (g_cached_functions[bi].bytecode) {
-    jsockd_log(LOG_DEBUG, "Hash collision: freeing existing bytecode\n");
-    free((void *)(g_cached_functions[bi].bytecode));
+    if (g_cached_functions[bi].refcount <= 0) {
+      jsockd_log(LOG_DEBUG, "Hash collision: freeing existing bytecode\n");
+      free((void *)(g_cached_functions[bi].bytecode));
+    } else {
+      jsockd_log(LOG_ERROR,
+                 "Hash collision: existing cached function still in use!\n");
+      mutex_unlock(&g_cached_functions_mutex);
+      return false;
+    }
   } else {
     atomic_fetch_add_explicit(&g_n_cached_functions, 1, memory_order_relaxed);
   }
   g_cached_functions[bi].bytecode = bytecode;
   g_cached_functions[bi].bytecode_size = bytecode_size;
+  g_cached_functions[bi].refcount = 1;
 
   mutex_unlock(&g_cached_functions_mutex);
+  return true;
 }
 
-static const uint8_t *get_cached_function(HashCacheUid uid, size_t *psize) {
+static cached_function_t *get_cached_function(HashCacheUid uid) {
   mutex_lock(&g_cached_functions_mutex);
   HashCacheBucket *b = get_hash_cache_entry(g_cached_function_buckets,
                                             CACHED_FUNCTION_HASH_BITS, uid);
-  mutex_unlock(&g_cached_functions_mutex);
   if (b) {
     size_t bi = b - g_cached_function_buckets;
-    *psize = g_cached_functions[bi].bytecode_size;
-    return g_cached_functions[bi].bytecode;
+    ++g_cached_functions[bi].refcount;
+    cached_function_t *cf = &g_cached_functions[bi];
+    mutex_unlock(&g_cached_functions_mutex);
+    return cf;
   }
+  mutex_unlock(&g_cached_functions_mutex);
   return NULL;
+}
+
+static void release_cached_function(cached_function_t *cf) {
+  mutex_lock(&g_cached_functions_mutex);
+  --cf->refcount;
+  mutex_unlock(&g_cached_functions_mutex);
 }
 
 // values for ThreadState.replacement_thread_state
@@ -212,6 +230,7 @@ typedef struct ThreadState {
   atomic_int replacement_thread_state;
   pthread_t replacement_thread;
   struct timespec last_active_time;
+  uint8_t *dangling_bytecode;
 #ifdef CMAKE_BUILD_TYPE_DEBUG
   bool manually_trigger_thread_state_reset;
 #endif
@@ -629,6 +648,7 @@ static int init_thread_state(ThreadState *ts, SocketState *socket_state,
   ts->truncated = false;
   ts->last_command_exec_time_ns = 0;
   ts->my_replacement = NULL;
+  ts->dangling_bytecode = NULL;
   atomic_init(&ts->replacement_thread_state, REPLACEMENT_THREAD_STATE_NONE);
 
   if (0 != clock_gettime(MONOTONIC_CLOCK, &ts->last_active_time)) {
@@ -739,6 +759,7 @@ static void cleanup_thread_state(ThreadState *ts) {
   JS_FreeRuntime(ts->rt);
   ts->ctx = NULL;
   ts->rt = NULL;
+  free(ts->dangling_bytecode);
 }
 
 static void cleanup_old_runtime(ThreadState *ts) {
@@ -846,12 +867,12 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
 
 static int handle_line_2_query(ThreadState *ts, const char *line, int len) {
   const HashCacheUid uid = get_hash_cache_uid(line, len);
-  size_t bytecode_size = 0;
-  const uint8_t *bytecode = get_cached_function(uid, &bytecode_size);
+  const cached_function_t *cf = get_cached_function(uid);
 
-  if (bytecode) {
+  if (cf) {
     jsockd_log(LOG_DEBUG, "Found cached function\n");
-    ts->compiled_query = func_from_bytecode(ts->ctx, bytecode, bytecode_size);
+    ts->compiled_query =
+        func_from_bytecode(ts->ctx, cf->bytecode, cf->bytecode_size);
   } else {
     jsockd_log(LOG_DEBUG, "Compiling...\n");
     // We compile and cache the function.
@@ -861,7 +882,8 @@ static int handle_line_2_query(ThreadState *ts, const char *line, int len) {
     if (!bytecode) {
       ts->compiled_query = JS_EXCEPTION;
     } else {
-      add_cached_function(uid, bytecode, bytecode_size);
+      if (!add_cached_function(uid, bytecode, bytecode_size))
+        ts->dangling_bytecode = (uint8_t *)bytecode;
       ts->compiled_query = func_from_bytecode(ts->ctx, bytecode, bytecode_size);
     }
   }
@@ -911,7 +933,8 @@ static void write_to_stream(ThreadState *ts, const char *buf, size_t len) {
 #define write_const_to_stream(ts, str)                                         \
   write_to_stream((ts), (str), sizeof(str) - 1)
 
-static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
+static int handle_line_3_parameter_helper(ThreadState *ts, const char *line,
+                                          int len) {
   const JSPrintValueOptions js_print_value_options = {.show_hidden = false,
                                                       .raw_dump = false,
                                                       .max_depth = 0,
@@ -1093,6 +1116,13 @@ static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
   }
 
   return ts->socket_state->stream_io_err;
+}
+
+static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
+  int r = handle_line_3_parameter_helper(ts, line, len);
+  free(ts->dangling_bytecode);
+  ts->dangling_bytecode = NULL;
+  return r;
 }
 
 static int line_handler(const char *line, size_t len, ThreadState *ts,
