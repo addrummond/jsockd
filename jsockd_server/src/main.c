@@ -745,9 +745,10 @@ static int init_thread_state(ThreadState *ts, SocketState *socket_state,
 }
 
 static void cleanup_command_state(ThreadState *ts) {
-  if (!JS_IsUndefined(ts->compiled_query))
+  if (!JS_IsUndefined(ts->compiled_query)) {
     JS_FreeValue(ts->ctx, ts->compiled_query);
-  ts->compiled_query = JS_UNDEFINED;
+    ts->compiled_query = JS_UNDEFINED;
+  }
   if (ts->dangling_bytecode) {
     free(ts->dangling_bytecode);
     ts->dangling_bytecode = NULL;
