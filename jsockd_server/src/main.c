@@ -745,10 +745,8 @@ static int init_thread_state(ThreadState *ts, SocketState *socket_state,
 }
 
 static void cleanup_command_state(ThreadState *ts) {
-  if (!JS_IsUndefined(ts->compiled_query)) {
-    JS_FreeValue(ts->ctx, ts->compiled_query);
-    ts->compiled_query = JS_UNDEFINED;
-  }
+  JS_FreeValue(ts->ctx, ts->compiled_query);
+  ts->compiled_query = JS_UNDEFINED;
   free(ts->dangling_bytecode);
   ts->dangling_bytecode = NULL;
   if (ts->cached_function_in_use) {
@@ -1160,10 +1158,8 @@ static int line_handler(const char *line, size_t len, ThreadState *ts,
     if (ts->line_n == 2) {
       ts->truncated = false;
       ts->line_n = 0;
-      if (!JS_IsUndefined(ts->compiled_query)) {
-        JS_FreeValue(ts->ctx, ts->compiled_query);
-        ts->compiled_query = JS_UNDEFINED;
-      }
+      JS_FreeValue(ts->ctx, ts->compiled_query);
+      ts->compiled_query = JS_UNDEFINED;
       write_to_stream(ts, ts->current_uuid, ts->current_uuid_len);
       write_const_to_stream(ts, " exception \"jsockd command was too long\n");
     } else {
@@ -1174,10 +1170,8 @@ static int line_handler(const char *line, size_t len, ThreadState *ts,
   }
 
   if (!strcmp("?quit", line)) {
-    if (!JS_IsUndefined(ts->compiled_query)) {
-      JS_FreeValue(ts->ctx, ts->compiled_query);
-      ts->compiled_query = JS_UNDEFINED;
-    }
+    JS_FreeValue(ts->ctx, ts->compiled_query);
+    ts->compiled_query = JS_UNDEFINED;
     atomic_store_explicit(&g_interrupted_or_error, true, memory_order_relaxed);
     write_const_to_stream(ts, "quit\n");
     return EXIT_ON_QUIT_COMMAND;
