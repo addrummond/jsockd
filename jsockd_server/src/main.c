@@ -110,7 +110,7 @@ static cached_function_t *add_cached_function(HashCacheUid uid,
       jsockd_log(LOG_DEBUG, "Hash collision: freeing existing bytecode\n");
       free((void *)(g_cached_functions[bi].bytecode));
     } else {
-      jsockd_log(LOG_ERROR,
+      jsockd_log(LOG_DEBUG,
                  "Hash collision: existing cached function still in use!\n");
       mutex_unlock(&g_cached_functions_mutex);
       return NULL;
