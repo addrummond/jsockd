@@ -765,7 +765,6 @@ static void cleanup_thread_state(ThreadState *ts) {
   cleanup_command_state(ts);
 
   JS_FreeValue(ts->ctx, ts->backtrace_module);
-  JS_FreeValue(ts->ctx, ts->compiled_query);
   JS_FreeValue(ts->ctx, ts->compiled_module);
   JS_FreeValue(ts->ctx, ts->sourcemap_str);
 
