@@ -95,8 +95,9 @@ static void dump_error(JSContext *ctx) {
     JS_FreeValue(ctx, JS_GetException(ctx));
 }
 
-static bool add_cached_function(HashCacheUid uid, const uint8_t *bytecode,
-                                size_t bytecode_size) {
+static cached_function_t *add_cached_function(HashCacheUid uid,
+                                              const uint8_t *bytecode,
+                                              size_t bytecode_size) {
   assert(bytecode);
 
   mutex_lock(&g_cached_functions_mutex);
@@ -112,7 +113,7 @@ static bool add_cached_function(HashCacheUid uid, const uint8_t *bytecode,
       jsockd_log(LOG_ERROR,
                  "Hash collision: existing cached function still in use!\n");
       mutex_unlock(&g_cached_functions_mutex);
-      return false;
+      return NULL;
     }
   } else {
     atomic_fetch_add_explicit(&g_n_cached_functions, 1, memory_order_relaxed);
@@ -121,8 +122,9 @@ static bool add_cached_function(HashCacheUid uid, const uint8_t *bytecode,
   g_cached_functions[bi].bytecode_size = bytecode_size;
   g_cached_functions[bi].refcount = 1;
 
+  cached_function_t *cf = &g_cached_functions[bi];
   mutex_unlock(&g_cached_functions_mutex);
-  return true;
+  return cf;
 }
 
 static cached_function_t *get_cached_function(HashCacheUid uid) {
@@ -231,6 +233,7 @@ typedef struct ThreadState {
   pthread_t replacement_thread;
   struct timespec last_active_time;
   uint8_t *dangling_bytecode;
+  cached_function_t *cached_function_in_use;
 #ifdef CMAKE_BUILD_TYPE_DEBUG
   bool manually_trigger_thread_state_reset;
 #endif
@@ -649,6 +652,7 @@ static int init_thread_state(ThreadState *ts, SocketState *socket_state,
   ts->last_command_exec_time_ns = 0;
   ts->my_replacement = NULL;
   ts->dangling_bytecode = NULL;
+  ts->cached_function_in_use = NULL;
   atomic_init(&ts->replacement_thread_state, REPLACEMENT_THREAD_STATE_NONE);
 
   if (0 != clock_gettime(MONOTONIC_CLOCK, &ts->last_active_time)) {
@@ -760,6 +764,7 @@ static void cleanup_thread_state(ThreadState *ts) {
   ts->ctx = NULL;
   ts->rt = NULL;
   free(ts->dangling_bytecode);
+  ts->dangling_bytecode = NULL;
 }
 
 static void cleanup_old_runtime(ThreadState *ts) {
@@ -882,7 +887,9 @@ static int handle_line_2_query(ThreadState *ts, const char *line, int len) {
     if (!bytecode) {
       ts->compiled_query = JS_EXCEPTION;
     } else {
-      if (!add_cached_function(uid, bytecode, bytecode_size))
+      ts->cached_function_in_use =
+          add_cached_function(uid, bytecode, bytecode_size);
+      if (!ts->cached_function_in_use)
         ts->dangling_bytecode = (uint8_t *)bytecode;
       ts->compiled_query = func_from_bytecode(ts->ctx, bytecode, bytecode_size);
     }
@@ -949,15 +956,12 @@ static int handle_line_3_parameter_helper(ThreadState *ts, const char *line,
       JS_PrintValue(ts->ctx, js_print_value_debug_write, (void *)&l,
                     ts->compiled_query, &js_print_value_options);
     }
-    JS_FreeValue(ts->ctx, ts->compiled_query);
-    ts->compiled_query = JS_UNDEFINED;
     write_to_stream(ts, ts->current_uuid, ts->current_uuid_len);
     write_const_to_stream(ts, " exception \"error compiling command\"\n");
     return ts->socket_state->stream_io_err;
   }
 
   if (0 != clock_gettime(MONOTONIC_CLOCK, &ts->last_js_execution_start)) {
-    JS_FreeValue(ts->ctx, ts->compiled_query);
     jsockd_log(LOG_ERROR,
                "Error getting time in handle_line_3_parameter [1]\n");
     return -1;
@@ -969,8 +973,6 @@ static int handle_line_3_parameter_helper(ThreadState *ts, const char *line,
                 len, line);
     dump_error(ts->ctx);
     JS_FreeValue(ts->ctx, parsed_arg);
-    JS_FreeValue(ts->ctx, ts->compiled_query);
-    ts->compiled_query = JS_UNDEFINED;
     write_to_stream(ts, ts->current_uuid, ts->current_uuid_len);
     write_const_to_stream(ts, " exception \"JSON input parse error\"\n");
     return ts->socket_state->stream_io_err;
@@ -980,8 +982,6 @@ static int handle_line_3_parameter_helper(ThreadState *ts, const char *line,
   JSValue ret = JS_Call(ts->ctx, ts->compiled_query, JS_NULL,
                         sizeof(argv) / sizeof(argv[0]), argv);
   ret = js_std_await(ts->ctx, ret); // allow return of a promise
-  JS_FreeValue(ts->ctx, ts->compiled_query);
-  ts->compiled_query = JS_UNDEFINED;
   if (JS_IsException(ret)) {
     jsockd_log(LOG_DEBUG, "Error calling cached function\n");
     write_to_stream(ts, ts->current_uuid, ts->current_uuid_len);
@@ -1118,9 +1118,25 @@ static int handle_line_3_parameter_helper(ThreadState *ts, const char *line,
   return ts->socket_state->stream_io_err;
 }
 
+static void cleanup_command_state(ThreadState *ts) {
+  if (!JS_IsUndefined(ts->compiled_query))
+    JS_FreeValue(ts->ctx, ts->compiled_query);
+  ts->compiled_query = JS_UNDEFINED;
+  if (ts->dangling_bytecode) {
+    free(ts->dangling_bytecode);
+    ts->dangling_bytecode = NULL;
+  }
+  if (ts->cached_function_in_use) {
+    release_cached_function(ts->cached_function_in_use);
+    ts->cached_function_in_use = NULL;
+  }
+}
+
 static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
   int r = handle_line_3_parameter_helper(ts, line, len);
+  release_cached_function(ts->cached_function_in_use);
   free(ts->dangling_bytecode);
+  ts->cached_function_in_use = NULL;
   ts->dangling_bytecode = NULL;
   return r;
 }
@@ -1169,10 +1185,7 @@ static int line_handler(const char *line, size_t len, ThreadState *ts,
     return EXIT_ON_QUIT_COMMAND;
   }
   if (!strcmp("?reset", line)) {
-    if (!JS_IsUndefined(ts->compiled_query)) {
-      JS_FreeValue(ts->ctx, ts->compiled_query);
-      ts->compiled_query = JS_UNDEFINED;
-    }
+    cleanup_command_state(ts);
     ts->line_n = 0;
     ts->truncated = false;
     write_const_to_stream(ts, "reset\n");
