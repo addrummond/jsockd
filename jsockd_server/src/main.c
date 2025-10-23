@@ -1365,9 +1365,9 @@ static void SIGINT_and_SIGTERM_handler(int sig) {
 
   // Using stdio inside an interrupt handler is not safe, but calls to write
   // are explicilty allowed.
-  const char int_msg[] = "\n$ jsockd 0000-00-00T00:00:00.000000Z [INFO] SIGINT "
+  const char int_msg[] = "$ jsockd 0000-00-00T00:00:00.000000Z [INFO] SIGINT "
                          "received, cleaning up...\n";
-  const char term_msg[] = "\n$ jsockd 0000-00-00T00:00:00.000000Z [INFO] "
+  const char term_msg[] = "$ jsockd 0000-00-00T00:00:00.000000Z [INFO] "
                           "SIGTERM received, cleaning up...\n";
   if (sig == SIGINT)
     write_all(2, int_msg, sizeof(int_msg) - 1);
