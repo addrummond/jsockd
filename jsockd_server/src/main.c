@@ -744,10 +744,26 @@ static int init_thread_state(ThreadState *ts, SocketState *socket_state,
   return 0;
 }
 
+static void cleanup_command_state(ThreadState *ts) {
+  if (!JS_IsUndefined(ts->compiled_query))
+    JS_FreeValue(ts->ctx, ts->compiled_query);
+  ts->compiled_query = JS_UNDEFINED;
+  if (ts->dangling_bytecode) {
+    free(ts->dangling_bytecode);
+    ts->dangling_bytecode = NULL;
+  }
+  if (ts->cached_function_in_use) {
+    release_cached_function(ts->cached_function_in_use);
+    ts->cached_function_in_use = NULL;
+  }
+}
+
 // called whenever we want to clean a thread a state up
 static void cleanup_thread_state(ThreadState *ts) {
   if (ts->rt == NULL) // It's already been cleaned up;
     return;
+
+  cleanup_command_state(ts);
 
   JS_FreeValue(ts->ctx, ts->backtrace_module);
   JS_FreeValue(ts->ctx, ts->compiled_query);
@@ -763,8 +779,6 @@ static void cleanup_thread_state(ThreadState *ts) {
   JS_FreeRuntime(ts->rt);
   ts->ctx = NULL;
   ts->rt = NULL;
-  free(ts->dangling_bytecode);
-  ts->dangling_bytecode = NULL;
 }
 
 static void cleanup_old_runtime(ThreadState *ts) {
@@ -1116,20 +1130,6 @@ static int handle_line_3_parameter_helper(ThreadState *ts, const char *line,
   }
 
   return ts->socket_state->stream_io_err;
-}
-
-static void cleanup_command_state(ThreadState *ts) {
-  if (!JS_IsUndefined(ts->compiled_query))
-    JS_FreeValue(ts->ctx, ts->compiled_query);
-  ts->compiled_query = JS_UNDEFINED;
-  if (ts->dangling_bytecode) {
-    free(ts->dangling_bytecode);
-    ts->dangling_bytecode = NULL;
-  }
-  if (ts->cached_function_in_use) {
-    release_cached_function(ts->cached_function_in_use);
-    ts->cached_function_in_use = NULL;
-  }
 }
 
 static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
