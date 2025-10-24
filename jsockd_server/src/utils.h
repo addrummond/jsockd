@@ -28,6 +28,9 @@ void write_to_wbuf(void *opaque_buf, const char *inp, size_t size);
 
 int write_all(int fd, const char *buf, size_t len);
 
+typedef enum { READY, SIG_INTERRUPT_OR_ERROR, GO_AROUND } PollFdResult;
+PollFdResult poll_fd(int fd, int timeout_ms);
+
 typedef struct {
   char *buf;
   size_t index;

@@ -1,7 +1,11 @@
 #include "utils.h"
+#include "config.h"
+#include "globals.h"
 #include "log.h"
 #include "quickjs-libc.h"
 #include <errno.h>
+#include <poll.h>
+#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -125,4 +129,14 @@ void dump_error(JSContext *ctx) {
     js_std_dump_error(ctx);
   else
     JS_FreeValue(ctx, JS_GetException(ctx));
+}
+
+PollFdResult poll_fd(int fd, int timeout_ms) {
+  struct pollfd pfd = {.fd = fd, .events = POLLIN | POLLPRI};
+  if (!poll(&pfd, 1, timeout_ms)) {
+    if (atomic_load_explicit(&g_interrupted_or_error, memory_order_relaxed))
+      return SIG_INTERRUPT_OR_ERROR;
+    return GO_AROUND;
+  }
+  return READY;
 }

@@ -166,18 +166,6 @@ static void js_print_value_debug_write(void *opaque, const char *buf,
   jsockd_logf(l, "%.*s\n", len, buf);
 }
 
-typedef enum { READY, SIG_INTERRUPT_OR_ERROR, GO_AROUND } PollFdResult;
-
-static PollFdResult poll_fd(int fd) {
-  struct pollfd pfd = {.fd = fd, .events = POLLIN | POLLPRI};
-  if (!poll(&pfd, 1, SOCKET_POLL_TIMEOUT_MS)) {
-    if (atomic_load_explicit(&g_interrupted_or_error, memory_order_relaxed))
-      return SIG_INTERRUPT_OR_ERROR;
-    return GO_AROUND;
-  }
-  return READY;
-}
-
 static int lb_read(char *buf, size_t n, void *data) {
   for (;;) {
     int r = read(*(int *)data, buf, n);
@@ -283,7 +271,7 @@ static void command_loop(ThreadState *ts,
   ts->socket_state->streamfd = -1;
   for (;;) {
   accept_loop:
-    switch (poll_fd(ts->socket_state->sockfd)) {
+    switch (poll_fd(ts->socket_state->sockfd, SOCKET_POLL_TIMEOUT_MS)) {
     case READY:
       break;
     case GO_AROUND:
@@ -320,7 +308,7 @@ static void command_loop(ThreadState *ts,
   read_loop:
     tick_handler(ts);
 
-    switch (poll_fd(ts->socket_state->streamfd)) {
+    switch (poll_fd(ts->socket_state->streamfd, SOCKET_POLL_TIMEOUT_MS)) {
     case READY:
       break;
     case GO_AROUND:
