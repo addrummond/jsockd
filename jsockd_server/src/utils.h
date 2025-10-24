@@ -7,7 +7,7 @@
 
 #include <pthread.h>
 #include <stdint.h>
-#include <stdio.h>
+#include "quickjs.h"
 #include <time.h>
 
 void mutex_lock_(pthread_mutex_t *m, const char *file, int line);
@@ -19,12 +19,20 @@ void memswap_small(void *m1, void *m2, size_t size);
 int string_ends_with(const char *str, const char *suffix);
 int make_temp_dir(char out[], size_t out_size, const char *template);
 void timespec_to_iso8601(const struct timespec *ts, char *buf, size_t buflen);
+void dump_error(JSContext *ctx);
+void write_to_wbuf(void *opaque_buf, const char *inp, size_t size);
 
 #define mutex_lock(m) mutex_lock_((m), __FILE__, __LINE__)
 #define mutex_unlock(m) mutex_unlock_((m), __FILE__, __LINE__)
 #define mutex_init(m) mutex_init_((m), __FILE__, __LINE__)
 
 int write_all(int fd, const char *buf, size_t len);
+
+typedef struct {
+  char *buf;
+  size_t index;
+  size_t length;
+} WBuf;
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 

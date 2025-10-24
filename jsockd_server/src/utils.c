@@ -1,5 +1,6 @@
 #include "utils.h"
 #include "log.h"
+#include "quickjs-libc.h"
 #include <errno.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -109,4 +110,19 @@ void timespec_to_iso8601(const struct timespec *ts, char *buf, size_t buflen) {
   // Ensure enough space for .nnnnnnnnnZ and null terminator
   if (len + 8 < buflen)
     snprintf(buf + len, buflen - len, ".%06ldZ", ns_to_us(ts->tv_nsec));
+}
+
+void write_to_wbuf(void *opaque_buf, const char *inp, size_t size) {
+  WBuf *buf = (WBuf *)opaque_buf;
+  size_t to_write =
+      buf->length >= buf->index ? MIN(buf->length - buf->index, size) : 0;
+  memcpy(buf->buf + buf->index, inp, to_write);
+  buf->index += to_write;
+}
+
+void dump_error(JSContext *ctx) {
+  if (CMAKE_BUILD_TYPE_IS_DEBUG)
+    js_std_dump_error(ctx);
+  else
+    JS_FreeValue(ctx, JS_GetException(ctx));
 }
