@@ -60,6 +60,10 @@ static int interrupt_handler(JSRuntime *rt, void *opaque) {
                                    memory_order_relaxed);
 }
 
+static void write_to_wbuf_wrapper(void *opaque, const char *inp, size_t size) {
+  write_to_wbuf((WBuf *)opaque, inp, size);
+}
+
 int init_thread_state(ThreadState *ts, SocketState *socket_state,
                       int thread_index) {
   jsockd_logf(LOG_DEBUG, "Calling init_thread_state for thread %i\n",
@@ -84,6 +88,7 @@ int init_thread_state(ThreadState *ts, SocketState *socket_state,
   ts->my_replacement = NULL;
   ts->dangling_bytecode = NULL;
   ts->cached_function_in_use = NULL;
+  ts->msgbuf = NULL;
   atomic_init(&ts->replacement_thread_state, REPLACEMENT_THREAD_STATE_NONE);
 
   if (0 != clock_gettime(MONOTONIC_CLOCK, &ts->last_active_time)) {
@@ -146,7 +151,7 @@ int init_thread_state(ThreadState *ts, SocketState *socket_state,
     WBuf emb = {
         .buf = error_msg_buf, .index = 0, .length = ERROR_MSG_MAX_BYTES};
     JSValue exception = JS_GetException(ts->ctx);
-    JS_PrintValue(ts->ctx, write_to_wbuf, &emb.buf, exception, NULL);
+    JS_PrintValue(ts->ctx, write_to_wbuf_wrapper, &emb.buf, exception, NULL);
     JS_FreeValue(ts->ctx, exception);
     size_t bt_length;
     const char *bt_str =

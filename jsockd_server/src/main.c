@@ -614,6 +614,10 @@ static void write_to_stream(ThreadState *ts, const char *buf, size_t len) {
   }
 }
 
+static void write_to_wbuf_wrapper(void *opaque, const char *inp, size_t size) {
+  write_to_wbuf((WBuf *)opaque, inp, size);
+}
+
 #define write_const_to_stream(ts, str)                                         \
   write_to_stream((ts), (str), sizeof(str) - 1)
 
@@ -667,7 +671,7 @@ static int handle_line_3_parameter_helper(ThreadState *ts, const char *line,
     WBuf emb = {
         .buf = error_msg_buf, .index = 0, .length = ERROR_MSG_MAX_BYTES};
     JSValue exception = JS_GetException(ts->ctx);
-    JS_PrintValue(ts->ctx, write_to_wbuf, &emb, exception, NULL);
+    JS_PrintValue(ts->ctx, write_to_wbuf_wrapper, &emb, exception, NULL);
 
     size_t json_bt_length;
     const char *json_bt_str =

@@ -20,7 +20,6 @@ int string_ends_with(const char *str, const char *suffix);
 int make_temp_dir(char out[], size_t out_size, const char *template);
 void timespec_to_iso8601(const struct timespec *ts, char *buf, size_t buflen);
 void dump_error(JSContext *ctx);
-void write_to_wbuf(void *opaque_buf, const char *inp, size_t size);
 
 #define mutex_lock(m) mutex_lock_((m), __FILE__, __LINE__)
 #define mutex_unlock(m) mutex_unlock_((m), __FILE__, __LINE__)
@@ -36,6 +35,7 @@ typedef struct {
   size_t index;
   size_t length;
 } WBuf;
+void write_to_wbuf(WBuf *buf, const char *inp, size_t size);
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 

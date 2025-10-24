@@ -116,8 +116,7 @@ void timespec_to_iso8601(const struct timespec *ts, char *buf, size_t buflen) {
     snprintf(buf + len, buflen - len, ".%06ldZ", ns_to_us(ts->tv_nsec));
 }
 
-void write_to_wbuf(void *opaque_buf, const char *inp, size_t size) {
-  WBuf *buf = (WBuf *)opaque_buf;
+void write_to_wbuf(WBuf *buf, const char *inp, size_t size) {
   size_t to_write =
       buf->length >= buf->index ? MIN(buf->length - buf->index, size) : 0;
   memcpy(buf->buf + buf->index, inp, to_write);

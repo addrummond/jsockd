@@ -59,6 +59,7 @@ typedef struct ThreadState {
   struct timespec last_active_time;
   uint8_t *dangling_bytecode;
   cached_function_t *cached_function_in_use;
+  char *msgbuf;
 #ifdef CMAKE_BUILD_TYPE_DEBUG
   bool manually_trigger_thread_state_reset;
 #endif
