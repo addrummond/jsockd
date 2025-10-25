@@ -253,8 +253,7 @@ static void command_loop(ThreadState *ts,
                                              ThreadState *data, bool truncated),
                          void (*tick_handler)(ThreadState *ts)) {
   CommandLoopLineHandler louslh = {.ts = ts, .line_handler = line_handler};
-  char *line_buf_buffer = calloc(LINE_BUF_BYTES, sizeof(char));
-  LineBuf line_buf = {.buf = line_buf_buffer, .size = LINE_BUF_BYTES};
+  LineBuf line_buf = {.buf = ts->input_buf, .size = INPUT_BUF_BYTES};
 
   if (0 != initialize_and_listen_on_unix_socket(ts->socket_state)) {
     jsockd_log(LOG_ERROR, "Error initializing UNIX socket\n");
@@ -354,8 +353,6 @@ error_no_inc:
   ts->socket_state->streamfd = -1;
   ts->socket_state->sockfd = -1;
 
-  free(line_buf_buffer);
-
   atomic_store_explicit(&g_interrupted_or_error, true, memory_order_relaxed);
 }
 
@@ -428,6 +425,8 @@ static void cleanup_thread_state(ThreadState *ts) {
     return;
 
   cleanup_command_state(ts);
+
+  free(ts->input_buf);
 
   JS_FreeValue(ts->ctx, ts->backtrace_module);
   JS_FreeValue(ts->ctx, ts->compiled_module);

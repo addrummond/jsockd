@@ -77,6 +77,7 @@ int init_thread_state(ThreadState *ts, SocketState *socket_state,
   ts->compiled_query = JS_UNDEFINED;
   ts->last_js_execution_start.tv_sec = 0;
   ts->last_js_execution_start.tv_nsec = 0;
+  ts->input_buf = calloc(INPUT_BUF_BYTES, sizeof(char));
   ts->current_uuid[0] = '\0';
   ts->current_uuid_len = 0;
   ts->memory_check_count = 0;
@@ -88,7 +89,6 @@ int init_thread_state(ThreadState *ts, SocketState *socket_state,
   ts->my_replacement = NULL;
   ts->dangling_bytecode = NULL;
   ts->cached_function_in_use = NULL;
-  ts->msgbuf = NULL;
   atomic_init(&ts->replacement_thread_state, REPLACEMENT_THREAD_STATE_NONE);
 
   if (0 != clock_gettime(MONOTONIC_CLOCK, &ts->last_active_time)) {

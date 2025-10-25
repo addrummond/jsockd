@@ -44,6 +44,7 @@ typedef struct ThreadState {
   JSValue compiled_query;
   JSValue backtrace_module;
   struct timespec last_js_execution_start;
+  char *input_buf;
   char current_uuid[MESSAGE_UUID_MAX_BYTES + 1 /*zeroterm*/];
   size_t current_uuid_len;
   int memory_check_count;
@@ -59,7 +60,6 @@ typedef struct ThreadState {
   struct timespec last_active_time;
   uint8_t *dangling_bytecode;
   cached_function_t *cached_function_in_use;
-  char *msgbuf;
 #ifdef CMAKE_BUILD_TYPE_DEBUG
   bool manually_trigger_thread_state_reset;
 #endif
