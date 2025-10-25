@@ -119,6 +119,7 @@ set(JSOCKD_SERVER_SOURCES
   src/globals.c
   src/backtrace.c
   src/threadstate.c
+  src/messages.c
   src/js/gen_backtrace.c
   src/js/gen_shims.c
   ${ED25519_LIB_SOURCES}

@@ -5,6 +5,7 @@
 #include "globals.h"
 #include "inttypes.h"
 #include "log.h"
+#include "messages.h"
 #include "quickjs-libc.h"
 #include "textencodedecode.h"
 #include "utils.h"
@@ -27,6 +28,11 @@ static JSContext *JS_NewCustomContext(JSRuntime *rt) {
   }
 
   if (qjs_add_intrinsic_text_encoder(ctx, global_obj) < 0) {
+    JS_FreeValue(ctx, global_obj);
+    return NULL;
+  }
+
+  if (add_intrinsic_jsockd(ctx, global_obj)) {
     JS_FreeValue(ctx, global_obj);
     return NULL;
   }

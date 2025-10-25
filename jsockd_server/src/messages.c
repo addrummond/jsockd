@@ -13,7 +13,7 @@ static int send_message(JSRuntime *rt, const char *message,
   write_all(ts->socket_state->streamfd, message, message_len);
   write_all(ts->socket_state->streamfd, &term, sizeof(char));
 
-  size_t total_read;
+  size_t total_read = 0;
 
   for (;;) {
   read_loop:
