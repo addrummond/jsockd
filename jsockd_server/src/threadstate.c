@@ -13,11 +13,13 @@
 #include <assert.h>
 #include <errno.h>
 
-static JSContext *JS_NewCustomContext(JSRuntime *rt) {
+static int new_custom_context(JSRuntime *rt, JSContext **out_ctx) {
   JSContext *ctx;
   ctx = JS_NewContext(rt);
+  *out_ctx = ctx;
   if (!ctx)
-    return NULL;
+    return -1;
+
   js_init_module_std(ctx, "std");
   js_init_module_os(ctx, "os");
 
@@ -25,24 +27,32 @@ static JSContext *JS_NewCustomContext(JSRuntime *rt) {
 
   if (qjs_add_intrinsic_text_decoder(ctx, global_obj) < 0) {
     JS_FreeValue(ctx, global_obj);
-    JS_FreeContext(ctx);
-    return NULL;
+    return -1;
   }
 
   if (qjs_add_intrinsic_text_encoder(ctx, global_obj) < 0) {
     JS_FreeValue(ctx, global_obj);
-    JS_FreeContext(ctx);
-    return NULL;
+    return -1;
   }
 
   if (add_intrinsic_jsockd(ctx, global_obj)) {
     JS_FreeValue(ctx, global_obj);
-    JS_FreeContext(ctx);
-    return NULL;
+    return -1;
   }
 
   JS_FreeValue(ctx, global_obj);
 
+  return 0;
+}
+
+static JSContext *new_custom_context_for_worker(JSRuntime *rt) {
+  JSContext *ctx;
+  if (0 != new_custom_context(rt, &ctx)) {
+    jsockd_log(LOG_ERROR, "Failed to create custom context for worker\n");
+    if (ctx != NULL)
+      JS_FreeContext(ctx);
+    return NULL;
+  }
   return ctx;
 }
 
@@ -114,12 +124,10 @@ int init_thread_state(ThreadState *ts, SocketState *socket_state,
     return -1;
   }
 
-  js_std_set_worker_new_context_func(JS_NewCustomContext);
+  js_std_set_worker_new_context_func(new_custom_context_for_worker);
   js_std_init_handlers(ts->rt);
-  ts->ctx = JS_NewCustomContext(ts->rt);
-  if (!ts->ctx) {
+  if (0 != new_custom_context(ts->rt, &ts->ctx)) {
     jsockd_log(LOG_ERROR, "Failed to create JS context\n");
-    JS_FreeRuntime(ts->rt);
     return -1;
   }
 
