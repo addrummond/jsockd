@@ -5,9 +5,9 @@
 #define _REENTRANT
 #endif
 
+#include "quickjs.h"
 #include <pthread.h>
 #include <stdint.h>
-#include "quickjs.h"
 #include <time.h>
 
 void mutex_lock_(pthread_mutex_t *m, const char *file, int line);

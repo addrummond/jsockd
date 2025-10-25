@@ -35,7 +35,7 @@ static int new_custom_context(JSRuntime *rt, JSContext **out_ctx) {
     return -1;
   }
 
-  if (add_intrinsic_jsockd(ctx, global_obj)) {
+  if (add_intrinsic_jsockd(ctx, global_obj) < 0) {
     JS_FreeValue(ctx, global_obj);
     return -1;
   }

@@ -1,13 +1,13 @@
 #ifndef THREADSTATE_H_
 #define THREADSTATE_H_
 
-#include <stdbool.h>
-#include <pthread.h>
+#include "config.h"
 #include "quickjs.h"
+#include <pthread.h>
 #include <stdatomic.h>
+#include <stdbool.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-#include "config.h"
 
 typedef struct {
   const uint8_t *bytecode;
@@ -65,6 +65,7 @@ typedef struct ThreadState {
 #endif
 } ThreadState;
 
-int init_thread_state(ThreadState *ts, SocketState *socket_state, int thread_index);
+int init_thread_state(ThreadState *ts, SocketState *socket_state,
+                      int thread_index);
 
 #endif

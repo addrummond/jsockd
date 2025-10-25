@@ -116,5 +116,6 @@ int add_intrinsic_jsockd(JSContext *cx, JSValueConst global) {
 
   JS_SetConstructor(cx, ctor, proto);
 
-  return JS_SetPropertyStr(cx, global, "TextDecoder", ctor);
+  int r = JS_SetPropertyStr(cx, global, "JSockD", ctor);
+  return r;
 }

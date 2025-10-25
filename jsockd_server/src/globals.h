@@ -1,11 +1,10 @@
 #ifndef GLOBALS_H_
 #define GLOBALS_H_
 
-#include <stdint.h>
+#include "cmdargs.h"
 #include <stdatomic.h>
 #include <stdbool.h>
-#include "cmdargs.h"
-
+#include <stdint.h>
 
 extern const uint32_t g_backtrace_module_bytecode_size;
 extern const uint8_t g_backtrace_module_bytecode[];
