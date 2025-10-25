@@ -48,3 +48,73 @@ static int send_message(JSRuntime *rt, const char *message,
 read_done:
   return (int)total_read;
 }
+
+static void jsockd_finalizer(JSRuntime *rt, JSValue val) {}
+
+static JSClassDef jsockd_class = {
+    "TextDecoder",
+    .finalizer = jsockd_finalizer,
+};
+
+static JSClassID jsockd_class_id;
+
+static JSValue jsockd_send_message(JSContext *cx, JSValueConst this_val,
+                                   int argc, JSValueConst *argv) {
+
+  if (argc != 1) {
+    return JS_ThrowInternalError(
+        cx,
+        "JSockD.sendMessage requires exactly 1 argument (the message to send)");
+  }
+
+  // TODO
+  return JS_UNDEFINED;
+}
+
+static const JSCFunctionListEntry jsockd_proto[] = {
+    JS_CFUNC_DEF("sendMessage", 1, jsockd_send_message),
+};
+
+static JSValue jsockd_ctor(JSContext *cx, JSValueConst this_val, int argc,
+                           JSValueConst *argv) {
+  JSValue obj;
+
+  JS_NewClassID(&jsockd_class_id);
+
+  obj = JS_NewObjectClass(cx, jsockd_class_id);
+  if (JS_IsException(obj)) {
+    return JS_EXCEPTION;
+  }
+
+  return obj;
+}
+
+int add_intrinsic_jsockd(JSContext *cx, JSValueConst global) {
+  JSValue ctor, proto;
+
+  JS_NewClassID(&jsockd_class_id);
+
+  if (JS_NewClass(JS_GetRuntime(cx), jsockd_class_id, &jsockd_class) < 0) {
+    return -1;
+  }
+
+  proto = JS_NewObject(cx);
+  if (JS_IsException(proto)) {
+    return -1;
+  }
+
+  JS_SetPropertyFunctionList(cx, proto, jsockd_proto,
+                             sizeof(jsockd_proto) / sizeof(jsockd_proto[0]));
+
+  JS_SetClassProto(cx, jsockd_class_id, proto);
+
+  ctor = JS_NewCFunction2(cx, jsockd_ctor, "TextDecoder", 2,
+                          JS_CFUNC_constructor, 0);
+  if (JS_IsException(ctor)) {
+    return -1;
+  }
+
+  JS_SetConstructor(cx, ctor, proto);
+
+  return JS_SetPropertyStr(cx, global, "TextDecoder", ctor);
+}
