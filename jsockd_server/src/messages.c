@@ -6,10 +6,13 @@
 #include <errno.h>
 #include <unistd.h>
 
-static int send_message(JSRuntime *rt, const char *message,
-                        size_t message_len) {
+static int send_message(JSRuntime *rt, const char *message, size_t message_len,
+                        JSValue *result) {
   const char term = '\n';
   ThreadState *ts = (ThreadState *)JS_GetRuntimeOpaque(rt);
+
+  *result = JS_UNDEFINED;
+
   write_all(ts->socket_state->streamfd, message, message_len);
   write_all(ts->socket_state->streamfd, &term, sizeof(char));
 
@@ -23,12 +26,13 @@ static int send_message(JSRuntime *rt, const char *message,
     case SIG_INTERRUPT_OR_ERROR:
       return -1;
     case READY: {
-      if (total_read == INPUT_BUF_BYTES) {
+      if (total_read == INPUT_BUF_BYTES - 1) {
         // Message too big for input buffer
+        // TODO ERROR HANDLING
         return -1;
       }
       int r = read(ts->socket_state->streamfd, ts->input_buf + total_read,
-                   INPUT_BUF_BYTES - total_read);
+                   INPUT_BUF_BYTES - 1 - total_read);
       if (r < 0 && errno == EINTR)
         continue;
       if (r <= 0) {
@@ -46,7 +50,20 @@ static int send_message(JSRuntime *rt, const char *message,
   }
 
 read_done:
-  return (int)total_read;
+  if (total_read == 0) {
+    // TODO ERROR HANDLING
+    return -1;
+  }
+  ts->input_buf[total_read] = '\0';
+  JSValue parsed =
+      JS_ParseJSON(ts->ctx, ts->input_buf, total_read, "<message>");
+  if (JS_IsException(parsed)) {
+    JS_FreeValue(ts->ctx, parsed);
+    // TODO error logging
+    return -1;
+  }
+  *result = parsed;
+  return 0;
 }
 
 static void jsockd_finalizer(JSRuntime *rt, JSValue val) {}
