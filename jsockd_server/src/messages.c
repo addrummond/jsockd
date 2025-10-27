@@ -71,7 +71,7 @@ static JSValue jsockd_send_message(JSContext *cx, JSValueConst this_val,
   return JS_UNDEFINED;
 }
 
-static const JSCFunctionListEntry jsockd_proto[] = {
+static const JSCFunctionListEntry jsockd_function_list[] = {
     JS_CFUNC_DEF("sendMessage", 1, jsockd_send_message),
 };
 
@@ -89,33 +89,34 @@ static JSValue jsockd_ctor(JSContext *cx, JSValueConst this_val, int argc,
   return obj;
 }
 
-int add_intrinsic_jsockd(JSContext *cx, JSValueConst global) {
+int add_intrinsic_jsockd(JSContext *ctx, JSValueConst global) {
   JSValue ctor, proto;
 
   JS_NewClassID(&jsockd_class_id);
 
-  if (JS_NewClass(JS_GetRuntime(cx), jsockd_class_id, &jsockd_class) < 0) {
+  if (JS_NewClass(JS_GetRuntime(ctx), jsockd_class_id, &jsockd_class) < 0) {
     return -1;
   }
 
-  proto = JS_NewObject(cx);
+  proto = JS_NewObject(ctx);
   if (JS_IsException(proto)) {
     return -1;
   }
 
-  JS_SetPropertyFunctionList(cx, proto, jsockd_proto,
-                             sizeof(jsockd_proto) / sizeof(jsockd_proto[0]));
+  JS_SetClassProto(ctx, jsockd_class_id, proto);
 
-  JS_SetClassProto(cx, jsockd_class_id, proto);
-
-  ctor = JS_NewCFunction2(cx, jsockd_ctor, "TextDecoder", 2,
+  ctor = JS_NewCFunction2(ctx, jsockd_ctor, "TextDecoder", 2,
                           JS_CFUNC_constructor, 0);
   if (JS_IsException(ctor)) {
     return -1;
   }
 
-  JS_SetConstructor(cx, ctor, proto);
+  JS_SetPropertyFunctionList(ctx, ctor, jsockd_function_list,
+                             sizeof(jsockd_function_list) /
+                                 sizeof(jsockd_function_list[0]));
 
-  int r = JS_SetPropertyStr(cx, global, "JSockD", ctor);
+  JS_SetConstructor(ctx, ctor, proto);
+
+  int r = JS_SetPropertyStr(ctx, global, "JSockD", ctor);
   return r;
 }
