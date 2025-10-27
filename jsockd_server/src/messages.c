@@ -75,14 +75,25 @@ static JSClassDef jsockd_class = {
 
 static JSClassID jsockd_class_id;
 
-static JSValue jsockd_send_message(JSContext *cx, JSValueConst this_val,
+static JSValue jsockd_send_message(JSContext *ctx, JSValueConst this_val,
                                    int argc, JSValueConst *argv) {
 
   if (argc != 1) {
     return JS_ThrowInternalError(
-        cx,
+        ctx,
         "JSockD.sendMessage requires exactly 1 argument (the message to send)");
   }
+  JSValue message_val = argv[0];
+  if (!JS_IsString(message_val)) {
+    return JS_ThrowTypeError(ctx,
+                             "JSockD.sendMessage argument must be a string");
+  }
+
+  JSValue res;
+
+  size_t message_len;
+  const char *message_str = JS_ToCStringLen(ctx, &message_len, message_val);
+  int r = send_message(JS_GetRuntime(ctx), message_str, message_len, &res);
 
   // TODO
   return JS_UNDEFINED;
@@ -92,13 +103,13 @@ static const JSCFunctionListEntry jsockd_function_list[] = {
     JS_CFUNC_DEF("sendMessage", 1, jsockd_send_message),
 };
 
-static JSValue jsockd_ctor(JSContext *cx, JSValueConst this_val, int argc,
+static JSValue jsockd_ctor(JSContext *ctx, JSValueConst this_val, int argc,
                            JSValueConst *argv) {
   JSValue obj;
 
   JS_NewClassID(&jsockd_class_id);
 
-  obj = JS_NewObjectClass(cx, jsockd_class_id);
+  obj = JS_NewObjectClass(ctx, jsockd_class_id);
   if (JS_IsException(obj)) {
     return JS_EXCEPTION;
   }
