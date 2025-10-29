@@ -90,13 +90,16 @@ static JSValue jsockd_send_message(JSContext *ctx, JSValueConst this_val,
   }
 
   JSValue res;
-
   size_t message_len;
   const char *message_str = JS_ToCStringLen(ctx, &message_len, message_val);
   int r = send_message(JS_GetRuntime(ctx), message_str, message_len, &res);
+  if (r != 0) {
+    JS_FreeCString(ctx, message_str);
+    JS_FreeValue(ctx, res);
+    return JS_ThrowInternalError(ctx, "Error sending message via JSockD");
+  }
 
-  // TODO
-  return JS_UNDEFINED;
+  return res;
 }
 
 static const JSCFunctionListEntry jsockd_function_list[] = {
