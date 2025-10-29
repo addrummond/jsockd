@@ -64,8 +64,9 @@ read_done:
   if (JS_IsException(parsed)) {
     JS_FreeValue(ts->ctx, parsed);
     jsockd_logf(LOG_DEBUG,
-                "Error parsing JSON message response: <<END\n%.*s\nEND\n",
-                MIN((int)total_read, 1024), ts->input_buf);
+                "Error parsing JSON message response: <<END\n%.*s\nEND%s\n",
+                MIN((int)total_read, 1024), ts->input_buf,
+                total_read > 1024 ? "[truncated]" : "");
     // TODO error logging
     return -5;
   }
