@@ -1,5 +1,6 @@
 #include "config.h"
 #include "globals.h"
+#include "log.h"
 #include "quickjs.h"
 #include "threadstate.h"
 #include "utils.h"
@@ -29,15 +30,18 @@ static int send_message(JSRuntime *rt, const char *message, size_t message_len,
       if (total_read == INPUT_BUF_BYTES - 1) {
         // Message too big for input buffer
         // TODO ERROR HANDLING
-        return -1;
+        return -2;
       }
       int r = read(ts->socket_state->streamfd, ts->input_buf + total_read,
                    INPUT_BUF_BYTES - 1 - total_read);
       if (r < 0 && errno == EINTR)
         continue;
       if (r <= 0) {
+        jsockd_logf(LOG_ERROR,
+                    "Error reading from socket in message handler (%i): %s\n",
+                    r, strerror(errno));
         // TODO ERROR HANDLING
-        return -1;
+        return -3;
       }
       total_read += (size_t)r;
       if (total_read > 0 &&
@@ -52,7 +56,7 @@ static int send_message(JSRuntime *rt, const char *message, size_t message_len,
 read_done:
   if (total_read == 0) {
     // TODO ERROR HANDLING
-    return -1;
+    return -4;
   }
   ts->input_buf[total_read] = '\0';
   JSValue parsed =
@@ -60,7 +64,7 @@ read_done:
   if (JS_IsException(parsed)) {
     JS_FreeValue(ts->ctx, parsed);
     // TODO error logging
-    return -1;
+    return -5;
   }
   *result = parsed;
   return 0;
@@ -96,6 +100,7 @@ static JSValue jsockd_send_message(JSContext *ctx, JSValueConst this_val,
   if (r != 0) {
     JS_FreeCString(ctx, message_str);
     JS_FreeValue(ctx, res);
+    jsockd_logf(LOG_DEBUG, "Error sending message, error code=%i\n", r);
     return JS_ThrowInternalError(ctx, "Error sending message via JSockD");
   }
 
