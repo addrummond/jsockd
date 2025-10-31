@@ -11,7 +11,6 @@
 #include "hex.h"
 #include "line_buf.h"
 #include "log.h"
-#include "messages.h"
 #include "mmap_file.h"
 #include "modcompiler.h"
 #include "quickjs-libc.h"
