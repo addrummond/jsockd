@@ -187,6 +187,7 @@ static JSValue jsockd_send_message(JSContext *ctx, JSValueConst this_val,
   size_t message_len;
   const char *message_str =
       JS_ToCStringLen(ctx, &message_len, encoded_message_val);
+  JS_FreeValue(ctx, encoded_message_val);
   int r = send_message(JS_GetRuntime(ctx), message_str, message_len, &res);
   if (r != 0) {
     JS_FreeCString(ctx, message_str);
@@ -197,6 +198,7 @@ static JSValue jsockd_send_message(JSContext *ctx, JSValueConst this_val,
                                  send_message_error_to_string(r));
   }
 
+  JS_FreeCString(ctx, message_str);
   return res;
 }
 

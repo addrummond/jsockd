@@ -885,6 +885,7 @@ static int line_handler(const char *line, size_t len, ThreadState *ts,
     return 0;
   }
 
+  jsockd_logf(LOG_DEBUG, "Line handler: line %i\n", ts->line_n);
   switch (ts->line_n) {
   case 0:
     return handle_line_1_message_uid(ts, line, len);
