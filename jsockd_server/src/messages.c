@@ -23,7 +23,8 @@ typedef enum {
   RET_TOO_BIG = -4,
   RET_INTERRUPTED = -5,
   RET_IO = -6,
-  RET_TIME = -7
+  RET_TIME = -7,
+  RET_BAD_MESSAGE = -8,
 } SendMessageError;
 
 static const char *send_message_error_to_string(int err) {
@@ -42,6 +43,8 @@ static const char *send_message_error_to_string(int err) {
     return "I/O error while waiting for message response";
   case RET_TIME:
     return "Time error while waiting for message response";
+  case RET_BAD_MESSAGE:
+    return "Internal protocol error (no command id or mismatched command id)";
   default:
     return "<unknown error>";
   }
@@ -120,8 +123,28 @@ read_done:
   if (total_read == 0)
     return RET_EOF;
   ts->input_buf[total_read] = '\0';
-  JSValue parsed =
-      JS_ParseJSON(ts->ctx, ts->input_buf, total_read, "<message>");
+
+  size_t uuid_len = split_uuid(ts->input_buf, total_read);
+  if (uuid_len == total_read) {
+    jsockd_logf(
+        LOG_DEBUG,
+        "Error parsing message response, no UUID found: <<END\n%.*s\nEND\n",
+        (int)total_read, ts->input_buf);
+    return RET_BAD_MESSAGE;
+  }
+
+  if (0 != strncmp(ts->input_buf, ts->current_uuid, ts->current_uuid_len)) {
+    jsockd_logf(
+        LOG_DEBUG,
+        "Error parsing message response, UUID mismatch (expected %.*s, got "
+        "%.*s): <<END\n%.*s\nEND\n",
+        (int)ts->current_uuid_len, ts->current_uuid, (int)uuid_len,
+        ts->input_buf, (int)total_read, ts->input_buf);
+    return RET_BAD_MESSAGE;
+  }
+
+  JSValue parsed = JS_ParseJSON(ts->ctx, ts->input_buf + uuid_len + 1,
+                                total_read - uuid_len - 1, "<message>");
   if (JS_IsException(parsed)) {
     JS_FreeValue(ts->ctx, parsed);
     jsockd_logf(LOG_DEBUG,
