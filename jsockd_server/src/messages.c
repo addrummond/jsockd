@@ -214,12 +214,7 @@ static JSValue jsockd_ctor(JSContext *ctx, JSValueConst this_val, int argc,
 
   JS_NewClassID(&jsockd_class_id);
 
-  obj = JS_NewObjectClass(ctx, jsockd_class_id);
-  if (JS_IsException(obj)) {
-    return JS_EXCEPTION;
-  }
-
-  return obj;
+  return JS_NewObjectClass(ctx, jsockd_class_id);
 }
 
 int add_intrinsic_jsockd(JSContext *ctx, JSValueConst global) {
