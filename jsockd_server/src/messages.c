@@ -85,7 +85,7 @@ static int send_message(JSRuntime *rt, const char *message, size_t message_len,
     read_r |= write_all(ts->socket_state->streamfd, &term, sizeof(char));
   }
   if (read_r < 0) {
-    jsockd_logf(LOG_ERROR, "Error writing message to socket (%i): %s\n", read_r,
+    jsockd_logf(LOG_ERROR, "Error writing message to socket: %s\n",
                 strerror(errno));
     return SEND_MESSAGE_ERR_IO;
   }
