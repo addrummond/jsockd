@@ -108,12 +108,6 @@ static cached_function_t *get_cached_function(HashCacheUid uid) {
 static void release_cached_function(cached_function_t *cf) {
   mutex_lock(&g_cached_functions_mutex);
   --cf->refcount;
-  if (cf->refcount == 0) {
-    jsockd_log(LOG_DEBUG, "Releasing cached function bytecode\n");
-    free((void *)(cf->bytecode));
-    cf->bytecode = NULL;
-    atomic_fetch_add_explicit(&g_n_cached_functions, -1, memory_order_relaxed);
-  }
   mutex_unlock(&g_cached_functions_mutex);
 }
 
