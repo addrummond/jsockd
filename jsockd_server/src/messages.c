@@ -17,33 +17,33 @@ static size_t split_uuid(const char *msg, size_t len) {
 }
 
 typedef enum {
-  RET_TIMEOUT = -1,
-  RET_EOF = -2,
-  RET_BAD_JSON = -3,
-  RET_TOO_BIG = -4,
-  RET_INTERRUPTED = -5,
-  RET_IO = -6,
-  RET_TIME = -7,
-  RET_BAD_MESSAGE = -8,
+  SEND_MESSAGE_ERR_TIMEOUT = -1,
+  SEND_MESSAGE_ERR_EOF = -2,
+  SEND_MESSAGE_ERR_BAD_JSON = -3,
+  SEND_MESSAGE_ERR_TOO_BIG = -4,
+  SEND_MESSAGE_ERR_INTERRUPTED = -5,
+  SEND_MESSAGE_ERR_IO = -6,
+  SEND_MESSAGE_ERR_TIME = -7,
+  SEND_MESSAGE_ERR_BAD_MESSAGE = -8,
 } SendMessageError;
 
 static const char *send_message_error_to_string(int err) {
   switch (err) {
-  case RET_TIMEOUT:
+  case SEND_MESSAGE_ERR_TIMEOUT:
     return "Timeout waiting for message response";
-  case RET_EOF:
+  case SEND_MESSAGE_ERR_EOF:
     return "EOF while reading message response";
-  case RET_BAD_JSON:
+  case SEND_MESSAGE_ERR_BAD_JSON:
     return "Bad JSON in message response";
-  case RET_TOO_BIG:
+  case SEND_MESSAGE_ERR_TOO_BIG:
     return "Message response too big";
-  case RET_INTERRUPTED:
+  case SEND_MESSAGE_ERR_INTERRUPTED:
     return "Interrupted while waiting for message response";
-  case RET_IO:
+  case SEND_MESSAGE_ERR_IO:
     return "I/O error while waiting for message response";
-  case RET_TIME:
+  case SEND_MESSAGE_ERR_TIME:
     return "Time error while waiting for message response";
-  case RET_BAD_MESSAGE:
+  case SEND_MESSAGE_ERR_BAD_MESSAGE:
     return "Internal protocol error (no command id or mismatched command id)";
   default:
     return "<unknown error>";
@@ -57,13 +57,38 @@ static int send_message(JSRuntime *rt, const char *message, size_t message_len,
 
   *result = JS_UNDEFINED;
 
-  // TODO: Might be faster to concat all of these into a buffer to avoid
-  // multiple syscalls.
-  write_all(ts->socket_state->streamfd, ts->current_uuid, ts->current_uuid_len);
-  write_all(ts->socket_state->streamfd, " message ",
-            sizeof("message ") / sizeof(char));
-  write_all(ts->socket_state->streamfd, message, message_len);
-  write_all(ts->socket_state->streamfd, &term, sizeof(char));
+  // If we can, it's probably faster to concat the entire message into input_buf
+  // and make just a single write syscall.
+  int read_r;
+  if (ts->current_uuid_len + sizeof(" message ") / sizeof(char) + message_len +
+          sizeof(char) <=
+      INPUT_BUF_BYTES) {
+    memcpy(ts->input_buf, ts->current_uuid, ts->current_uuid_len);
+    memcpy(ts->input_buf + ts->current_uuid_len, " message ",
+           sizeof(" message ") / sizeof(char));
+    memcpy(ts->input_buf + ts->current_uuid_len +
+               sizeof(" message ") / sizeof(char),
+           message, message_len);
+    ts->input_buf[ts->current_uuid_len + sizeof(" message ") / sizeof(char) +
+                  message_len] = term;
+    size_t total_written = ts->current_uuid_len +
+                           sizeof(" message ") / sizeof(char) + message_len +
+                           sizeof(char);
+    read_r =
+        write_all(ts->socket_state->streamfd, ts->input_buf, total_written);
+  } else {
+    read_r = write_all(ts->socket_state->streamfd, ts->current_uuid,
+                       ts->current_uuid_len);
+    read_r |= write_all(ts->socket_state->streamfd, " message ",
+                        sizeof("message ") / sizeof(char));
+    read_r |= write_all(ts->socket_state->streamfd, message, message_len);
+    read_r |= write_all(ts->socket_state->streamfd, &term, sizeof(char));
+  }
+  if (read_r < 0) {
+    jsockd_logf(LOG_ERROR, "Error writing message to socket (%i): %s\n", read_r,
+                strerror(errno));
+    return SEND_MESSAGE_ERR_IO;
+  }
 
   size_t total_read = 0;
 
@@ -75,7 +100,7 @@ static int send_message(JSRuntime *rt, const char *message, size_t message_len,
     case GO_AROUND:
       goto read_loop;
     case SIG_INTERRUPT_OR_ERROR:
-      return RET_INTERRUPTED;
+      return SEND_MESSAGE_ERR_INTERRUPTED;
     case READY: {
       if (total_read == INPUT_BUF_BYTES - 1) {
         too_big = true;
@@ -89,7 +114,7 @@ static int send_message(JSRuntime *rt, const char *message, size_t message_len,
         jsockd_logf(LOG_ERROR,
                     "Error reading from socket in message handler (%i): %s\n",
                     r, strerror(errno));
-        return RET_IO;
+        return SEND_MESSAGE_ERR_IO;
       }
       total_read += (size_t)r;
       if (total_read > 0 &&
@@ -103,7 +128,7 @@ static int send_message(JSRuntime *rt, const char *message, size_t message_len,
     if (0 != clock_gettime(MONOTONIC_CLOCK, &now)) {
       jsockd_log(LOG_ERROR,
                  "Error getting time in handle_line_3_parameter [2]\n");
-      return RET_TIME;
+      return SEND_MESSAGE_ERR_TIME;
     }
     int64_t delta_ns = ns_time_diff(&now, &ts->last_js_execution_start);
     if (delta_ns > 0 &&
@@ -113,15 +138,15 @@ static int send_message(JSRuntime *rt, const char *message, size_t message_len,
                   "us while waiting for %.*s message response; interrupting\n",
                   delta_ns / 1000ULL, g_cmd_args.max_command_runtime_us,
                   (int)ts->current_uuid_len, ts->current_uuid);
-      return RET_TIMEOUT;
+      return SEND_MESSAGE_ERR_TIMEOUT;
     }
   }
 
 read_done:
   if (too_big)
-    return RET_TOO_BIG;
+    return SEND_MESSAGE_ERR_TOO_BIG;
   if (total_read == 0)
-    return RET_EOF;
+    return SEND_MESSAGE_ERR_EOF;
   ts->input_buf[total_read] = '\0';
 
   size_t uuid_len = split_uuid(ts->input_buf, total_read);
@@ -130,7 +155,7 @@ read_done:
         LOG_DEBUG,
         "Error parsing message response, no UUID found: <<END\n%.*s\nEND\n",
         (int)total_read, ts->input_buf);
-    return RET_BAD_MESSAGE;
+    return SEND_MESSAGE_ERR_BAD_MESSAGE;
   }
 
   if (0 != strncmp(ts->input_buf, ts->current_uuid, ts->current_uuid_len)) {
@@ -140,7 +165,7 @@ read_done:
         "%.*s): <<END\n%.*s\nEND\n",
         (int)ts->current_uuid_len, ts->current_uuid, (int)uuid_len,
         ts->input_buf, (int)total_read, ts->input_buf);
-    return RET_BAD_MESSAGE;
+    return SEND_MESSAGE_ERR_BAD_MESSAGE;
   }
 
   JSValue parsed = JS_ParseJSON(ts->ctx, ts->input_buf + uuid_len + 1,
@@ -151,7 +176,7 @@ read_done:
                 "Error parsing JSON message response: <<END\n%.*s\nEND%s\n",
                 MIN((int)total_read, 1024), ts->input_buf,
                 total_read > 1024 ? "[truncated]" : "");
-    return RET_BAD_JSON;
+    return SEND_MESSAGE_ERR_BAD_JSON;
   }
   *result = parsed;
   return 0;
