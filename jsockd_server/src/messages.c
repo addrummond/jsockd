@@ -210,8 +210,6 @@ static const JSCFunctionListEntry jsockd_function_list[] = {
 
 static JSValue jsockd_ctor(JSContext *ctx, JSValueConst this_val, int argc,
                            JSValueConst *argv) {
-  JSValue obj;
-
   JS_NewClassID(&jsockd_class_id);
 
   return JS_NewObjectClass(ctx, jsockd_class_id);
