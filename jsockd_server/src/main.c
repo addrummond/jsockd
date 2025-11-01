@@ -322,6 +322,7 @@ static void command_loop(ThreadState *ts,
                       command_loop_line_handler_wrapper, (void *)&louslh);
     while (exit_value == TRAMPOLINE) {
       JS_UpdateStackTop(ts->rt);
+      LineBuf line_buf = {.buf = ts->input_buf, .size = INPUT_BUF_BYTES};
       exit_value =
           line_buf_replay(&line_buf, g_cmd_args.socket_sep_char,
                           command_loop_line_handler_wrapper, (void *)&louslh);
