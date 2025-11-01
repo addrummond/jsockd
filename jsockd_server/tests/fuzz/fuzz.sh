@@ -90,7 +90,7 @@ else
     echo "The last 3 lines of the server output:"
     last_three_lines=$(tail -n 3 /tmp/jsockd_fuzz_test_output)
     echo "$last_three_lines"
-    expected_last_three_lines=$(printf "reset\nx {}\nquit\n")
+    expected_last_three_lines=$(printf "reset\nx ok {}\nquit\n")
     if [ "$last_three_lines" != "$expected_last_three_lines" ]; then
         echo "Unexpected last three lines of server output"
         exit 1
