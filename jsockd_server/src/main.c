@@ -933,7 +933,6 @@ static void *listen_thread_func(void *data) {
 
 static pthread_t g_threads[MAX_THREADS];
 static SocketState g_socket_states[MAX_THREADS];
-static ThreadState g_thread_states[MAX_THREADS];
 
 static const uint8_t *load_module_bytecode(const char *filename,
                                            size_t *out_size) {

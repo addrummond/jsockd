@@ -68,4 +68,7 @@ typedef struct ThreadState {
 int init_thread_state(ThreadState *ts, SocketState *socket_state,
                       int thread_index);
 
+void register_thread_state_runtime(JSRuntime *rt, ThreadState *ts);
+ThreadState *get_runtime_thread_state(JSRuntime *rt);
+
 #endif

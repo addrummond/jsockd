@@ -53,7 +53,7 @@ static const char *send_message_error_to_string(int err) {
 static int send_message(JSRuntime *rt, const char *message, size_t message_len,
                         JSValue *result) {
   const char term = '\n';
-  ThreadState *ts = (ThreadState *)JS_GetRuntimeOpaque(rt);
+  ThreadState *ts = get_runtime_thread_state(rt);
 
   *result = JS_UNDEFINED;
 

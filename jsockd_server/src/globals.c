@@ -1,8 +1,11 @@
 #include "cmdargs.h"
+#include "threadstate.h"
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+
+ThreadState g_thread_states[MAX_THREADS];
 
 atomic_int g_sig_triggered = 0;
 

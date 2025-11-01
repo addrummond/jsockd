@@ -1,5 +1,6 @@
 #include "threadstate.h"
 #include "backtrace.h"
+#include "config.h"
 #include "console.h"
 #include "custom_module_loader.h"
 #include "globals.h"
@@ -7,11 +8,12 @@
 #include "log.h"
 #include "messages.h"
 #include "quickjs-libc.h"
-#include "quickjs.h"
 #include "textencodedecode.h"
+#include "threadstate.h"
 #include "utils.h"
 #include <assert.h>
 #include <errno.h>
+#include <stdatomic.h>
 
 static int new_custom_context(JSRuntime *rt, JSContext **out_ctx) {
   JSContext *ctx;
@@ -189,7 +191,7 @@ int init_thread_state(ThreadState *ts, SocketState *socket_state,
     return -1;
   }
 
-  JS_SetRuntimeOpaque(ts->rt, ts);
+  register_thread_state_runtime(ts->rt, ts);
 
   JS_SetInterruptHandler(ts->rt, interrupt_handler, ts);
 
@@ -198,4 +200,28 @@ int init_thread_state(ThreadState *ts, SocketState *socket_state,
 #endif
 
   return 0;
+}
+
+// QuickJS LibC makes its own use of JS_Get/SetRuntimeOpaque, so we implement
+// our own simple mapping from JSRuntime pointers to ThreadState pointers.
+
+static JSRuntime *ts_rt_mapping[MAX_THREADS];
+
+// We assume the functions below are called only from the thread associated with
+// each runtime, so no need for locking/atomics.
+
+void register_thread_state_runtime(JSRuntime *rt, ThreadState *ts) {
+  assert(ts >= g_thread_states && ts < g_thread_states + MAX_THREADS);
+  size_t index = (size_t)(ts - g_thread_states);
+  assert(index < MAX_THREADS);
+  ts_rt_mapping[index] = rt;
+}
+
+ThreadState *get_runtime_thread_state(JSRuntime *rt) {
+  for (size_t i = 0; i < MAX_THREADS; i++) {
+    if (ts_rt_mapping[i] == rt)
+      return &g_thread_states[i];
+  }
+  assert(0 && "ThreadState not found for given JSRuntime");
+  return NULL;
 }

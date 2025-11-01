@@ -2,10 +2,12 @@
 #define GLOBALS_H_
 
 #include "cmdargs.h"
+#include "threadstate.h"
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <stddef.h>
+
+extern ThreadState g_thread_states[MAX_THREADS];
 
 extern const uint32_t g_backtrace_module_bytecode_size;
 extern const uint8_t g_backtrace_module_bytecode[];
