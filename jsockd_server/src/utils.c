@@ -4,7 +4,6 @@
 #include "quickjs-libc.h"
 #include <errno.h>
 #ifdef LINUX
-#error "Linux"
 #define _GNU_SOURCE // make ppoll available
 #endif
 #include <poll.h>
@@ -153,7 +152,7 @@ PollFdResult ppoll_fd(int fd, const struct timespec *timeout) {
   return poll_fd(fd, ms);
 #else
   struct pollfd pfd = {.fd = fd, .events = POLLIN | POLLPRI};
-  if (!ppoll(&pfd, 1, timeout)) {
+  if (!ppoll(&pfd, 1, timeout, NULL)) {
     if (atomic_load_explicit(&g_interrupted_or_error, memory_order_relaxed))
       return SIG_INTERRUPT_OR_ERROR;
     return GO_AROUND;
