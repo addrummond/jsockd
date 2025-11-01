@@ -253,7 +253,6 @@ static void command_loop(ThreadState *ts,
                                              ThreadState *data, bool truncated),
                          void (*tick_handler)(ThreadState *ts)) {
   CommandLoopLineHandler louslh = {.ts = ts, .line_handler = line_handler};
-  LineBuf line_buf = {.size = INPUT_BUF_BYTES};
 
   if (0 != initialize_and_listen_on_unix_socket(ts->socket_state)) {
     jsockd_log(LOG_ERROR, "Error initializing UNIX socket\n");
@@ -316,8 +315,7 @@ static void command_loop(ThreadState *ts,
       goto error_no_inc;
     }
 
-    line_buf.start = 0;
-    line_buf.buf = ts->input_buf;
+    LineBuf line_buf = {.buf = ts->input_buf, .size = INPUT_BUF_BYTES};
     int exit_value =
         line_buf_read(&line_buf, g_cmd_args.socket_sep_char, lb_read,
                       &ts->socket_state->streamfd,
