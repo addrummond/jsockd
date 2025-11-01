@@ -191,8 +191,8 @@ static JSValue jsockd_send_message(JSContext *ctx, JSValueConst this_val,
       JS_ToCStringLen(ctx, &message_len, encoded_message_val);
   JS_FreeValue(ctx, encoded_message_val);
   int r = send_message(JS_GetRuntime(ctx), message_str, message_len, &res);
+  JS_FreeCString(ctx, message_str);
   if (r != 0) {
-    JS_FreeCString(ctx, message_str);
     JS_FreeValue(ctx, res);
     jsockd_logf(LOG_DEBUG, "Error sending message, error code=%i: %s\n", r,
                 send_message_error_to_string(r));
@@ -200,7 +200,6 @@ static JSValue jsockd_send_message(JSContext *ctx, JSValueConst this_val,
                                  send_message_error_to_string(r));
   }
 
-  JS_FreeCString(ctx, message_str);
   return res;
 }
 

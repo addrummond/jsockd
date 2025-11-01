@@ -1,5 +1,4 @@
 #include "utils.h"
-#include "config.h"
 #include "globals.h"
 #include "log.h"
 #include "quickjs-libc.h"
@@ -13,25 +12,28 @@
 #include <unistd.h>
 
 void mutex_lock_(pthread_mutex_t *m, const char *file, int line) {
-  if (0 != pthread_mutex_lock(m)) {
+  int r;
+  if (0 != (r = pthread_mutex_lock(m))) {
     fprintf(stderr, "Failed to lock mutex at %s:%i: %s\n", file, line,
-            strerror(errno));
+            strerror(r));
     exit(1);
   }
 }
 
 void mutex_unlock_(pthread_mutex_t *m, const char *file, int line) {
-  if (0 != pthread_mutex_unlock(m)) {
+  int r;
+  if (0 != (r = pthread_mutex_unlock(m))) {
     fprintf(stderr, "Failed to unlock mutex at %s:%i: %s\n", file, line,
-            strerror(errno));
+            strerror(r));
     exit(1);
   }
 }
 
 void mutex_init_(pthread_mutex_t *m, const char *file, int line) {
-  if (0 != pthread_mutex_init(m, NULL)) {
+  int r;
+  if (0 != (r = pthread_mutex_init(m, NULL))) {
     fprintf(stderr, "Failed to initialized mutex at %s:%i: %s\n", file, line,
-            strerror(errno));
+            strerror(r));
     exit(1);
   }
 }

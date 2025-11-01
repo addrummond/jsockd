@@ -430,8 +430,6 @@ static void cleanup_thread_state(ThreadState *ts) {
 
   js_std_free_handlers(ts->rt);
 
-  jsockd_logf(LOG_DEBUG, "Cleaning up backtrace modules for thread %i\n",
-              ts->thread_index);
   JS_FreeValue(ts->ctx, ts->backtrace_module);
   JS_FreeValue(ts->ctx, ts->compiled_module);
   JS_FreeValue(ts->ctx, ts->sourcemap_str);
@@ -1187,15 +1185,13 @@ static int inner_main(int argc, char *argv[]) {
 
   jsockd_log(LOG_DEBUG, "All threads joined\n");
 
-  global_cleanup();
-
-  jsockd_log(LOG_DEBUG, "Global cleanup complete\n");
-
   for (int i = 0; i < atomic_load_explicit(&g_n_threads, memory_order_relaxed);
        ++i)
     destroy_thread_state(&g_thread_states[i]);
-
   jsockd_log(LOG_DEBUG, "All thread states destroyed\n");
+
+  global_cleanup();
+  jsockd_log(LOG_DEBUG, "Global cleanup complete\n");
 
 #ifdef CMAKE_BUILD_TYPE_DEBUG
   int tsc =
