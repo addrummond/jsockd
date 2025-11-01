@@ -2,6 +2,7 @@
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 atomic_int g_sig_triggered = 0;
 
