@@ -430,6 +430,8 @@ static void cleanup_thread_state(ThreadState *ts) {
 
   js_std_free_handlers(ts->rt);
 
+  jsockd_logf(LOG_DEBUG, "Cleaning up backtrace modules for thread %i\n",
+              ts->thread_index);
   JS_FreeValue(ts->ctx, ts->backtrace_module);
   JS_FreeValue(ts->ctx, ts->compiled_module);
   JS_FreeValue(ts->ctx, ts->sourcemap_str);
