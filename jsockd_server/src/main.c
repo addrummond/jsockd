@@ -316,6 +316,7 @@ static void command_loop(ThreadState *ts,
     }
 
     if (ts->rt == NULL) {
+      jsockd_log(LOG_DEBUG, "Re-initializing shut down thread state\n");
       assert(REPLACEMENT_THREAD_STATE_NONE ==
              atomic_load_explicit(&ts->replacement_thread_state,
                                   memory_order_relaxed));
