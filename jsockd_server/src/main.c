@@ -108,6 +108,13 @@ static cached_function_t *get_cached_function(HashCacheUid uid) {
 static void release_cached_function(cached_function_t *cf) {
   mutex_lock(&g_cached_functions_mutex);
   --cf->refcount;
+  if (cf->refcount == 0) {
+    printf("DOING CLEANUP!\n");
+    jsockd_log(LOG_DEBUG, "Releasing cached function bytecode\n");
+    free((void *)(cf->bytecode));
+    cf->bytecode = NULL;
+    atomic_fetch_add_explicit(&g_n_cached_functions, -1, memory_order_relaxed);
+  }
   mutex_unlock(&g_cached_functions_mutex);
 }
 
@@ -412,11 +419,14 @@ static void cleanup_command_state(ThreadState *ts) {
   ts->compiled_query = JS_UNDEFINED;
   free(ts->dangling_bytecode);
   ts->dangling_bytecode = NULL;
+  JS_FreeValue(ts->ctx, ts->compiled_query);
   if (ts->cached_function_in_use) {
+    printf("CLEANING UP CACHED FUNCTION\n");
     release_cached_function(ts->cached_function_in_use);
     ts->cached_function_in_use = NULL;
+  } else {
+    printf("NOT CLEANING UP CACHED FUNCTION\n");
   }
-  JS_FreeValue(ts->ctx, ts->compiled_query);
 }
 
 // called whenever we want to clean a thread a state up
@@ -565,8 +575,12 @@ static int handle_line_2_query(ThreadState *ts, const char *line, int len) {
     } else {
       ts->cached_function_in_use =
           add_cached_function(uid, bytecode, bytecode_size);
-      if (!ts->cached_function_in_use)
+      if (!ts->cached_function_in_use) {
+        assert(ts->dangling_bytecode == NULL);
         ts->dangling_bytecode = (uint8_t *)bytecode;
+      } else {
+        printf("NOT IN USE\n");
+      }
       ts->compiled_query = func_from_bytecode(ts->ctx, bytecode, bytecode_size);
     }
   }
