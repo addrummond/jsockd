@@ -315,6 +315,14 @@ static void command_loop(ThreadState *ts,
       goto error_no_inc;
     }
 
+    if (ts->rt == NULL) {
+      assert(REPLACEMENT_THREAD_STATE_NONE ==
+             atomic_load_explicit(&ts->replacement_thread_state,
+                                  memory_order_relaxed));
+      init_thread_state(ts, ts->socket_state, ts->thread_index);
+      atomic_fetch_add_explicit(&g_n_ready_threads, 1, memory_order_relaxed);
+    }
+
     LineBuf line_buf = {.buf = ts->input_buf, .size = INPUT_BUF_BYTES};
     int exit_value =
         line_buf_read(&line_buf, g_cmd_args.socket_sep_char, lb_read,
@@ -428,6 +436,7 @@ static void cleanup_thread_state(ThreadState *ts) {
   cleanup_command_state(ts);
 
   free(ts->input_buf);
+  ts->input_buf = NULL;
 
   js_std_free_handlers(ts->rt);
 
@@ -492,12 +501,6 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
 
   int rts =
       atomic_load_explicit(&ts->replacement_thread_state, memory_order_relaxed);
-
-  if (ts->rt == NULL) {
-    assert(rts == REPLACEMENT_THREAD_STATE_NONE);
-    init_thread_state(ts, ts->socket_state, ts->thread_index);
-    atomic_fetch_add_explicit(&g_n_ready_threads, 1, memory_order_relaxed);
-  }
 
   // Check to see if the thread state has been reinitialized (following a memory
   // increase).
