@@ -38,6 +38,7 @@ typedef struct {
 void write_to_wbuf(WBuf *buf, const char *inp, size_t size);
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define MAX(a, b) ((a) < (b) ? (b) : (a))
 
 #define STRINGIFY_(x) #x
 #define STRINGIFY(x) STRINGIFY_(x)

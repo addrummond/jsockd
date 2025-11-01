@@ -141,3 +141,19 @@ PollFdResult poll_fd(int fd, int timeout_ms) {
   }
   return READY;
 }
+
+PollFdResult ppoll_fd(int fd, const struct timespec *timeout) {
+#ifdef MACOS
+  int ms =
+      MAX(1, (int)timeout->tv_sec * 1000 + (int)timeout->tv_nsec / 1000000);
+  return poll_fd(fd, ms);
+#else
+  struct pollfd pfd = {.fd = fd, .events = POLLIN | POLLPRI};
+  if (!ppoll(&pfd, 1, timeout)) {
+    if (atomic_load_explicit(&g_interrupted_or_error, memory_order_relaxed))
+      return SIG_INTERRUPT_OR_ERROR;
+    return GO_AROUND;
+  }
+  return READY;
+#endif
+}

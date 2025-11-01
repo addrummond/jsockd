@@ -94,6 +94,11 @@ static int send_message(JSRuntime *rt, const char *message, size_t message_len,
 
   bool too_big = false;
 
+  struct timespec polling_interval = {
+      .tv_sec = g_cmd_args.max_command_runtime_us / 1000000ULL,
+      .tv_nsec =
+          MAX(1, (g_cmd_args.max_command_runtime_us % 1000000ULL) / 1000ULL)};
+
   for (;;) {
   read_loop:
     switch (poll_fd(ts->socket_state->streamfd, 1)) {
