@@ -3,6 +3,9 @@
 #include "log.h"
 #include "quickjs-libc.h"
 #include <errno.h>
+#ifdef LINUX
+#define _GNU_SOURCE // make ppoll available
+#endif
 #include <poll.h>
 #include <stdatomic.h>
 #include <stdbool.h>
