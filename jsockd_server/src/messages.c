@@ -101,7 +101,7 @@ static int send_message(JSRuntime *rt, const char *message, size_t message_len,
 
   for (;;) {
   read_loop:
-    switch (poll_fd(ts->socket_state->streamfd, 1)) {
+    switch (ppoll_fd(ts->socket_state->streamfd, &polling_interval)) {
     case GO_AROUND:
       goto read_loop;
     case SIG_INTERRUPT_OR_ERROR:

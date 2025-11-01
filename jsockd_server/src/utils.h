@@ -29,6 +29,7 @@ int write_all(int fd, const char *buf, size_t len);
 
 typedef enum { READY, SIG_INTERRUPT_OR_ERROR, GO_AROUND } PollFdResult;
 PollFdResult poll_fd(int fd, int timeout_ms);
+PollFdResult ppoll_fd(int fd, const struct timespec *timeout);
 
 typedef struct {
   char *buf;
