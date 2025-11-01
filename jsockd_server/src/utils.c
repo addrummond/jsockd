@@ -4,6 +4,7 @@
 #include "quickjs-libc.h"
 #include <errno.h>
 #ifdef LINUX
+#error "Linux"
 #define _GNU_SOURCE // make ppoll available
 #endif
 #include <poll.h>
