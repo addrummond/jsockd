@@ -409,7 +409,6 @@ static JSValue func_from_bytecode(JSContext *ctx, const uint8_t *bytecode,
 }
 
 static void cleanup_command_state(ThreadState *ts) {
-  JS_FreeValue(ts->ctx, ts->compiled_query);
   ts->compiled_query = JS_UNDEFINED;
   free(ts->dangling_bytecode);
   ts->dangling_bytecode = NULL;
@@ -417,6 +416,7 @@ static void cleanup_command_state(ThreadState *ts) {
     release_cached_function(ts->cached_function_in_use);
     ts->cached_function_in_use = NULL;
   }
+  JS_FreeValue(ts->ctx, ts->compiled_query);
 }
 
 // called whenever we want to clean a thread a state up
@@ -884,7 +884,7 @@ static int line_handler(const char *line, size_t len, ThreadState *ts,
     return 0;
   }
 
-  jsockd_logf(LOG_DEBUG, "Line handler: line %i\n", ts->line_n);
+  jsockd_logf(LOG_DEBUG, "Line handler: line %i\n", ts->line_n + 1);
   switch (ts->line_n) {
   case 0:
     return handle_line_1_message_uid(ts, line, len);
