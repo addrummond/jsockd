@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+char *g_thread_state_input_buffers[MAX_THREADS];
 ThreadState g_thread_states[MAX_THREADS];
 
 atomic_int g_sig_triggered = 0;

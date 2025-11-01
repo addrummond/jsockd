@@ -435,9 +435,6 @@ static void cleanup_thread_state(ThreadState *ts) {
 
   cleanup_command_state(ts);
 
-  free(ts->input_buf);
-  ts->input_buf = NULL;
-
   js_std_free_handlers(ts->rt);
 
   JS_FreeValue(ts->ctx, ts->backtrace_module);
@@ -1129,6 +1126,8 @@ static int inner_main(int argc, char *argv[]) {
   int thread_init_n = 0;
   for (thread_init_n = 0; thread_init_n < n_threads; ++thread_init_n) {
     jsockd_logf(LOG_DEBUG, "Creating thread %i\n", thread_init_n);
+    g_thread_state_input_buffers[thread_init_n] =
+        calloc(INPUT_BUF_BYTES, sizeof(char));
     init_socket_state(&g_socket_states[thread_init_n],
                       g_cmd_args.socket_path[thread_init_n]);
     if (0 != init_thread_state(&g_thread_states[thread_init_n],
@@ -1192,8 +1191,10 @@ static int inner_main(int argc, char *argv[]) {
   jsockd_log(LOG_DEBUG, "All threads joined\n");
 
   for (int i = 0; i < atomic_load_explicit(&g_n_threads, memory_order_relaxed);
-       ++i)
+       ++i) {
     destroy_thread_state(&g_thread_states[i]);
+    free(g_thread_state_input_buffers[i]);
+  }
   jsockd_log(LOG_DEBUG, "All thread states destroyed\n");
 
   global_cleanup();

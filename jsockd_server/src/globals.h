@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+extern char *g_thread_state_input_buffers[MAX_THREADS];
 extern ThreadState g_thread_states[MAX_THREADS];
 
 extern const uint32_t g_backtrace_module_bytecode_size;

@@ -88,6 +88,8 @@ static void write_to_wbuf_wrapper(void *opaque, const char *inp, size_t size) {
 
 int init_thread_state(ThreadState *ts, SocketState *socket_state,
                       int thread_index) {
+  assert(thread_index < MAX_THREADS);
+
   jsockd_logf(LOG_DEBUG, "Calling init_thread_state for thread %i\n",
               thread_index);
 
@@ -99,7 +101,7 @@ int init_thread_state(ThreadState *ts, SocketState *socket_state,
   ts->compiled_query = JS_UNDEFINED;
   ts->last_js_execution_start.tv_sec = 0;
   ts->last_js_execution_start.tv_nsec = 0;
-  ts->input_buf = calloc(INPUT_BUF_BYTES, sizeof(char));
+  ts->input_buf = g_thread_state_input_buffers[thread_index];
   ts->current_uuid[0] = '\0';
   ts->current_uuid_len = 0;
   ts->memory_check_count = 0;
