@@ -409,9 +409,9 @@ static JSValue func_from_bytecode(JSContext *ctx, const uint8_t *bytecode,
 }
 
 static void cleanup_command_state(ThreadState *ts) {
+  JS_FreeValue(ts->ctx, ts->compiled_query);
   free(ts->dangling_bytecode);
   ts->dangling_bytecode = NULL;
-  JS_FreeValue(ts->ctx, ts->compiled_query);
   ts->compiled_query = JS_UNDEFINED;
   if (ts->cached_function_in_use) {
     release_cached_function(ts->cached_function_in_use);
