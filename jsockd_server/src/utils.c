@@ -152,7 +152,10 @@ PollFdResult ppoll_fd(int fd, const struct timespec *timeout) {
   return poll_fd(fd, ms);
 #else
   struct pollfd pfd = {.fd = fd, .events = POLLIN | POLLPRI};
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wimplicit-function-declaration"
   if (!ppoll(&pfd, 1, timeout, NULL)) {
+#pragma GCC diagnostic pop
     if (atomic_load_explicit(&g_interrupted_or_error, memory_order_relaxed))
       return SIG_INTERRUPT_OR_ERROR;
     return GO_AROUND;
