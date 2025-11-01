@@ -178,8 +178,7 @@ static JSValue jsockd_send_message(JSContext *ctx, JSValueConst this_val,
   JSValue message_val = argv[0];
   JSValue encoded_message_val =
       JS_JSONStringify(ctx, message_val, JS_UNDEFINED, JS_UNDEFINED);
-  JS_FreeValue(ctx, message_val);
-  if (JS_IsException(message_val)) {
+  if (JS_IsException(encoded_message_val)) {
     JS_FreeValue(ctx, encoded_message_val);
     return JS_ThrowTypeError(
         ctx, "JSockD.sendMessage argument must be JSON serializable");
