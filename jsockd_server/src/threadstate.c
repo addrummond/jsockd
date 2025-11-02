@@ -213,12 +213,12 @@ static JSRuntime *ts_rt_mapping[MAX_THREADS];
 // each runtime, so no need for locking/atomics.
 
 void register_thread_state_runtime(JSRuntime *rt, ThreadState *ts) {
-  assert(ts->thread_index < MAX_THREADS);
+  assert(ts->thread_index < g_n_threads);
   ts_rt_mapping[ts->thread_index] = rt;
 }
 
 ThreadState *get_runtime_thread_state(JSRuntime *rt) {
-  for (size_t i = 0; i < MAX_THREADS; i++) {
+  for (size_t i = 0; i < g_n_threads; i++) {
     if (ts_rt_mapping[i] == rt)
       return &g_thread_states[i];
   }
