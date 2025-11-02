@@ -14,73 +14,75 @@ import (
 	"testing"
 )
 
-func TestGoodCommand(t *testing.T) {
-	config := DefaultConfig()
-	config.SkipJSockDVersionCheck = true
-	client, err := InitJSockDClient(config, getJSockDPath(t), []string{"/tmp/jsockd.sock"})
-	defer client.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
-	response, err := SendRawCommand(client, "(m, p) => p+1", "99")
-	if response.Exception {
-		t.Fatalf("Exception: %s", response.ResultJson)
-	}
-	if strings.TrimSpace(response.ResultJson) != "100" {
-		t.Fatalf("Unexpected result: %s", response.ResultJson)
-	}
+func TestSendRawCommand(t *testing.T) {
+	t.Run("good command", func(t *testing.T) {
+		config := DefaultConfig()
+		config.SkipJSockDVersionCheck = true
+		client, err := InitJSockDClient(config, getJSockDPath(t), []string{"/tmp/jsockd.sock"})
+		defer client.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+		response, err := SendRawCommand(client, "(m, p) => p+1", "99", nil)
+		if response.Exception {
+			t.Fatalf("Exception: %s", response.ResultJson)
+		}
+		if strings.TrimSpace(response.ResultJson) != "100" {
+			t.Fatalf("Unexpected result: %s", response.ResultJson)
+		}
+	})
+	t.Run("bad command", func(t *testing.T) {
+		config := DefaultConfig()
+		config.SkipJSockDVersionCheck = true
+		client, err := InitJSockDClient(config, getJSockDPath(t), []string{"/tmp/jsockd.sock"})
+		defer client.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+		response, err := SendRawCommand(client, "(m, p) => p.foo()", "99", nil)
+		if !response.Exception {
+			t.Fatal("Expected exceptional response")
+		}
+		t.Logf("Got exception: %s", response.ResultJson)
+	})
 }
 
-func TestBadCommand(t *testing.T) {
-	config := DefaultConfig()
-	config.SkipJSockDVersionCheck = true
-	client, err := InitJSockDClient(config, getJSockDPath(t), []string{"/tmp/jsockd.sock"})
-	defer client.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
-	response, err := SendRawCommand(client, "(m, p) => p.foo()", "99")
-	if !response.Exception {
-		t.Fatal("Expected exceptional response")
-	}
-	t.Logf("Got exception: %s", response.ResultJson)
-}
-
-func TestSendCommandGood(t *testing.T) {
-	config := DefaultConfig()
-	config.SkipJSockDVersionCheck = true
-	client, err := InitJSockDClient(config, getJSockDPath(t), []string{"/tmp/jsockd.sock"})
-	defer client.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
-	resp, err := SendCommand[int](client, "(m, p) => p+1", 99)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp.Exception {
-		t.Fatal("Unexpected exception")
-	}
-	if resp.Result != 100 {
-		t.Fatalf("Unexpected result: %d", resp.Result)
-	}
-}
-
-func TestSendCommandBad(t *testing.T) {
-	config := DefaultConfig()
-	config.SkipJSockDVersionCheck = true
-	client, err := InitJSockDClient(config, getJSockDPath(t), []string{"/tmp/jsockd.sock"})
-	defer client.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
-	resp, err := SendCommand[int](client, "(m, p) => p.foo()", 99)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !resp.Exception {
-		t.Fatal("Expected exceptional response")
-	}
+func TestSendCommand(t *testing.T) {
+	t.Run("good command", func(t *testing.T) {
+		config := DefaultConfig()
+		config.SkipJSockDVersionCheck = true
+		client, err := InitJSockDClient(config, getJSockDPath(t), []string{"/tmp/jsockd.sock"})
+		defer client.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp, err := SendCommand[int](client, "(m, p) => p+1", 99, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp.Exception {
+			t.Fatal("Unexpected exception")
+		}
+		if resp.Result != 100 {
+			t.Fatalf("Unexpected result: %d", resp.Result)
+		}
+	})
+	t.Run("bad command", func(t *testing.T) {
+		config := DefaultConfig()
+		config.SkipJSockDVersionCheck = true
+		client, err := InitJSockDClient(config, getJSockDPath(t), []string{"/tmp/jsockd.sock"})
+		defer client.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp, err := SendCommand[int](client, "(m, p) => p.foo()", 99, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !resp.Exception {
+			t.Fatal("Expected exceptional response")
+		}
+	})
 }
 
 var jsockdPath string

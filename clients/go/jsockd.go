@@ -57,10 +57,11 @@ var logLineRegex = regexp.MustCompile(`(\*|\$) jsockd ([^ ]+) \[([^][]+)\] (.*)`
 var nextCommandId uint64
 
 type command struct {
-	id           string
-	query        string
-	paramJson    string
-	responseChan chan RawResponse
+	id             string
+	query          string
+	paramJson      string
+	responseChan   chan RawResponse
+	messageHandler func(jsonMessage string) string
 }
 
 // RawResponse represents the raw response to a command sent to the JSockD
@@ -171,12 +172,12 @@ func InitJSockDClient(config Config, jsockdExec string, sockets []string) (*JSoc
 // SendCommand sends a command to the JSockD server and returns the
 // response. The parameter is serialized to JSON via json.Marshal and the result
 // is deserialized from JSON via json.Unmarshal.
-func SendCommand[ResponseT any](client *JSockDClient, query string, jsonParam any) (Response[ResponseT], error) {
+func SendCommand[ResponseT any](client *JSockDClient, query string, jsonParam any, messageHandler func(jsonMessage string) string) (Response[ResponseT], error) {
 	j, err := json.Marshal(jsonParam)
 	if err != nil {
 		return Response[ResponseT]{}, fmt.Errorf("json marshal: %w", err)
 	}
-	rawResp, err := SendRawCommand(client, query, string(j))
+	rawResp, err := SendRawCommand(client, query, string(j), messageHandler)
 	if err != nil {
 		return Response[ResponseT]{}, err
 	}
@@ -195,17 +196,18 @@ func SendCommand[ResponseT any](client *JSockDClient, query string, jsonParam an
 
 // SendRawCommand sends a command to the JSockD server and returns the
 // response. JSON values are passed and returned as strings.
-func SendRawCommand(client *JSockDClient, query string, jsonParam string) (RawResponse, error) {
+func SendRawCommand(client *JSockDClient, query string, jsonParam string, messageHandler func(jsonMessage string) string) (RawResponse, error) {
 	if fe := getFatalError(client); fe != nil {
 		return RawResponse{}, fe
 	}
 
 	cmdId := atomic.AddUint64(&nextCommandId, 1)
 	cmd := command{
-		id:           strconv.FormatUint(cmdId, 10),
-		query:        query,
-		paramJson:    jsonParam,
-		responseChan: make(chan RawResponse),
+		id:             strconv.FormatUint(cmdId, 10),
+		query:          query,
+		paramJson:      jsonParam,
+		responseChan:   make(chan RawResponse),
+		messageHandler: messageHandler,
 	}
 	nconns := len(client.conns)
 	if nconns == 0 {
@@ -284,6 +286,38 @@ func connHandler(conn net.Conn, cmdChan chan command, client *JSockDClient) {
 			cmd.responseChan <- RawResponse{Exception: true, ResultJson: strings.TrimPrefix(parts[1], "exception ")}
 		} else if strings.HasPrefix(parts[1], "ok ") {
 			cmd.responseChan <- RawResponse{Exception: false, ResultJson: strings.TrimPrefix(parts[1], "ok ")}
+		} else if strings.HasPrefix(parts[1], "message ") {
+			for {
+				response := "null"
+				if cmd.messageHandler != nil {
+					response = cmd.messageHandler(strings.TrimPrefix(parts[1], "message "))
+				}
+				mresp, err := readRecord(conn)
+				if err != nil {
+					setFatalError(client, err)
+					return
+				}
+				parts := strings.SplitN(rec, " ", 2)
+				if parts[0] != cmd.id {
+					setFatalError(client, fmt.Errorf("mismatched command id in message response: got %q, wanted %q", parts[0], cmd.id))
+					return
+				}
+				_, err = conn.Write(fmt.Appendf(nil, "%s\x00%s\x00", cmd.id, response))
+				if err != nil {
+					setFatalError(client, err)
+					return
+				}
+				if strings.HasPrefix(mresp, "ok ") {
+					cmd.responseChan <- RawResponse{Exception: false, ResultJson: strings.TrimPrefix(mresp, "ok ")}
+					break
+				} else if strings.HasPrefix(mresp, "exception ") {
+					cmd.responseChan <- RawResponse{Exception: true, ResultJson: strings.TrimPrefix(mresp, "exception ")}
+					break
+				} else if strings.HasPrefix(mresp, "message ") {
+					parts = strings.SplitN(mresp, " ", 2)
+					continue
+				}
+			}
 		} else {
 			setFatalError(client, fmt.Errorf("malformed command response from JSockD: %q", rec))
 			return
