@@ -31,6 +31,38 @@ func TestSendRawCommand(t *testing.T) {
 			t.Fatalf("Unexpected result: %s", response.ResultJson)
 		}
 	})
+	t.Run("command with message", func(t *testing.T) {
+		config := DefaultConfig()
+		config.SkipJSockDVersionCheck = true
+		client, err := InitJSockDClient(config, getJSockDPath(t), []string{"/tmp/jsockd.sock"})
+		defer client.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+		msgCount := 0
+		response, err := SendRawCommand(client, "(m, p) => { JSockD.sendMessage(\"foo\"); return JSockD.sendMessage(\"bar\"); }", "99", func(json string) string {
+			if msgCount == 0 && json != "\"foo\"" {
+				t.Fatalf("Unexpected first message: %s", json)
+			}
+			if msgCount == 1 && json != "\"bar\"" {
+				t.Fatalf("Unexpected second message: %s", json)
+			}
+			if msgCount > 1 {
+				t.Fatalf("Unexpected extra message: %s", json)
+			}
+			msgCount++
+			if msgCount == 1 {
+				return "\"ack-1\""
+			}
+			return "\"ack-2\""
+		})
+		if response.Exception {
+			t.Fatalf("Exception: %s", response.ResultJson)
+		}
+		if strings.TrimSpace(response.ResultJson) != "\"ack2\"" {
+			t.Fatalf("Unexpected result: %s", response.ResultJson)
+		}
+	})
 	t.Run("bad command", func(t *testing.T) {
 		config := DefaultConfig()
 		config.SkipJSockDVersionCheck = true
