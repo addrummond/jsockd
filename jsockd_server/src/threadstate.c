@@ -214,7 +214,8 @@ static JSRuntime *ts_rt_mapping[MAX_THREADS];
 
 void register_thread_state_runtime(JSRuntime *rt, ThreadState *ts) {
   assert(ts->thread_index < g_n_threads);
-  assert(ts >= g_thread_states && ts < g_thread_states + MAX_THREADS);
+  assert(ts >= g_thread_states && ts < g_thread_states + MAX_THREADS &&
+         ts >= g_thread_states && ts < g_thread_states + g_n_threads);
   ts_rt_mapping[ts->thread_index] = rt;
 }
 
