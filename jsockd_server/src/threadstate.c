@@ -218,7 +218,8 @@ void register_thread_state_runtime(JSRuntime *rt, ThreadState *ts) {
 }
 
 ThreadState *get_runtime_thread_state(JSRuntime *rt) {
-  for (size_t i = 0; i < g_n_threads; i++) {
+  for (int i = 0; i < atomic_load_explicit(&g_n_threads, memory_order_relaxed);
+       i++) {
     if (ts_rt_mapping[i] == rt)
       return &g_thread_states[i];
   }
