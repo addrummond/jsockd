@@ -193,8 +193,6 @@ int init_thread_state(ThreadState *ts, SocketState *socket_state,
     return -1;
   }
 
-  register_thread_state_runtime(ts->rt, ts);
-
   JS_SetInterruptHandler(ts->rt, interrupt_handler, ts);
 
 #ifdef CMAKE_BUILD_TYPE_DEBUG

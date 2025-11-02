@@ -322,6 +322,7 @@ static void command_loop(ThreadState *ts,
                                   memory_order_relaxed));
       init_thread_state(ts, ts->socket_state, ts->thread_index);
       atomic_fetch_add_explicit(&g_n_ready_threads, 1, memory_order_relaxed);
+      register_thread_state_runtime(ts->rt, ts);
     }
 
     LineBuf line_buf = {.buf = ts->input_buf, .size = INPUT_BUF_BYTES};
@@ -513,6 +514,7 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
     ts->my_replacement->my_replacement = NULL;
     memswap_small(ts->my_replacement, ts, sizeof(*ts));
     ts->my_replacement = r;
+    register_thread_state_runtime(ts->rt, ts);
     atomic_store_explicit(&ts->replacement_thread_state,
                           REPLACEMENT_THREAD_STATE_CLEANUP,
                           memory_order_relaxed);
@@ -1138,6 +1140,8 @@ static int inner_main(int argc, char *argv[]) {
         munmap_or_warn((void *)g_module_bytecode, g_module_bytecode_size);
       goto thread_init_error;
     }
+    register_thread_state_runtime(g_thread_states[thread_init_n].rt,
+                                  &g_thread_states[thread_init_n]);
     pthread_attr_t attr;
     if (0 != pthread_attr_init(&attr)) {
       jsockd_logf(LOG_ERROR, "pthread_attr_init failed: %s\n", strerror(errno));
