@@ -212,12 +212,23 @@ static JSRuntime *ts_rt_mapping[MAX_THREADS];
 // We assume the functions below are called only from the thread associated with
 // each runtime, so no need for locking/atomics.
 
+#define BOUNDS_ASSERTION                                                       \
+  (ts->thread_index < g_n_threads && ts >= g_thread_states &&                  \
+   ts < g_thread_states + MAX_THREADS && ts >= g_thread_states &&              \
+   ts < g_thread_states + g_n_threads)
 void register_thread_state_runtime(JSRuntime *rt, ThreadState *ts) {
-  assert(ts->thread_index < g_n_threads);
-  assert(ts >= g_thread_states && ts < g_thread_states + MAX_THREADS &&
-         ts >= g_thread_states && ts < g_thread_states + g_n_threads);
+  if (CMAKE_BUILD_TYPE_IS_DEBUG && !BOUNDS_ASSERTION) {
+    jsockd_logf(LOG_ERROR,
+                "register_thread_state_runtime: bounds assertion failed: "
+                "thread_index=%i, g_n_threads=%i, ts=%p, left=%p, right=%p\n",
+                ts->thread_index, g_n_threads, (void *)ts,
+                (void *)g_thread_states,
+                (void *)(g_thread_states + g_n_threads));
+  }
+  assert(BOUNDS_ASSERTION);
   ts_rt_mapping[ts->thread_index] = rt;
 }
+#undef BOUNDS_ASSERTION
 
 ThreadState *get_runtime_thread_state(JSRuntime *rt) {
   for (int i = 0; i < atomic_load_explicit(&g_n_threads, memory_order_relaxed);

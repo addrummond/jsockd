@@ -171,7 +171,7 @@ func InitJSockDClient(config Config, jsockdExec string, sockets []string) (*JSoc
 // SendCommand sends a command to the JSockD server and returns the
 // response. The parameter is serialized to JSON via json.Marshal and the result
 // is deserialized from JSON via json.Unmarshal.
-func SendCommand[ResponseT any](client *JSockDClient, query string, jsonParam any) (Response[ResponseT], error) {
+func SendCommand[ResponseT any](client *JSockDClient, query string, jsonParam any, messageHandler func(json string) string) (Response[ResponseT], error) {
 	j, err := json.Marshal(jsonParam)
 	if err != nil {
 		return Response[ResponseT]{}, fmt.Errorf("json marshal: %w", err)
