@@ -41,9 +41,7 @@ func TestSendRawCommand(t *testing.T) {
 			t.Fatal(err)
 		}
 		msgCount := 0
-		fmt.Printf("!!!!START\n")
 		response, err := SendRawCommand(client, "(m, p) => { JSockD.sendMessage(\"foo\"); return JSockD.sendMessage(\"bar\"); }", "99", func(json string) string {
-			fmt.Printf("MESSAGE RECEIVED: %v %s %v\n", len(json), json, []byte(json))
 			if msgCount == 0 && json != "\"foo\"" {
 				t.Fatalf("Unexpected first message: '%s' '%s'", json, "\"foo\"")
 			}
@@ -59,7 +57,6 @@ func TestSendRawCommand(t *testing.T) {
 			}
 			return "\"ack-2\""
 		})
-		fmt.Printf("!!!!END\n")
 		if response.Exception {
 			t.Fatalf("Exception: %s", response.ResultJson)
 		}
