@@ -135,6 +135,7 @@ case $1 in
         (
             set -e
             cd $GITHUB_WORKSPACE/clients/go
+            export JSOCKD="$GITHUB_WORKSPACE/jsockd_server/build_Debug/jsockd"
             go test ./...
         )
         ;;

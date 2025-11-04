@@ -135,11 +135,6 @@ func getJSockDPath(t *testing.T) string {
 		t.Logf("Using exising jsockd: %s", jsockdPath)
 		return jsockdPath
 	}
-	if ws := os.Getenv("GITHUB_WORKSPACE"); ws != "" {
-		jsockdPath = path.Join(ws, "jsockd_server", "build_Release", "jsockd")
-		t.Logf("In CI; using jsockd at: %s", jsockdPath)
-		return jsockdPath
-	}
 
 	osName := runtime.GOOS
 	if osName == "darwin" {
