@@ -16,6 +16,18 @@ static size_t split_uuid(const char *msg, size_t len) {
   return len;
 }
 
+static void trim_space(char **msg, size_t *len) {
+  while (*len > 0 &&
+         (**msg == ' ' || **msg == '\t' || **msg == '\n' || **msg == '\r')) {
+    (*msg)++;
+    (*len)--;
+  }
+  while (*len > 0 && ((*msg)[*len - 1] == ' ' || (*msg)[*len - 1] == '\t' ||
+                      (*msg)[*len - 1] == '\n' || (*msg)[*len - 1] == '\r')) {
+    (*len)--;
+  }
+}
+
 typedef enum {
   SEND_MESSAGE_ERR_TIMEOUT = -1,
   SEND_MESSAGE_ERR_EOF = -2,
@@ -175,14 +187,20 @@ read_done:
     return SEND_MESSAGE_ERR_BAD_MESSAGE;
   }
 
-  JSValue parsed = JS_ParseJSON(ts->ctx, ts->input_buf + uuid_len + 1,
-                                total_read - uuid_len - 1, "<message>");
+  const char *json_input = ts->input_buf + uuid_len + 1;
+  size_t json_input_len = total_read - uuid_len - 1 - 1; /*sep byte at end */
+  ;
+  trim_space((char **)&json_input, &json_input_len);
+  JSValue parsed =
+      JS_ParseJSON(ts->ctx, json_input, json_input_len, "<message>");
   if (JS_IsException(parsed)) {
     JS_FreeValue(ts->ctx, parsed);
-    jsockd_logf(LOG_DEBUG,
-                "Error parsing JSON message response: <<END\n%.*s\nEND%s\n",
-                MIN((int)total_read, 1024), ts->input_buf,
-                total_read > 1024 ? "[truncated]" : "");
+    dump_error(ts->ctx);
+    jsockd_logf(
+        LOG_DEBUG,
+        "Error parsing JSON message response len %zu: <<END\n%.*s\nEND%s\n",
+        json_input_len, MIN((int)json_input_len, 1024), json_input,
+        json_input_len > 1024 ? "[truncated]" : "");
     return SEND_MESSAGE_ERR_BAD_JSON;
   }
   *result = parsed;
