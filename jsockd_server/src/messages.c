@@ -130,9 +130,10 @@ static int send_message(JSRuntime *rt, const char *message, size_t message_len,
       if (r < 0 && errno == EINTR)
         continue;
       if (r <= 0) {
-        jsockd_logf(LOG_ERROR,
-                    "Error reading from socket in message handler (%i): %s\n",
-                    r, strerror(errno));
+        jsockd_logf(
+            LOG_ERROR,
+            "Error reading from socket fd=%i in message handler (%i): %s\n",
+            ts->socket_state->streamfd, r, strerror(errno));
         return SEND_MESSAGE_ERR_IO;
       }
       total_read += (size_t)r;
