@@ -12,7 +12,6 @@ import (
 	"strings"
 	"sync"
 	"testing"
-	"time"
 )
 
 func TestSendRawCommand(t *testing.T) {
@@ -32,13 +31,9 @@ func TestSendRawCommand(t *testing.T) {
 			t.Fatalf("Unexpected result: %s", response.ResultJson)
 		}
 	})
-	t.Run("command with message xxx", func(t *testing.T) {
+	t.Run("command with message", func(t *testing.T) {
 		config := DefaultConfig()
 		config.SkipJSockDVersionCheck = true
-		// TODO remove
-		config.Logger = func(timestamp time.Time, level string, message string) {
-			fmt.Printf("JSockD log [%s] %s: %s\n", timestamp.Format(time.RFC3339), level, message)
-		}
 		client, err := InitJSockDClient(config, getJSockDPath(t), []string{"/tmp/jsockd.sock"})
 		defer client.Close()
 		if err != nil {
@@ -64,7 +59,7 @@ func TestSendRawCommand(t *testing.T) {
 		if response.Exception {
 			t.Fatalf("Exception: %s", response.ResultJson)
 		}
-		if strings.TrimSpace(response.ResultJson) != "\"ack2\"" {
+		if response.ResultJson != "\"ack-2\"" {
 			t.Fatalf("Unexpected result: %s", response.ResultJson)
 		}
 	})

@@ -292,37 +292,28 @@ func connHandler(conn net.Conn, cmdChan chan command, client *JSockDClient) {
 				if cmd.messageHandler != nil {
 					response = cmd.messageHandler(strings.TrimSuffix(strings.TrimPrefix(parts[1], "message "), "\n"))
 				}
-				fmt.Printf("Sending response %s\n", response)
 				_, err = conn.Write(fmt.Appendf(nil, "%s\x00%s\x00", cmd.id, response))
 				if err != nil {
-					fmt.Printf("Error writing message response: %v\n", err)
 					setFatalError(client, err)
 					return
 				}
-				fmt.Printf("RESP WRITTEN\n")
 				mresp, err := readRecord(conn)
-				fmt.Printf("READ REC ERR %v\n", mresp)
 				if err != nil {
 					setFatalError(client, err)
 					return
 				}
 				parts = strings.SplitN(mresp, " ", 2)
 				if parts[0] != cmd.id {
-					fmt.Printf("FATAL ERROR HERE!!!")
 					setFatalError(client, fmt.Errorf("mismatched command id in message response: got %q, wanted %q", parts[0], cmd.id))
 					return
 				}
-				fmt.Printf("CHECKING PREF %v\n", parts[1])
 				if strings.HasPrefix(parts[1], "ok ") {
-					fmt.Printf("CHECKING PREF OK\n")
-					cmd.responseChan <- RawResponse{Exception: false, ResultJson: strings.TrimPrefix(mresp, "ok ")}
+					cmd.responseChan <- RawResponse{Exception: false, ResultJson: strings.TrimSuffix(strings.TrimPrefix(parts[1], "ok "), "\n")}
 					break
 				} else if strings.HasPrefix(parts[1], "exception ") {
-					cmd.responseChan <- RawResponse{Exception: true, ResultJson: strings.TrimPrefix(mresp, "exception ")}
+					cmd.responseChan <- RawResponse{Exception: true, ResultJson: strings.TrimSuffix(strings.TrimPrefix(parts[1], "exception "), "\n")}
 					return
 				} else if strings.HasPrefix(parts[1], "message ") {
-					fmt.Printf("=> MESSAGE\n")
-					fmt.Printf("PARTS AT END %v\n", parts)
 					continue
 				} else {
 					setFatalError(client, fmt.Errorf("malformed message response from JSockD: %q", mresp))
