@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 )
 
 func TestSendRawCommand(t *testing.T) {
@@ -40,7 +41,9 @@ func TestSendRawCommand(t *testing.T) {
 			t.Fatal(err)
 		}
 		msgCount := 0
+		fmt.Printf("!!!!START\n")
 		response, err := SendRawCommand(client, "(m, p) => { JSockD.sendMessage(\"foo\"); return JSockD.sendMessage(\"bar\"); }", "99", func(json string) string {
+			fmt.Printf("MESSAGE RECEIVED: %v %s %v\n", len(json), json, []byte(json))
 			if msgCount == 0 && json != "\"foo\"" {
 				t.Fatalf("Unexpected first message: '%s' '%s'", json, "\"foo\"")
 			}
@@ -56,6 +59,7 @@ func TestSendRawCommand(t *testing.T) {
 			}
 			return "\"ack-2\""
 		})
+		fmt.Printf("!!!!END\n")
 		if response.Exception {
 			t.Fatalf("Exception: %s", response.ResultJson)
 		}
@@ -66,6 +70,10 @@ func TestSendRawCommand(t *testing.T) {
 	t.Run("bad command", func(t *testing.T) {
 		config := DefaultConfig()
 		config.SkipJSockDVersionCheck = true
+		// TODO remove
+		config.Logger = func(timestamp time.Time, level string, message string) {
+			fmt.Printf("JSockD log [%s] %s: %s\n", timestamp.Format(time.RFC3339), level, message)
+		}
 		client, err := InitJSockDClient(config, getJSockDPath(t), []string{"/tmp/jsockd.sock"})
 		defer client.Close()
 		if err != nil {

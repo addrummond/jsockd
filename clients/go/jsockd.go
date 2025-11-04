@@ -229,6 +229,7 @@ func SendRawCommand(client *JSockDClient, query string, jsonParam string, messag
 // terminate. Close may be called multiple times without ill effect; subsequent
 // calls are no-ops.
 func (client *JSockDClient) Close() error {
+	fmt.Printf("JSockDClient.Close called\n")
 	qs := atomic.AddUint64(&client.quitCount, 1)
 	if qs > 1 {
 		// Already quitting or quit
@@ -262,6 +263,7 @@ func connHandler(conn net.Conn, cmdChan chan command, client *JSockDClient) {
 	defer conn.Close()
 
 	for cmd := range cmdChan {
+		fmt.Printf("===> LOOP START\n")
 		_, err := conn.Write(fmt.Appendf(nil, "%s\x00%s\x00%s\x00", cmd.id, cmd.query, cmd.paramJson))
 		if err != nil {
 			setFatalError(client, err)
@@ -287,39 +289,45 @@ func connHandler(conn net.Conn, cmdChan chan command, client *JSockDClient) {
 		} else if strings.HasPrefix(parts[1], "ok ") {
 			cmd.responseChan <- RawResponse{Exception: false, ResultJson: strings.TrimPrefix(parts[1], "ok ")}
 		} else if strings.HasPrefix(parts[1], "message ") {
+			fmt.Printf("MSG PARTS %v\n", parts)
 			for {
-				fmt.Printf("MESSAGE LOOP\n")
+				fmt.Printf("MESSAGE LOOP %v\n", parts[1])
 				response := "null"
 				if cmd.messageHandler != nil {
 					response = cmd.messageHandler(strings.TrimSuffix(strings.TrimPrefix(parts[1], "message "), "\n"))
 				}
-				fmt.Printf("READ REC B4\n")
-				mresp, err := readRecord(conn)
-				if err != nil {
-					setFatalError(client, err)
-					return
-				}
-				fmt.Printf("READ REC AF\n")
-				parts := strings.SplitN(rec, " ", 2)
-				if parts[0] != cmd.id {
-					setFatalError(client, fmt.Errorf("mismatched command id in message response: got %q, wanted %q", parts[0], cmd.id))
-					return
-				}
-				fmt.Printf("MESSAGE LOOP 2\n")
+				fmt.Printf("READ REC B4 '%s'\n", response)
 				_, err = conn.Write(fmt.Appendf(nil, "%s\x00%s\x00", cmd.id, response))
 				if err != nil {
 					setFatalError(client, err)
 					return
 				}
+				mresp, err := readRecord(conn)
+				if err != nil {
+					fmt.Printf("READ REC ERR %v\n", err)
+					setFatalError(client, err)
+					return
+				}
+				fmt.Printf("READ REC AF %v\n", mresp)
+				parts := strings.SplitN(rec, " ", 2)
+				if parts[0] != cmd.id {
+					setFatalError(client, fmt.Errorf("mismatched command id in message response: got %q, wanted %q", parts[0], cmd.id))
+					return
+				}
+				fmt.Printf("MESSAGE LOOP [2] %v\n", mresp)
 				if strings.HasPrefix(mresp, "ok ") {
 					cmd.responseChan <- RawResponse{Exception: false, ResultJson: strings.TrimPrefix(mresp, "ok ")}
 					break
 				} else if strings.HasPrefix(mresp, "exception ") {
+					fmt.Printf("RETURNING RETURNING\n")
 					cmd.responseChan <- RawResponse{Exception: true, ResultJson: strings.TrimPrefix(mresp, "exception ")}
-					break
+					return
 				} else if strings.HasPrefix(mresp, "message ") {
 					parts = strings.SplitN(mresp, " ", 2)
 					continue
+				} else {
+					setFatalError(client, fmt.Errorf("malformed message response from JSockD: %q", mresp))
+					return
 				}
 			}
 		} else {
@@ -364,6 +372,7 @@ func streamStderrLogs(stderr io.Reader, config Config) {
 
 	scanner := bufio.NewScanner(stderr)
 	var currentLine strings.Builder
+	lastWasDollar := true
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		groups := logLineRegex.FindStringSubmatch(line)
@@ -388,7 +397,10 @@ func streamStderrLogs(stderr io.Reader, config Config) {
 			}
 			currentLine.WriteString(msg)
 		} else if prefix == "$" {
-			currentLine.WriteByte('\n')
+			if !lastWasDollar {
+				lastWasDollar = false
+				currentLine.WriteByte('\n')
+			}
 			currentLine.WriteString(msg)
 			if config.Logger != nil {
 				config.Logger(t, level, currentLine.String())

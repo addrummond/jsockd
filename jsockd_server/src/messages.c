@@ -10,7 +10,7 @@
 
 static size_t split_uuid(const char *msg, size_t len) {
   for (size_t i = 0; i < len; i++) {
-    if (msg[i] == ' ')
+    if (msg[i] == g_cmd_args.socket_sep_char)
       return i;
   }
   return len;
@@ -60,27 +60,29 @@ static int send_message(JSRuntime *rt, const char *message, size_t message_len,
   // If we can, it's probably faster to concat the entire message into input_buf
   // and make just a single write syscall.
   int read_r;
-  if (ts->current_uuid_len + sizeof(" message ") / sizeof(char) + message_len +
+  if (ts->current_uuid_len +
+          (sizeof(" message ") - sizeof(char)) / sizeof(char) + message_len +
           sizeof(char) <=
       INPUT_BUF_BYTES) {
     memcpy(ts->input_buf, ts->current_uuid, ts->current_uuid_len);
     memcpy(ts->input_buf + ts->current_uuid_len, " message ",
-           sizeof(" message ") / sizeof(char));
+           (sizeof(" message ") - sizeof(char)) / sizeof(char));
     memcpy(ts->input_buf + ts->current_uuid_len +
-               sizeof(" message ") / sizeof(char),
+               (sizeof(" message ") - sizeof(char)) / sizeof(char),
            message, message_len);
-    ts->input_buf[ts->current_uuid_len + sizeof(" message ") / sizeof(char) +
+    ts->input_buf[ts->current_uuid_len +
+                  (sizeof(" message ") - sizeof(char)) / sizeof(char) +
                   message_len] = term;
     size_t total_written = ts->current_uuid_len +
-                           sizeof(" message ") / sizeof(char) + message_len +
-                           sizeof(char);
+                           (sizeof(" message ") - sizeof(char)) / sizeof(char) +
+                           message_len + sizeof(char);
     read_r =
         write_all(ts->socket_state->streamfd, ts->input_buf, total_written);
   } else {
     read_r = write_all(ts->socket_state->streamfd, ts->current_uuid,
                        ts->current_uuid_len);
     read_r |= write_all(ts->socket_state->streamfd, " message ",
-                        sizeof("message ") / sizeof(char));
+                        (sizeof("message ") - 1) / sizeof(char));
     read_r |= write_all(ts->socket_state->streamfd, message, message_len);
     read_r |= write_all(ts->socket_state->streamfd, &term, sizeof(char));
   }
