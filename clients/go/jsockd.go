@@ -288,20 +288,24 @@ func connHandler(conn net.Conn, cmdChan chan command, client *JSockDClient) {
 			cmd.responseChan <- RawResponse{Exception: false, ResultJson: strings.TrimPrefix(parts[1], "ok ")}
 		} else if strings.HasPrefix(parts[1], "message ") {
 			for {
+				fmt.Printf("MESSAGE LOOP\n")
 				response := "null"
 				if cmd.messageHandler != nil {
-					response = cmd.messageHandler(strings.TrimPrefix(parts[1], "message "))
+					response = cmd.messageHandler(strings.TrimSuffix(strings.TrimPrefix(parts[1], "message "), "\n"))
 				}
+				fmt.Printf("READ REC B4\n")
 				mresp, err := readRecord(conn)
 				if err != nil {
 					setFatalError(client, err)
 					return
 				}
+				fmt.Printf("READ REC AF\n")
 				parts := strings.SplitN(rec, " ", 2)
 				if parts[0] != cmd.id {
 					setFatalError(client, fmt.Errorf("mismatched command id in message response: got %q, wanted %q", parts[0], cmd.id))
 					return
 				}
+				fmt.Printf("MESSAGE LOOP 2\n")
 				_, err = conn.Write(fmt.Appendf(nil, "%s\x00%s\x00", cmd.id, response))
 				if err != nil {
 					setFatalError(client, err)

@@ -42,7 +42,7 @@ func TestSendRawCommand(t *testing.T) {
 		msgCount := 0
 		response, err := SendRawCommand(client, "(m, p) => { JSockD.sendMessage(\"foo\"); return JSockD.sendMessage(\"bar\"); }", "99", func(json string) string {
 			if msgCount == 0 && json != "\"foo\"" {
-				t.Fatalf("Unexpected first message: %s", json)
+				t.Fatalf("Unexpected first message: '%s' '%s'", json, "\"foo\"")
 			}
 			if msgCount == 1 && json != "\"bar\"" {
 				t.Fatalf("Unexpected second message: %s", json)
