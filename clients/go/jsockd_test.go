@@ -23,7 +23,7 @@ func TestSendRawCommand(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		response, err := SendRawCommand(client, "(m, p) => p+1", "99", nil)
+		response, err := SendRawCommand(client, "(m, p) => p+1", "99")
 		if response.Exception {
 			t.Fatalf("Exception: %s", response.ResultJson)
 		}
@@ -44,8 +44,8 @@ func TestSendRawCommand(t *testing.T) {
 		}
 		msgCount := 0
 		var msgErr error
-		response, err := SendRawCommand(client, "(m, p) => { JSockD.sendMessage(\"foo\"); return JSockD.sendMessage(\"bar\"); }", "99", func(json string) string {
-			if msgCount == 0 && json != "\"fooo\"" {
+		response, err := SendRawCommandWithMessageHandler(client, "(m, p) => { JSockD.sendMessage(\"foo\"); return JSockD.sendMessage(\"bar\"); }", "99", func(json string) string {
+			if msgCount == 0 && json != "\"foo\"" {
 				msgErr = fmt.Errorf("Unexpected first message: '%s' '%s'", json, "\"foo\"")
 			}
 			if msgCount == 1 && json != "\"bar\"" {
@@ -78,7 +78,7 @@ func TestSendRawCommand(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		response, err := SendRawCommand(client, "(m, p) => p.foo()", "99", nil)
+		response, err := SendRawCommand(client, "(m, p) => p.foo()", "99")
 		if !response.Exception {
 			t.Fatal("Expected exceptional response")
 		}
@@ -95,7 +95,7 @@ func TestSendCommand(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		resp, err := SendCommand[int](client, "(m, p) => p+1", 99, nil)
+		resp, err := SendCommand[int](client, "(m, p) => p+1", 99)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -114,7 +114,7 @@ func TestSendCommand(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		resp, err := SendCommand[int](client, "(m, p) => p.foo()", 99, nil)
+		resp, err := SendCommand[int](client, "(m, p) => p.foo()", 99)
 		if err != nil {
 			t.Fatal(err)
 		}

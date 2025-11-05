@@ -172,12 +172,55 @@ func InitJSockDClient(config Config, jsockdExec string, sockets []string) (*JSoc
 // SendCommand sends a command to the JSockD server and returns the
 // response. The parameter is serialized to JSON via json.Marshal and the result
 // is deserialized from JSON via json.Unmarshal.
-func SendCommand[ResponseT any](client *JSockDClient, query string, jsonParam any, messageHandler func(jsonMessage string) string) (Response[ResponseT], error) {
+func SendCommand[ResponseT any](client *JSockDClient, query string, jsonParam any) (Response[ResponseT], error) {
+	return sendCommand[ResponseT](client, query, jsonParam, nil)
+}
+
+// SendCommandWithMessageHandler is like SendCommand but with a message
+// handling function as an additional parameter. If there is an error
+// JSON-decoding the `message` argument of the message handler, or if
+// there is an error JSON-encoding its return value, then null will be
+// sent as the response to the JSockD server, and
+// SendCommandWithMessageHandler will return a non-nil error.
+//
+// Note that messageHandler, when called, will execute in a different
+// goroutine to the one that called SendCommandWithMessageHandler. This
+// goroutine is guaranteed to have finished executing by the time
+// SendCommandWithMessageHandler returns.
+func SendCommandWithMessageHandler[ResponseT any, MessageT any, MessageResponseT any](client *JSockDClient, query string, jsonParam any, messageHandler func (message MessageT) MessageResponseT) (Response[ResponseT], error) {
+	var msgHandlerErr error
+	wrappedHandler := func(jsonMessage string) string {
+		var message MessageT
+		msgHandlerErr := json.Unmarshal([]byte(jsonMessage), &message)
+		if msgHandlerErr != nil {
+			return "null"
+		}
+		response := messageHandler(message)
+		j, msgHandlerErr := json.Marshal(response)
+		if msgHandlerErr != nil {
+			return "null"
+		}
+		return string(j)
+	}
+	res, err := sendCommand[ResponseT](client, query, jsonParam, wrappedHandler)
+	if err != nil && msgHandlerErr != nil {
+		return Response[ResponseT]{}, fmt.Errorf("message handler error: %w; command error: %v", msgHandlerErr, err)
+	}
+	if err != nil {
+		return Response[ResponseT]{}, err
+	}
+	if msgHandlerErr != nil {
+		return Response[ResponseT]{}, fmt.Errorf("message handler error: %w", msgHandlerErr)
+	}
+	return res, nil
+}
+
+func sendCommand[ResponseT any](client *JSockDClient, query string, jsonParam any, messageHandler func (jsonMessage string) string) (Response[ResponseT], error) {
 	j, err := json.Marshal(jsonParam)
 	if err != nil {
 		return Response[ResponseT]{}, fmt.Errorf("json marshal: %w", err)
 	}
-	rawResp, err := SendRawCommand(client, query, string(j), messageHandler)
+	rawResp, err := sendRawCommand(client, query, string(j), messageHandler)
 	if err != nil {
 		return Response[ResponseT]{}, err
 	}
@@ -196,7 +239,24 @@ func SendCommand[ResponseT any](client *JSockDClient, query string, jsonParam an
 
 // SendRawCommand sends a command to the JSockD server and returns the
 // response. JSON values are passed and returned as strings.
-func SendRawCommand(client *JSockDClient, query string, jsonParam string, messageHandler func(jsonMessage string) string) (RawResponse, error) {
+func SendRawCommand(client *JSockDClient, query string, jsonParam string) (RawResponse, error) {
+	return sendRawCommand(client, query, jsonParam, nil)
+}
+
+// SendRawCommandWithMessageHandler is like SendRawCommand but with a message
+// handling function as an additional parameter. The message handling function
+// receives JSON-encoded messages and should return a valid JSON-encoded
+// response.
+//
+// Note that messageHandler, when called, will execute in a different
+// goroutine to the one that called SendRawCommandWithMessageHandler. This
+// goroutine is guaranteed to have finished executing by the time
+// SendRawCommandWithMessageHandler returns.
+func SendRawCommandWithMessageHandler(client *JSockDClient, query string, jsonParam string, messageHandler func(jsonMessage string) string) (RawResponse, error) {
+	return sendRawCommand(client, query, jsonParam, messageHandler)
+}
+
+func sendRawCommand(client *JSockDClient, query string, jsonParam string, messageHandler func(jsonMessage string) string) (RawResponse, error) {
 	if fe := getFatalError(client); fe != nil {
 		return RawResponse{}, fe
 	}
