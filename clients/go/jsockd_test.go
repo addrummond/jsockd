@@ -35,20 +35,24 @@ func TestSendRawCommand(t *testing.T) {
 		config := DefaultConfig()
 		config.SkipJSockDVersionCheck = true
 		client, err := InitJSockDClient(config, getJSockDPath(t), []string{"/tmp/jsockd.sock"})
-		defer client.Close()
+		defer func () {
+			fmt.Printf("IN DEFER\n")
+			client.Close()
+		}()
 		if err != nil {
 			t.Fatal(err)
 		}
 		msgCount := 0
+		var msgErr error
 		response, err := SendRawCommand(client, "(m, p) => { JSockD.sendMessage(\"foo\"); return JSockD.sendMessage(\"bar\"); }", "99", func(json string) string {
-			if msgCount == 0 && json != "\"foo\"" {
-				t.Fatalf("Unexpected first message: '%s' '%s'", json, "\"foo\"")
+			if msgCount == 0 && json != "\"fooo\"" {
+				msgErr = fmt.Errorf("Unexpected first message: '%s' '%s'", json, "\"foo\"")
 			}
 			if msgCount == 1 && json != "\"bar\"" {
-				t.Fatalf("Unexpected second message: %s", json)
+				msgErr = fmt.Errorf("Unexpected second message: '%s' '%s'", json, "\"foo\"")
 			}
-			if msgCount > 1 {
-				t.Fatalf("Unexpected extra message: %s", json)
+			if msgCount > 1 && msgErr == nil {
+				msgErr = fmt.Errorf("Unexpected extra message: %s", json)
 			}
 			msgCount++
 			if msgCount == 1 {
@@ -56,6 +60,9 @@ func TestSendRawCommand(t *testing.T) {
 			}
 			return "\"ack-2\""
 		})
+		if msgErr != nil {
+			t.Fatalf("Message error: %v", msgErr)
+		}
 		if response.Exception {
 			t.Fatalf("Exception: %s", response.ResultJson)
 		}
