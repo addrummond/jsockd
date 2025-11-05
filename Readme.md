@@ -178,8 +178,11 @@ The first is the module that was loaded from the bytecode file (or `undefined` i
 The third field is the JSON-encoded parameter value.
 
 The server responds with a single line (terminated with `\n`) consisting of the command ID followed by a space and then either
-* the JSON-encoded result of the command, if successful; or
+* the string `ok` followed by a space and then the JSON-encoded result of the command, if successful; or
+* the string `message` followed by a space and then a JSON-encoded message sent by the command via `JSockD.sendMessage`; or
 * the string `exception` followed by a space and then a JSON-encoded error message and backtrace (see next subsection).
+
+In the `message` case, the client should respond with the command id followed by a separator byte and then either the special string `internal_error` (if an error occured when the client tried to process the message) or a JSON-encoded response value, and then finally another separator byte. The server responds either with another `message` (in which case the client should respond as before) or with an `ok` or `exception` response.
 
 As the protocol is synchronous, command IDs are not strictly necessary. However, it is recommended to check that responses have the expected
 command ID as a means of ensuring that the client code is working correctly.
