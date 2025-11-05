@@ -19,6 +19,9 @@ func TestSendRawCommand(t *testing.T) {
 		config := DefaultConfig()
 		config.SkipJSockDVersionCheck = true
 		client, err := InitJSockDClient(config, getJSockDPath(t), []string{"/tmp/jsockd.sock"})
+		if err != nil {
+			t.Fatal(err)
+		}
 		defer client.Close()
 		if err != nil {
 			t.Fatal(err)
@@ -35,7 +38,7 @@ func TestSendRawCommand(t *testing.T) {
 		config := DefaultConfig()
 		config.SkipJSockDVersionCheck = true
 		client, err := InitJSockDClient(config, getJSockDPath(t), []string{"/tmp/jsockd.sock"})
-		defer func () {
+		defer func() {
 			fmt.Printf("IN DEFER\n")
 			client.Close()
 		}()
@@ -74,6 +77,9 @@ func TestSendRawCommand(t *testing.T) {
 		config := DefaultConfig()
 		config.SkipJSockDVersionCheck = true
 		client, err := InitJSockDClient(config, getJSockDPath(t), []string{"/tmp/jsockd.sock"})
+		if err != nil {
+			t.Fatal(err)
+		}
 		defer client.Close()
 		if err != nil {
 			t.Fatal(err)
@@ -91,6 +97,9 @@ func TestSendCommand(t *testing.T) {
 		config := DefaultConfig()
 		config.SkipJSockDVersionCheck = true
 		client, err := InitJSockDClient(config, getJSockDPath(t), []string{"/tmp/jsockd.sock"})
+		if err != nil {
+			t.Fatal(err)
+		}
 		defer client.Close()
 		if err != nil {
 			t.Fatal(err)
@@ -110,6 +119,9 @@ func TestSendCommand(t *testing.T) {
 		config := DefaultConfig()
 		config.SkipJSockDVersionCheck = true
 		client, err := InitJSockDClient(config, getJSockDPath(t), []string{"/tmp/jsockd.sock"})
+		if err != nil {
+			t.Fatal(err)
+		}
 		defer client.Close()
 		if err != nil {
 			t.Fatal(err)

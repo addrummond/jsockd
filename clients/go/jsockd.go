@@ -187,11 +187,11 @@ func SendCommand[ResponseT any](client *JSockDClient, query string, jsonParam an
 // goroutine to the one that called SendCommandWithMessageHandler. This
 // goroutine is guaranteed to have finished executing by the time
 // SendCommandWithMessageHandler returns.
-func SendCommandWithMessageHandler[ResponseT any, MessageT any, MessageResponseT any](client *JSockDClient, query string, jsonParam any, messageHandler func (message MessageT) MessageResponseT) (Response[ResponseT], error) {
+func SendCommandWithMessageHandler[ResponseT any, MessageT any, MessageResponseT any](client *JSockDClient, query string, jsonParam any, messageHandler func(message MessageT) MessageResponseT) (Response[ResponseT], error) {
 	var msgHandlerErr error
 	wrappedHandler := func(jsonMessage string) string {
 		var message MessageT
-		msgHandlerErr := json.Unmarshal([]byte(jsonMessage), &message)
+		msgHandlerErr = json.Unmarshal([]byte(jsonMessage), &message)
 		if msgHandlerErr != nil {
 			return "null"
 		}
@@ -215,7 +215,7 @@ func SendCommandWithMessageHandler[ResponseT any, MessageT any, MessageResponseT
 	return res, nil
 }
 
-func sendCommand[ResponseT any](client *JSockDClient, query string, jsonParam any, messageHandler func (jsonMessage string) string) (Response[ResponseT], error) {
+func sendCommand[ResponseT any](client *JSockDClient, query string, jsonParam any, messageHandler func(jsonMessage string) string) (Response[ResponseT], error) {
 	j, err := json.Marshal(jsonParam)
 	if err != nil {
 		return Response[ResponseT]{}, fmt.Errorf("json marshal: %w", err)
