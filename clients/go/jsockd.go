@@ -61,7 +61,7 @@ type command struct {
 	query          string
 	paramJson      string
 	responseChan   chan RawResponse
-	messageHandler func(jsonMessage string) string
+	messageHandler func(jsonMessage string) (string, error)
 }
 
 // RawResponse represents the raw response to a command sent to the JSockD
@@ -89,6 +89,8 @@ type JSockDClient struct {
 	fatalError      error
 	fatalErrorMutex sync.Mutex
 }
+
+const messageHandlerInternalError = "internal_error"
 
 // InitJSockDClient starts a JSockD server process with the specified
 // configuration, connects to it via the specified Unix domain sockets, and
@@ -187,20 +189,24 @@ func SendCommand[ResponseT any](client *JSockDClient, query string, jsonParam an
 // goroutine to the one that called SendCommandWithMessageHandler. This
 // goroutine is guaranteed to have finished executing by the time
 // SendCommandWithMessageHandler returns.
-func SendCommandWithMessageHandler[ResponseT any, MessageT any, MessageResponseT any](client *JSockDClient, query string, jsonParam any, messageHandler func(message MessageT) MessageResponseT) (Response[ResponseT], error) {
+func SendCommandWithMessageHandler[ResponseT any, MessageT any, MessageResponseT any](client *JSockDClient, query string, jsonParam any, messageHandler func(message MessageT) (MessageResponseT, error)) (Response[ResponseT], error) {
 	var msgHandlerErr error
-	wrappedHandler := func(jsonMessage string) string {
+	wrappedHandler := func(jsonMessage string) (string, error) {
 		var message MessageT
 		msgHandlerErr = json.Unmarshal([]byte(jsonMessage), &message)
 		if msgHandlerErr != nil {
-			return "null"
+			return "", msgHandlerErr
 		}
-		response := messageHandler(message)
+		var response MessageResponseT
+		response, msgHandlerErr = messageHandler(message)
+		if msgHandlerErr != nil {
+			return "", msgHandlerErr
+		}
 		j, msgHandlerErr := json.Marshal(response)
 		if msgHandlerErr != nil {
-			return "null"
+			return "", msgHandlerErr
 		}
-		return string(j)
+		return string(j), nil
 	}
 	res, err := sendCommand[ResponseT](client, query, jsonParam, wrappedHandler)
 	if err != nil && msgHandlerErr != nil {
@@ -215,7 +221,7 @@ func SendCommandWithMessageHandler[ResponseT any, MessageT any, MessageResponseT
 	return res, nil
 }
 
-func sendCommand[ResponseT any](client *JSockDClient, query string, jsonParam any, messageHandler func(jsonMessage string) string) (Response[ResponseT], error) {
+func sendCommand[ResponseT any](client *JSockDClient, query string, jsonParam any, messageHandler func(jsonMessage string) (string, error)) (Response[ResponseT], error) {
 	j, err := json.Marshal(jsonParam)
 	if err != nil {
 		return Response[ResponseT]{}, fmt.Errorf("json marshal: %w", err)
@@ -252,11 +258,11 @@ func SendRawCommand(client *JSockDClient, query string, jsonParam string) (RawRe
 // goroutine to the one that called SendRawCommandWithMessageHandler. This
 // goroutine is guaranteed to have finished executing by the time
 // SendRawCommandWithMessageHandler returns.
-func SendRawCommandWithMessageHandler(client *JSockDClient, query string, jsonParam string, messageHandler func(jsonMessage string) string) (RawResponse, error) {
+func SendRawCommandWithMessageHandler(client *JSockDClient, query string, jsonParam string, messageHandler func(jsonMessage string) (string, error)) (RawResponse, error) {
 	return sendRawCommand(client, query, jsonParam, messageHandler)
 }
 
-func sendRawCommand(client *JSockDClient, query string, jsonParam string, messageHandler func(jsonMessage string) string) (RawResponse, error) {
+func sendRawCommand(client *JSockDClient, query string, jsonParam string, messageHandler func(jsonMessage string) (string, error)) (RawResponse, error) {
 	if fe := getFatalError(client); fe != nil {
 		return RawResponse{}, fe
 	}
@@ -349,8 +355,14 @@ func connHandler(conn net.Conn, cmdChan chan command, client *JSockDClient) {
 		} else if strings.HasPrefix(parts[1], "message ") {
 			for {
 				response := "null"
-				if cmd.messageHandler != nil {
-					response = cmd.messageHandler(strings.TrimSuffix(strings.TrimPrefix(parts[1], "message "), "\n"))
+				err := errors.New("internal error: no message handler")
+				if cmd.messageHandler == nil {
+					response, err = cmd.messageHandler(strings.TrimSuffix(strings.TrimPrefix(parts[1], "message "), "\n"))
+				}
+				if err != nil {
+					setFatalError(client, fmt.Errorf("message handler error: %w", err))
+					_, _ = conn.Write(fmt.Appendf(nil, "%s\x00%s\x00", cmd.id, messageHandlerInternalError))
+					return
 				}
 				_, err = conn.Write(fmt.Appendf(nil, "%s\x00%s\x00", cmd.id, response))
 				if err != nil {

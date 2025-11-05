@@ -19,12 +19,12 @@ static size_t split_uuid(const char *msg, size_t len) {
 static void trim_space(char **msg, size_t *len) {
   while (*len > 0 &&
          (**msg == ' ' || **msg == '\t' || **msg == '\n' || **msg == '\r')) {
-    (*msg)++;
-    (*len)--;
+    ++(*msg);
+    --(*len);
   }
   while (*len > 0 && ((*msg)[*len - 1] == ' ' || (*msg)[*len - 1] == '\t' ||
                       (*msg)[*len - 1] == '\n' || (*msg)[*len - 1] == '\r')) {
-    (*len)--;
+    --(*len);
   }
 }
 
@@ -37,6 +37,7 @@ typedef enum {
   SEND_MESSAGE_ERR_IO = -6,
   SEND_MESSAGE_ERR_TIME = -7,
   SEND_MESSAGE_ERR_BAD_MESSAGE = -8,
+  SEND_MESSAGE_ERR_HANDLER_INTERNAL_ERROR = -9
 } SendMessageError;
 
 static const char *send_message_error_to_string(int err) {
@@ -57,6 +58,8 @@ static const char *send_message_error_to_string(int err) {
     return "Time error while waiting for message response";
   case SEND_MESSAGE_ERR_BAD_MESSAGE:
     return "Internal protocol error (no command id or mismatched command id)";
+  case SEND_MESSAGE_ERR_HANDLER_INTERNAL_ERROR:
+    return "Client indicated internal error in its message handler";
   default:
     return "<unknown error>";
   }
@@ -190,8 +193,15 @@ read_done:
 
   const char *json_input = ts->input_buf + uuid_len + 1;
   size_t json_input_len = total_read - uuid_len - 1 - 1; /*sep byte at end */
-  ;
   trim_space((char **)&json_input, &json_input_len);
+
+  if (0 == strcmp("internal_error", json_input)) {
+    jsockd_log(
+        LOG_DEBUG,
+        "Received internal_error message response from message handler\n");
+    return SEND_MESSAGE_ERR_HANDLER_INTERNAL_ERROR;
+  }
+
   JSValue parsed =
       JS_ParseJSON(ts->ctx, json_input, json_input_len, "<message>");
   if (JS_IsException(parsed)) {
