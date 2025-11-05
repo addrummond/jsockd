@@ -356,7 +356,7 @@ func connHandler(conn net.Conn, cmdChan chan command, client *JSockDClient) {
 			for {
 				response := "null"
 				err := errors.New("internal error: no message handler")
-				if cmd.messageHandler == nil {
+				if cmd.messageHandler != nil {
 					response, err = cmd.messageHandler(strings.TrimSuffix(strings.TrimPrefix(parts[1], "message "), "\n"))
 				}
 				if err != nil {
