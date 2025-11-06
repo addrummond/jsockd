@@ -11,6 +11,11 @@ defmodule JSockDClient do
 
   `argument` is JSON-encoded and then passed as the second argument to the function.
 
+  Optional keyword arguments:
+
+    * `message_handler` is a function that receives a message and returns a value that can be serialized via `Jason.encode!(message, jason_encode_opts)`.
+    * `jason_encode_opts` is a keyword list of options passed to `Jason.encode!/2` when serializing the response from the `message_handler`.
+
   The first argument passed to the JavaScript function is the precompiled bytecode module.
   """
 
