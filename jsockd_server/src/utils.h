@@ -12,6 +12,8 @@
 #include <time.h>
 
 #define STRCONST_LEN(s) (sizeof(s)/sizeof(char) - sizeof(char))
+#define STRCONST_IOVEC(s)                                                   \
+  {.iov_base = (void *)(s), .iov_len = STRCONST_LEN(s)}
 
 void mutex_lock_(pthread_mutex_t *m, const char *file, int line);
 void mutex_unlock_(pthread_mutex_t *m, const char *file, int line);
