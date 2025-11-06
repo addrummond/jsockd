@@ -16,18 +16,6 @@ static size_t split_uuid(const char *msg, size_t len) {
   return len;
 }
 
-static void trim_space(char **msg, size_t *len) {
-  while (*len > 0 &&
-         (**msg == ' ' || **msg == '\t' || **msg == '\n' || **msg == '\r')) {
-    ++(*msg);
-    --(*len);
-  }
-  while (*len > 0 && ((*msg)[*len - 1] == ' ' || (*msg)[*len - 1] == '\t' ||
-                      (*msg)[*len - 1] == '\n' || (*msg)[*len - 1] == '\r')) {
-    --(*len);
-  }
-}
-
 typedef enum {
   SEND_MESSAGE_ERR_TIMEOUT = -1,
   SEND_MESSAGE_ERR_EOF = -2,
@@ -193,7 +181,6 @@ read_done:
 
   const char *json_input = ts->input_buf + uuid_len + 1;
   size_t json_input_len = total_read - uuid_len - 1 - 1; /*sep byte at end */
-  trim_space((char **)&json_input, &json_input_len);
 
   if (0 == strcmp("internal_error", json_input)) {
     jsockd_log(
