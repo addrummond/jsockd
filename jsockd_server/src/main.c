@@ -761,13 +761,6 @@ static int handle_line_3_parameter_helper(ThreadState *ts, const char *line,
   size_t sz;
   const char *str = JS_ToCStringLen(ts->ctx, &sz, stringified);
 
-  struct iovec vecs[] = {
-      {.iov_base = (void *)ts->current_uuid, .iov_len = ts->current_uuid_len},
-      {.iov_base = (void *)" ok ", .iov_len = STRCONST_LEN(" ok ")},
-      {.iov_base = (void *)str, .iov_len = sz},
-      {.iov_base = (void *)"\n", .iov_len = STRCONST_LEN("\n")},
-  };
-
   writev_to_stream(ts, ((struct iovec[]){
                            {.iov_base = (void *)ts->current_uuid,
                             .iov_len = ts->current_uuid_len},
