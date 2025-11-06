@@ -188,7 +188,10 @@ The response type is either `ok`, `message` or `exception`. If it is `ok`, the r
 In the `message` case, the client should respond as follows:
 
 ```
-<command id><separator byte><response><separator byte>
+<command id>
+----- separator byte -----
+<response>
+----- separator byte -----
 ```
 
 The response is either the special string `internal_error` (if an error occured when the client tried to process the message) or a JSON-encoded response value. The server then responds either with another `message` (in which case the client should respond as before) or with an `ok` or `exception` response.
@@ -311,6 +314,8 @@ export { flubBar, blagFoo }
 * `console.log`, `console.error`, etc. log to the JSockD server log (stderr).
 * `setTimeout` and `setInterval` are not available. As JSockD does not support long-running commands, you would generally want to shim these if any of your library code depends on them.
 * `globalThis` is available as the global object.
+* The `JSockD` global object is available with the following method:
+  * `JSockD.sendMessage(message: any): any`: sends a JSON-serializable message to the client and synchronously waits for a response.
 
 ## 5. Building from source
 
