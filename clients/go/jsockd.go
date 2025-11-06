@@ -348,16 +348,16 @@ func connHandler(conn net.Conn, cmdChan chan command, client *JSockDClient) {
 			setFatalError(client, fmt.Errorf("malformed response record: %q", rec))
 			return
 		}
-		if strings.HasPrefix(parts[1], "exception ") {
-			cmd.responseChan <- RawResponse{Exception: true, ResultJson: strings.TrimPrefix(parts[1], "exception ")}
-		} else if strings.HasPrefix(parts[1], "ok ") {
-			cmd.responseChan <- RawResponse{Exception: false, ResultJson: strings.TrimPrefix(parts[1], "ok ")}
-		} else if strings.HasPrefix(parts[1], "message ") {
+		if rest, ok := strings.CutPrefix(parts[1], "exception "); ok {
+			cmd.responseChan <- RawResponse{Exception: true, ResultJson: rest}
+		} else if rest, ok := strings.CutPrefix(parts[1], "ok "); ok {
+			cmd.responseChan <- RawResponse{Exception: false, ResultJson: rest}
+		} else if rest, ok := strings.CutPrefix(parts[1], "message "); ok {
 			for {
 				response := "null"
 				err := errors.New("internal error: no message handler")
 				if cmd.messageHandler != nil {
-					response, err = cmd.messageHandler(strings.TrimSuffix(strings.TrimPrefix(parts[1], "message "), "\n"))
+					response, err = cmd.messageHandler(strings.TrimSuffix(rest, "\n"))
 				}
 				if err != nil {
 					setFatalError(client, fmt.Errorf("message handler error: %w", err))
@@ -379,13 +379,14 @@ func connHandler(conn net.Conn, cmdChan chan command, client *JSockDClient) {
 					setFatalError(client, fmt.Errorf("mismatched command id in message response: got %q, wanted %q", parts[0], cmd.id))
 					return
 				}
-				if strings.HasPrefix(parts[1], "ok ") {
-					cmd.responseChan <- RawResponse{Exception: false, ResultJson: strings.TrimSuffix(strings.TrimPrefix(parts[1], "ok "), "\n")}
+				var ok bool
+				if rest, ok = strings.CutPrefix(parts[1], "ok "); ok {
+					cmd.responseChan <- RawResponse{Exception: false, ResultJson: strings.TrimSuffix(rest, "\n")}
 					break
-				} else if strings.HasPrefix(parts[1], "exception ") {
-					cmd.responseChan <- RawResponse{Exception: true, ResultJson: strings.TrimSuffix(strings.TrimPrefix(parts[1], "exception "), "\n")}
+				} else if rest, ok = strings.CutPrefix(parts[1], "exception "); ok {
+					cmd.responseChan <- RawResponse{Exception: true, ResultJson: strings.TrimSuffix(rest, "\n")}
 					return
-				} else if strings.HasPrefix(parts[1], "message ") {
+				} else if rest, ok = strings.CutPrefix(parts[1], "message "); ok {
 					continue
 				} else {
 					setFatalError(client, fmt.Errorf("malformed message response from JSockD: %q", mresp))

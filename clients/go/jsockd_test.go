@@ -38,6 +38,9 @@ func TestSendRawCommand(t *testing.T) {
 		config := DefaultConfig()
 		config.SkipJSockDVersionCheck = true
 		client, err := InitJSockDClient(config, getJSockDPath(t), []string{"/tmp/jsockd.sock"})
+		if err != nil {
+			t.Fatal(err)
+		}
 		defer client.Close()
 		if err != nil {
 			t.Fatal(err)
@@ -49,7 +52,7 @@ func TestSendRawCommand(t *testing.T) {
 				msgErr = fmt.Errorf("Unexpected first message: '%s' '%s'", json, "\"foo\"")
 			}
 			if msgCount == 1 && json != "\"bar\"" {
-				msgErr = fmt.Errorf("Unexpected second message: '%s' '%s'", json, "\"foo\"")
+				msgErr = fmt.Errorf("Unexpected second message: '%s' '%s'", json, "\"bar\"")
 			}
 			if msgCount > 1 && msgErr == nil {
 				msgErr = fmt.Errorf("Unexpected extra message: %s", json)
