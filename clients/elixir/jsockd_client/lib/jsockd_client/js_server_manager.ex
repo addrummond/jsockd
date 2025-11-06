@@ -90,7 +90,6 @@ defmodule JSockDClient.JsServerManager do
        port_id: port_id,
        unix_socket_paths: unix_socket_paths,
        unix_sockets_with_threads: [],
-       pending_calls: %{},
        current_line: [],
        skip_jsockd_version_check?: skip_jsockd_version_check?,
        current_log_line: []
@@ -153,20 +152,8 @@ defmodule JSockDClient.JsServerManager do
 
   @impl true
   def handle_info({:send_reply, from, reply}, state) do
-    [uuid, contents] = String.split(reply, " ", parts: 2)
-
-    expected_uuid = Map.get(state.pending_calls, from)
-
-    if uuid != expected_uuid do
-      Logger.warning(
-        "Received reply with mismatched UUID: expected #{expected_uuid}, got #{uuid}"
-      )
-
-      {:noreply, state}
-    else
-      GenServer.reply(from, contents)
-      {:noreply, %{state | pending_calls: Map.delete(state.pending_calls, from)}}
-    end
+    GenServer.reply(from, reply)
+    {:noreply, state}
   end
 
   @impl true
@@ -195,7 +182,7 @@ defmodule JSockDClient.JsServerManager do
       {:send, message_uuid, function, argument_string, from, message_handler, self()}
     )
 
-    {:noreply, %{state | pending_calls: Map.put(state.pending_calls, from, message_uuid)}}
+    {:noreply, state}
   end
 
   defp handle_jsockd_msg("", state), do: state
@@ -277,7 +264,10 @@ defmodule JSockDClient.JsServerManager do
 
             :ok = :socket.send(sock, [message_uuid, "\x00", function, "\x00", argument, "\x00"])
 
-            recv_loop(sock, message_uuid, from, message_handler, reply_pid)
+            reply =
+              recv_loop(sock, message_uuid, from, message_handler, reply_pid)
+
+            send(reply_pid, {:send_reply, from, reply})
         end
 
         loop.(loop)
@@ -293,9 +283,16 @@ defmodule JSockDClient.JsServerManager do
 
     cond do
       String.ends_with?(data, "\n") ->
+        reply = Enum.reverse(acc) |> Enum.join()
+        [uuid, contents] = String.split(reply, " ", parts: 2)
+
+        if uuid != message_uuid do
+          raise "Mismatched message UUID received: expected #{inspect(message_uuid)}, got #{inspect(uuid)}"
+        end
+
         recv_loop_inner(
           sock,
-          String.replace_trailing(data, "\n", ""),
+          String.replace_trailing(contents, "\n", ""),
           message_uuid,
           from,
           message_handler,
@@ -303,7 +300,7 @@ defmodule JSockDClient.JsServerManager do
         )
 
       String.contains?(data, "\n") ->
-        raise "Unexpected data received: #{inspect(data)}"
+        raise "Unexpected data received: #{inspect(acc)}"
 
       true ->
         recv_loop(sock, message_uuid, from, message_handler, reply_pid, acc)
