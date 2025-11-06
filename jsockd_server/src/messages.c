@@ -60,36 +60,14 @@ static int send_message(JSRuntime *rt, const char *message, size_t message_len,
 
   *result = JS_UNDEFINED;
 
-  // If we can, it's probably faster to concat the entire message into input_buf
-  // and make just a single write syscall.
-  int read_r;
-  if (ts->current_uuid_len +
-          (sizeof(" message ") - sizeof(char)) / sizeof(char) + message_len +
-          sizeof(char) <=
-      INPUT_BUF_BYTES) {
-    memcpy(ts->input_buf, ts->current_uuid, ts->current_uuid_len);
-    memcpy(ts->input_buf + ts->current_uuid_len, " message ",
-           (sizeof(" message ") - sizeof(char)) / sizeof(char));
-    memcpy(ts->input_buf + ts->current_uuid_len +
-               (sizeof(" message ") - sizeof(char)) / sizeof(char),
-           message, message_len);
-    ts->input_buf[ts->current_uuid_len +
-                  (sizeof(" message ") - sizeof(char)) / sizeof(char) +
-                  message_len] = term;
-    size_t total_written = ts->current_uuid_len +
-                           (sizeof(" message ") - sizeof(char)) / sizeof(char) +
-                           message_len + sizeof(char);
-    read_r =
-        write_all(ts->socket_state->streamfd, ts->input_buf, total_written);
-  } else {
-    read_r = write_all(ts->socket_state->streamfd, ts->current_uuid,
-                       ts->current_uuid_len);
-    read_r |= write_all(ts->socket_state->streamfd, " message ",
-                        (sizeof("message ") - 1) / sizeof(char));
-    read_r |= write_all(ts->socket_state->streamfd, message, message_len);
-    read_r |= write_all(ts->socket_state->streamfd, &term, sizeof(char));
-  }
-  if (read_r < 0) {
+  struct iovec msgvecs[] = {
+      {.iov_base = (void *)ts->current_uuid, .iov_len = ts->current_uuid_len},
+      {.iov_base = (void *)" message ", .iov_len = STRCONST_LEN(" message ")},
+      {.iov_base = (void *)message, .iov_len = message_len},
+      {.iov_base = (void *)&term, .iov_len = sizeof(char)},
+  };
+  if (writev_all(ts->socket_state->streamfd, msgvecs,
+                 sizeof(msgvecs) / sizeof(msgvecs[0])) < 0) {
     jsockd_logf(LOG_ERROR, "Error writing message to socket: %s\n",
                 strerror(errno));
     return SEND_MESSAGE_ERR_IO;

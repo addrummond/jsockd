@@ -8,7 +8,10 @@
 #include "quickjs.h"
 #include <pthread.h>
 #include <stdint.h>
+#include <sys/uio.h>
 #include <time.h>
+
+#define STRCONST_LEN(s) (sizeof(s)/sizeof(char) - sizeof(char))
 
 void mutex_lock_(pthread_mutex_t *m, const char *file, int line);
 void mutex_unlock_(pthread_mutex_t *m, const char *file, int line);
@@ -26,6 +29,7 @@ void dump_error(JSContext *ctx);
 #define mutex_init(m) mutex_init_((m), __FILE__, __LINE__)
 
 int write_all(int fd, const char *buf, size_t len);
+int writev_all(int fildes, struct iovec *iov, int iovcnt);
 
 typedef enum { READY, SIG_INTERRUPT_OR_ERROR, GO_AROUND } PollFdResult;
 PollFdResult poll_fd(int fd, int timeout_ms);

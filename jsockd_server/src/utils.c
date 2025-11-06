@@ -3,6 +3,7 @@
 #include "log.h"
 #include "quickjs-libc.h"
 #include <errno.h>
+#include <limits.h>
 #ifdef LINUX
 #define _GNU_SOURCE // make ppoll available
 #endif
@@ -44,13 +45,49 @@ void mutex_init_(pthread_mutex_t *m, const char *file, int line) {
 int write_all(int fd, const char *buf, size_t len) {
   while (len > 0) {
     int n = write(fd, buf, len);
-    if (n < 0) {
+    if (n <= 0) {
       if (errno == EINTR)
         continue; // interrupted, try again
       return n;
     }
     len -= n;
     buf += n;
+  }
+  return 0;
+}
+
+int writev_all(int fildes, struct iovec *iov, int iovcnt) {
+  if (iovcnt <= 0)
+    return 0;
+
+  ssize_t total_len = 0;
+  for (int i = 0; i < iovcnt; i++) {
+    total_len += (ssize_t)iov[i].iov_len;
+  }
+  if (total_len == 0)
+    return 0;
+
+  while (iovcnt > 0) {
+    ssize_t n = writev(fildes, iov, iovcnt);
+    if (n <= 0) {
+      if (errno == EINTR)
+        continue;
+      return -1;
+    }
+
+    total_len -= n;
+    ssize_t remaining = n;
+
+    while (iovcnt > 0 && remaining >= (ssize_t)iov->iov_len) {
+      remaining -= (ssize_t)iov->iov_len;
+      iov++;
+      iovcnt--;
+    }
+
+    if (iovcnt > 0) {
+      iov->iov_base = (char *)iov->iov_base + remaining;
+      iov->iov_len -= (size_t)remaining;
+    }
   }
   return 0;
 }
