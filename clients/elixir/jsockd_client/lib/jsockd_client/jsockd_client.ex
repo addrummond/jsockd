@@ -17,7 +17,7 @@ defmodule JSockDClient do
   # keep in sync with config.h
   @default_max_command_runtime_us 250_000
 
-  def send_js(function, argument) do
+  def send_js(function, argument, opts \\ []) do
     message_uuid = :crypto.strong_rand_bytes(8) |> Base.encode64()
 
     timeout_ms =
@@ -28,12 +28,11 @@ defmodule JSockDClient do
       )
 
     try do
-      JSockDClient.JsServerManager
-      |> GenServer.call(
-        {:send_command, message_uuid, function, Jason.encode!(argument)},
+      GenServer.call(
+        JSockDClient.JsServerManager,
+        {:send_command, message_uuid, function, Jason.encode!(argument), opts[:message_handler]},
         _timeout = timeout_ms
       )
-      |> parse_response()
     catch
       :exit, reason ->
         # The JS server implements its own timeout mechanism, so if we've been
