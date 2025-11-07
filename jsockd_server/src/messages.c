@@ -196,14 +196,16 @@ static JSClassID jsockd_class_id;
 
 static JSValue jsockd_send_message(JSContext *ctx, JSValueConst this_val,
                                    int argc, JSValueConst *argv) {
-  if (argc != 1) {
+  if (argc < 1 || argc > 3) {
     return JS_ThrowInternalError(
-        ctx,
-        "JSockD.sendMessage requires exactly 1 argument (the message to send)");
+        ctx, "JSockD.sendMessage requires 1-3 arguments (the message to send, "
+             "and optionally, 'replacer' and 'space' arguments to pass to "
+             "JSON.stringify)");
   }
   JSValue message_val = argv[0];
   JSValue encoded_message_val =
-      JS_JSONStringify(ctx, message_val, JS_UNDEFINED, JS_UNDEFINED);
+      JS_JSONStringify(ctx, message_val, argc > 1 ? argv[1] : JS_UNDEFINED,
+                       argc > 2 ? argv[2] : JS_UNDEFINED);
   if (JS_IsException(encoded_message_val)) {
     JS_FreeValue(ctx, encoded_message_val);
     return JS_ThrowTypeError(

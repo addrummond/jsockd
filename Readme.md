@@ -315,7 +315,7 @@ export { flubBar, blagFoo }
 * `setTimeout` and `setInterval` are not available. As JSockD does not support long-running commands, you would generally want to shim these if any of your library code depends on them.
 * `globalThis` is available as the global object.
 * The `JSockD` global object is available with the following method:
-  * `JSockD.sendMessage(message: any): any`: sends a JSON-serializable message to the client and synchronously waits for a response.
+* `JSockD.sendMessage(message: any, replacer?: any, space?: any): any`: sends a JSON-serializable message to the client and synchronously waits for a response. The optional `replacer` and `space` arguments are passed to `JSON.stringify` when serializing the message. The return value is the response received from the client.
 
 ## 5. Building from source
 
