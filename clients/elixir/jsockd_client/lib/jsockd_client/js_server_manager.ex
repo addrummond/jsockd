@@ -97,12 +97,15 @@ defmodule JSockDClient.JsServerManager do
   end
 
   @impl true
-  def terminate(_reason, state) do
+  def terminate(reason, state) do
     Enum.each(state.unix_sockets_with_threads, fn {{_path, sock}, _pid} ->
       :ok = :socket.close(sock)
     end)
 
-    Port.close(state.port_id)
+    # Port.info returns nil if the port is already closed
+    if nil != Port.info(state.port_id) do
+      Port.close(state.port_id)
+    end
   end
 
   def start_link(arg) do
@@ -167,7 +170,7 @@ defmodule JSockDClient.JsServerManager do
 
   @impl true
   def handle_call(
-        {:send_command, message_uuid, function, argument_string, message_handler},
+        {:send_command, message_uuid, function, argument_string, opts},
         from,
         state
       ) do
@@ -179,7 +182,7 @@ defmodule JSockDClient.JsServerManager do
 
     send(
       usockpid,
-      {:send, message_uuid, function, argument_string, from, message_handler, self()}
+      {:send, message_uuid, function, argument_string, from, opts, self()}
     )
 
     {:noreply, state}
@@ -253,7 +256,7 @@ defmodule JSockDClient.JsServerManager do
     spawn_link(fn ->
       loop = fn loop ->
         receive do
-          {:send, message_uuid, function, argument, from, message_handler, reply_pid} ->
+          {:send, message_uuid, function, argument, from, opts, reply_pid} ->
             function = String.trim(function)
             argument = String.trim(argument)
 
@@ -265,7 +268,7 @@ defmodule JSockDClient.JsServerManager do
             :ok = :socket.send(sock, [message_uuid, "\x00", function, "\x00", argument, "\x00"])
 
             reply =
-              recv_loop(sock, message_uuid, from, message_handler, reply_pid)
+              recv_loop(sock, message_uuid, from, opts, reply_pid)
 
             send(reply_pid, {:send_reply, from, reply})
         end
@@ -277,7 +280,7 @@ defmodule JSockDClient.JsServerManager do
     end)
   end
 
-  defp recv_loop(sock, message_uuid, from, message_handler, reply_pid, acc \\ []) do
+  defp recv_loop(sock, message_uuid, from, opts, reply_pid, acc \\ []) do
     {:ok, data} = :socket.recv(sock, 0)
     acc = [data | acc]
 
@@ -295,7 +298,7 @@ defmodule JSockDClient.JsServerManager do
           String.replace_trailing(contents, "\n", ""),
           message_uuid,
           from,
-          message_handler,
+          opts,
           reply_pid
         )
 
@@ -303,11 +306,11 @@ defmodule JSockDClient.JsServerManager do
         raise "Unexpected data received: #{inspect(acc)}"
 
       true ->
-        recv_loop(sock, message_uuid, from, message_handler, reply_pid, acc)
+        recv_loop(sock, message_uuid, from, opts, reply_pid, acc)
     end
   end
 
-  defp recv_loop_inner(sock, data, message_uuid, from, message_handler, reply_pid) do
+  defp recv_loop_inner(sock, data, message_uuid, from, opts, reply_pid) do
     case data do
       "exception " <> except ->
         {:error, Jason.decode!(except)}
@@ -318,7 +321,11 @@ defmodule JSockDClient.JsServerManager do
       "message " <> msg ->
         response =
           try do
-            Jason.encode!(message_handler.(Jason.decode!(msg)))
+            # Reply with "null" if no message handler is specified
+            Jason.encode!(
+              opts[:message_handler] &&
+                opts[:message_handler].(Jason.decode!(msg, opts[:json_decode_opts] || []))
+            )
           rescue
             e ->
               # Ignore any error response from :socket.send as we're about to raise anyway
@@ -328,7 +335,7 @@ defmodule JSockDClient.JsServerManager do
 
         :ok = :socket.send(sock, [message_uuid, "\x00", response, "\x00"])
 
-        recv_loop(sock, message_uuid, from, message_handler, reply_pid)
+        recv_loop(sock, message_uuid, from, opts, reply_pid)
     end
   end
 

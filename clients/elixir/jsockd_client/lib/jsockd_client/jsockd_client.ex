@@ -35,7 +35,7 @@ defmodule JSockDClient do
     try do
       GenServer.call(
         JSockDClient.JsServerManager,
-        {:send_command, message_uuid, function, Jason.encode!(argument), opts[:message_handler]},
+        {:send_command, message_uuid, function, Jason.encode!(argument), opts},
         _timeout = timeout_ms
       )
     catch
