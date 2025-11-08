@@ -2,8 +2,8 @@
 #include <memory.h>
 #include <stdio.h>
 
-static size_t get_cache_bucket(HashCacheUid uid, int n_bits) {
-  return uid.low64 & (((uint64_t)1 << n_bits) - 1);
+size_t get_cache_bucket(HashCacheUid uid, int n_bits) {
+  return uid.low64 % (1 << n_bits);
 }
 
 static size_t get_bucket_look_forward(int n_bits) { return n_bits * 3 / 2; }
@@ -33,7 +33,6 @@ HashCacheBucket *add_to_hash_cache(HashCacheBucket buckets[], int n_bits,
   };
 
   HashCacheBucket *bucket = buckets + bucket_i;
-  bucket->uid = uid;
   return bucket;
 }
 

@@ -83,6 +83,7 @@ static cached_function_t *add_cached_function(HashCacheUid uid,
   } else {
     atomic_fetch_add_explicit(&g_n_cached_functions, 1, memory_order_relaxed);
   }
+  b->uid = uid;
   g_cached_functions[bi].bytecode = bytecode;
   g_cached_functions[bi].bytecode_size = bytecode_size;
   g_cached_functions[bi].refcount = 1;
