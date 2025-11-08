@@ -39,6 +39,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"path"
 	"regexp"
 	"strconv"
 	"strings"
@@ -88,14 +89,40 @@ type JSockDClient struct {
 	quitCount       uint64
 	fatalError      error
 	fatalErrorMutex sync.Mutex
+	socketTmpdir    string
 }
 
 const messageHandlerInternalError = "internal_error"
 
-// InitJSockDClient starts a JSockD server process with the specified
+// InitJSockDClientWithSockets starts a JSockD server process with the specified
 // configuration, connects to it via the specified Unix domain sockets, and
 // returns a JSockDClient that can be used to send commands to the server.
-func InitJSockDClient(config Config, jsockdExec string, sockets []string) (*JSockDClient, error) {
+func InitJSockDClient(config Config, jsockdExec string) (*JSockDClient, error) {
+	client, err := initJSockDClient(config, jsockdExec)
+	if err != nil && client.socketTmpdir != "" {
+		// Ignore error as it's just nice to have cleanup
+		os.RemoveAll(client.socketTmpdir)
+	}
+	return client, err
+}
+
+func initJSockDClient(config Config, jsockdExec string) (*JSockDClient, error) {
+	var sockets []string
+	var socketTmpdir string
+	if config.Sockets != nil {
+		sockets = config.Sockets
+	} else {
+		var err error
+		socketTmpdir, err = os.MkdirTemp("", "jsockd_go_client_sockets_")
+		if err != nil {
+			return nil, err
+		}
+		sockets := make([]string, config.NThreads)
+		for i := 0; i < config.NThreads; i++ {
+			sockets[i] = path.Join(socketTmpdir, fmt.Sprintf("jsockd_socket_%d.sock", i))
+		}
+	}
+
 	cmdargs := prepareCmdArgs(config, jsockdExec, sockets)
 
 	// Start the process
@@ -157,10 +184,11 @@ func InitJSockDClient(config Config, jsockdExec string, sockets []string) (*JSoc
 
 	connChans := make([]chan command, readyCount)
 	client := &JSockDClient{
-		conns:     conns,
-		connChans: connChans,
-		config:    config,
-		cmd:       cmd,
+		conns:        conns,
+		connChans:    connChans,
+		config:       config,
+		cmd:          cmd,
+		socketTmpdir: socketTmpdir,
 	}
 
 	for i := range readyCount {
@@ -299,6 +327,11 @@ func (client *JSockDClient) Close() error {
 	if qs > 1 {
 		// Already quitting or quit
 		return nil
+	}
+
+	// Ignore error as it's just nice to have cleanup
+	if client.socketTmpdir != "" {
+		defer os.RemoveAll(client.socketTmpdir)
 	}
 
 	for _, c := range client.connChans {

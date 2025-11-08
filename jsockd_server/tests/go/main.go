@@ -1,8 +1,24 @@
 package main
 
-import "github.com/addrummond/jsockd/clients/go/jsockdclient"
+import (
+	"fmt"
+	"os"
+
+	"github.com/addrummond/jsockd/clients/go/jsockdclient"
+)
 
 func main() {
-	conf := jsockdclient.DefaultConfig()
-	_ = conf
+	config := jsockdclient.DefaultConfig()
+	config.NThreads = 50
+	config.SkipJSockDVersionCheck = true
+
+	socketNames := make([]string, config.NThreads)
+	for i := range config.NThreads {
+		socketNames[i] = fmt.Sprintf("/tmp/jsockd.%d.sock", i)
+	}
+
+	client, err := jsockdclient.InitJSockDClient(config, os.Args[1], socketNames)
+	if client.Err != nil {
+
+	}
 }

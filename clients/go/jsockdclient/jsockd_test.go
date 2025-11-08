@@ -18,7 +18,8 @@ func TestSendRawCommand(t *testing.T) {
 	t.Run("good command", func(t *testing.T) {
 		config := DefaultConfig()
 		config.SkipJSockDVersionCheck = true
-		client, err := InitJSockDClient(config, getJSockDPath(t), []string{"/tmp/jsockd.sock"})
+		config.NThreads = 1
+		client, err := InitJSockDClient(config, getJSockDPath(t))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -37,7 +38,8 @@ func TestSendRawCommand(t *testing.T) {
 	t.Run("command with message", func(t *testing.T) {
 		config := DefaultConfig()
 		config.SkipJSockDVersionCheck = true
-		client, err := InitJSockDClient(config, getJSockDPath(t), []string{"/tmp/jsockd.sock"})
+		config.NThreads = 1
+		client, err := InitJSockDClient(config, getJSockDPath(t))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -76,7 +78,8 @@ func TestSendRawCommand(t *testing.T) {
 	t.Run("bad command", func(t *testing.T) {
 		config := DefaultConfig()
 		config.SkipJSockDVersionCheck = true
-		client, err := InitJSockDClient(config, getJSockDPath(t), []string{"/tmp/jsockd.sock"})
+		config.NThreads = 1
+		client, err := InitJSockDClient(config, getJSockDPath(t))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -96,7 +99,8 @@ func TestSendCommand(t *testing.T) {
 	t.Run("good command", func(t *testing.T) {
 		config := DefaultConfig()
 		config.SkipJSockDVersionCheck = true
-		client, err := InitJSockDClient(config, getJSockDPath(t), []string{"/tmp/jsockd.sock"})
+		config.NThreads = 1
+		client, err := InitJSockDClient(config, getJSockDPath(t))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -118,7 +122,8 @@ func TestSendCommand(t *testing.T) {
 	t.Run("bad command", func(t *testing.T) {
 		config := DefaultConfig()
 		config.SkipJSockDVersionCheck = true
-		client, err := InitJSockDClient(config, getJSockDPath(t), []string{"/tmp/jsockd.sock"})
+		config.NThreads = 1
+		client, err := InitJSockDClient(config, getJSockDPath(t))
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -217,6 +217,8 @@ following:
 * Closing any one of the server's UNIX domain sockets.
 * Sending a SIGTERM signal to the server process.
 
+JSockD will attempt to remove socket files when it exits, so it is not necessary for clients to clean these up.
+
 ### 3.4 Error message and backtrace formats
 
 ```javascript
