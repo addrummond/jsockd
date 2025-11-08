@@ -62,7 +62,7 @@ static int send_message(JSRuntime *rt, const char *message, size_t message_len,
 
   struct iovec msgvecs[] = {
       {.iov_base = (void *)ts->current_uuid, .iov_len = ts->current_uuid_len},
-      {.iov_base = (void *)" message ", .iov_len = STRCONST_LEN(" message ")},
+      STRCONST_IOVEC(" message "),
       {.iov_base = (void *)message, .iov_len = message_len},
       {.iov_base = (void *)&term, .iov_len = sizeof(char)},
   };
