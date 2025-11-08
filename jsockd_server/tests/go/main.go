@@ -36,8 +36,10 @@ func main() {
 			defer wg.Done()
 			for j := 0; j < 10000; j++ {
 				n := rand.IntN(1000)
-				cmd := fmt.Sprintf("(_m, p) => p + %v", n)
-				resp, err := jsockdclient.SendCommand[int](client, cmd, n)
+				cmd := fmt.Sprintf("(_m, p) => { const x = p + %v; return JSockD.sendMessage(x) + 1; }", n)
+				resp, err := jsockdclient.SendCommandWithMessageHandler[int](client, cmd, n, func(msg int) (int, error) {
+					return msg, nil
+				})
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "Error sending command: %v\n", err)
 					os.Exit(1)
@@ -46,7 +48,7 @@ func main() {
 					fmt.Fprintf(os.Stderr, "Received exception: %v\n", resp.Exception)
 					os.Exit(1)
 				}
-				if resp.Result != 2*n {
+				if resp.Result != (2*n)+1 {
 					fmt.Fprintf(os.Stderr, "Unexpected result for command (_m, p) => p + %v: got %v, expected %v\n", n, resp.Result, 2*n)
 					os.Exit(1)
 				}
