@@ -98,6 +98,9 @@ const messageHandlerInternalError = "internal_error"
 // configuration, connects to it via the specified Unix domain sockets, and
 // returns a JSockDClient that can be used to send commands to the server.
 func InitJSockDClient(config Config, jsockdExec string) (*JSockDClient, error) {
+	if config.NThreads <= 0 {
+		return nil, errors.New("NThreads must be greater than zero. Did you forget to call jsockdclient.DefaultConfig() to initialize the Config struct?")
+	}
 	client, err := initJSockDClient(config, jsockdExec)
 	if err != nil && client != nil && client.socketTmpdir != "" {
 		// Ignore error as it's just nice to have cleanup
