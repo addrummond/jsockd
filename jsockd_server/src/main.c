@@ -627,8 +627,8 @@ static void writev_to_stream_helper(ThreadState *ts, struct iovec *iov,
   }
 }
 
-#define writev_to_stream(ts, vecs)                                             \
-  writev_to_stream_helper((ts), (vecs), sizeof(vecs) / sizeof((vecs)[0]))
+#define writev_to_stream(ts, ...)                                              \
+  writev_to_stream_helper((ts), (struct iovec[]){__VA_ARGS__}, sizeof((struct iovec[]){__VA_ARGS__}) / sizeof(struct iovec)
 
 static void write_to_wbuf_wrapper(void *opaque, const char *inp, size_t size) {
   write_to_wbuf((WBuf *)opaque, inp, size);
@@ -653,11 +653,9 @@ static int handle_line_3_parameter_helper(ThreadState *ts, const char *line,
       JS_PrintValue(ts->ctx, js_print_value_debug_write, (void *)&l,
                     ts->compiled_query, &js_print_value_options);
     }
-    writev_to_stream(
-        ts, ((struct iovec[]){
-                {.iov_base = (void *)ts->current_uuid,
+    writev_to_stream( ts,  {.iov_base = (void *)ts->current_uuid,
                  .iov_len = ts->current_uuid_len},
-                STRCONST_IOVEC(" exception \"error compiling command\"\n")}));
+                STRCONST_IOVEC(" exception \"error compiling command\"\n")));
     return ts->socket_state->stream_io_err;
   }
 
@@ -673,11 +671,10 @@ static int handle_line_3_parameter_helper(ThreadState *ts, const char *line,
                 len, line);
     dump_error(ts->ctx);
     JS_FreeValue(ts->ctx, parsed_arg);
-    writev_to_stream(
-        ts, ((struct iovec[]){{.iov_base = (void *)ts->current_uuid,
+    writev_to_stream(ts, {.iov_base = (void *)ts->current_uuid,
                                .iov_len = ts->current_uuid_len},
                               STRCONST_IOVEC(" exception "
-                                             "\"JSON input parse error\"\n")}));
+                                             "\"JSON input parse error\"\n")));
     return ts->socket_state->stream_io_err;
   }
 
@@ -686,26 +683,27 @@ static int handle_line_3_parameter_helper(ThreadState *ts, const char *line,
                         sizeof(argv) / sizeof(argv[0]), argv);
   ret = js_std_await(ts->ctx, ret); // allow return of a promise
   if (JS_IsException(ret)) {
-    // TODO: Update to use writev_to_stream (a relatively complex case)
     jsockd_log(LOG_DEBUG, "Error calling cached function\n");
-    write_to_stream(ts, ts->current_uuid, ts->current_uuid_len);
-    write_const_to_stream(ts, " exception ");
+
     char *error_msg_buf = calloc(ERROR_MSG_MAX_BYTES, sizeof(char));
     WBuf emb = {
         .buf = error_msg_buf, .index = 0, .length = ERROR_MSG_MAX_BYTES};
     JSValue exception = JS_GetException(ts->ctx);
     JS_PrintValue(ts->ctx, write_to_wbuf_wrapper, &emb, exception, NULL);
 
-    size_t json_bt_length;
-    const char *json_bt_str =
-        get_backtrace(ts, emb.buf, emb.index, &json_bt_length, BACKTRACE_JSON);
-    if (!json_bt_str) {
-      write_const_to_stream(ts, "{}\n");
-    } else {
-      write_to_stream(ts, json_bt_str, json_bt_length);
-      write_const_to_stream(ts, "\n");
-      JS_FreeCString(ts->ctx, json_bt_str);
-    }
+    const char *bt_str = "{}";
+    size_t bt_length = 0;
+    const char *bt_str_ =
+        get_backtrace(ts, emb.buf, emb.index, &bt_length, BACKTRACE_JSON);
+    if (bt_str_)
+      bt_str = bt_str_;
+
+    writev_to_stream(ts,                         {.iov_base = (void *)ts->current_uuid,
+                              .iov_len = ts->current_uuid_len},
+                             STRCONST_IOVEC(" exception "),
+                             {.iov_base = (void *)bt_str, .iov_len = bt_length},
+                             STRCONST_IOVEC("\n"),
+                         ));
 
     JS_FreeValue(ts->ctx, exception);
     JS_FreeValue(ts->ctx, parsed_arg);
@@ -723,12 +721,11 @@ static int handle_line_3_parameter_helper(ThreadState *ts, const char *line,
     JS_FreeValue(ts->ctx, ret);
     JS_FreeValue(ts->ctx, stringified);
     dump_error(ts->ctx);
-    writev_to_stream(ts, ((struct iovec[]){
-                             {.iov_base = (void *)ts->current_uuid,
+    writev_to_stream(ts, {.iov_base = (void *)ts->current_uuid,
                               .iov_len = ts->current_uuid_len},
                              STRCONST_IOVEC(" exception \"error attempting to "
                                             "JSON serialize return value\"\n"),
-                         }));
+                         ));
     return ts->socket_state->stream_io_err;
   }
 
@@ -737,11 +734,10 @@ static int handle_line_3_parameter_helper(ThreadState *ts, const char *line,
     JS_FreeValue(ts->ctx, parsed_arg);
     JS_FreeValue(ts->ctx, ret);
     writev_to_stream(
-        ts, ((struct iovec[]){
-                {.iov_base = (void *)ts->current_uuid,
+        ts,      {.iov_base = (void *)ts->current_uuid,
                  .iov_len = ts->current_uuid_len},
                 STRCONST_IOVEC(" exception \"unserializable return value\"\n"),
-            }));
+            ));
     return ts->socket_state->stream_io_err;
   }
 
@@ -761,13 +757,12 @@ static int handle_line_3_parameter_helper(ThreadState *ts, const char *line,
   size_t sz;
   const char *str = JS_ToCStringLen(ts->ctx, &sz, stringified);
 
-  writev_to_stream(ts, ((struct iovec[]){
-                           {.iov_base = (void *)ts->current_uuid,
+  writev_to_stream(ts,     {.iov_base = (void *)ts->current_uuid,
                             .iov_len = ts->current_uuid_len},
                            STRCONST_IOVEC(" ok "),
                            {.iov_base = (void *)str, .iov_len = sz},
                            STRCONST_IOVEC("\n"),
-                       }));
+                       ));
 
   JS_FreeValue(ts->ctx, parsed_arg);
   JS_FreeValue(ts->ctx, ret);
@@ -861,12 +856,10 @@ static int line_handler(const char *line, size_t len, ThreadState *ts,
       ts->line_n = 0;
       JS_FreeValue(ts->ctx, ts->compiled_query);
       ts->compiled_query = JS_UNDEFINED;
-      writev_to_stream(
-          ts, ((struct iovec[]){
-                  {.iov_base = (void *)ts->current_uuid,
+      writev_to_stream(ts,      {.iov_base = (void *)ts->current_uuid,
                    .iov_len = ts->current_uuid_len},
                   STRCONST_IOVEC(" exception \"jsockd command was too long\n"),
-              }));
+              ));
     } else {
       // we'll signal an error once the client has sent the third line
       ts->line_n++;
@@ -893,22 +886,20 @@ static int line_handler(const char *line, size_t len, ThreadState *ts,
     int exec_time_len = snprintf(
         exec_time_buf, sizeof(exec_time_buf) / sizeof(exec_time_buf[0]),
         "%" PRId64, ts->last_command_exec_time_ns);
-    writev_to_stream(ts, ((struct iovec[]){
-                             {.iov_base = (void *)exec_time_buf,
+    writev_to_stream(ts,     {.iov_base = (void *)exec_time_buf,
                               .iov_len = (size_t)exec_time_len},
                              STRCONST_IOVEC("\n"),
-                         }));
+                         ));
     return 0;
   }
   if (!strcmp("?memusage", line)) {
     JSMemoryUsage mu;
     JS_ComputeMemoryUsage(ts->rt, &mu);
     const char *memusage_str = format_memusage(&mu);
-    writev_to_stream(ts, ((struct iovec[]){
-                             {.iov_base = (void *)memusage_str,
+    writev_to_stream(ts,       {.iov_base = (void *)memusage_str,
                               .iov_len = strlen(memusage_str)},
                              STRCONST_IOVEC("\n"),
-                         }));
+                         ));
     free((void *)memusage_str);
     return 0;
   }
