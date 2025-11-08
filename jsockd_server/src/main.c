@@ -555,6 +555,11 @@ static int handle_line_2_query(ThreadState *ts, const char *line, int len) {
   const HashCacheUid uid = get_hash_cache_uid(line, len);
   const cached_function_t *cf = get_cached_function(uid);
 
+#ifdef CMAKE_BUILD_TYPE_DEBUG
+  jsockd_logf(LOG_DEBUG, "Computed UID: %016" PRIx64 "%016" PRIx64 "\n",
+              uid.high64, uid.low64);
+#endif
+
   if (cf) {
     jsockd_log(LOG_DEBUG, "Found cached function\n");
     ts->compiled_query =

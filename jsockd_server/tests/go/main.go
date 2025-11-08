@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
 	rand "math/rand/v2"
 
@@ -13,6 +14,9 @@ func main() {
 	config := jsockdclient.DefaultConfig()
 	config.NThreads = 50
 	config.SkipJSockDVersionCheck = true
+	config.Logger = func(timestamp time.Time, level string, message string) {
+		fmt.Printf("[%s] %s: %s\n", timestamp.Format("2006-01-02 15:04:05"), level, message)
+	}
 
 	socketNames := make([]string, config.NThreads)
 	for i := range config.NThreads {
