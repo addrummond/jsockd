@@ -728,7 +728,7 @@ static int handle_line_3_parameter_helper(ThreadState *ts, const char *line,
         ts,
         {.iov_base = (void *)ts->current_uuid, .iov_len = ts->current_uuid_len},
         STRCONST_IOVEC(" exception \"error attempting to "
-                       "JSON serialize return value\"\n"), );
+                       "JSON serialize return value\"\n"));
     return ts->socket_state->stream_io_err;
   }
 
@@ -739,7 +739,7 @@ static int handle_line_3_parameter_helper(ThreadState *ts, const char *line,
     writev_to_stream(
         ts,
         {.iov_base = (void *)ts->current_uuid, .iov_len = ts->current_uuid_len},
-        STRCONST_IOVEC(" exception \"unserializable return value\"\n"), );
+        STRCONST_IOVEC(" exception \"unserializable return value\"\n"));
     return ts->socket_state->stream_io_err;
   }
 
@@ -763,7 +763,7 @@ static int handle_line_3_parameter_helper(ThreadState *ts, const char *line,
       ts,
       {.iov_base = (void *)ts->current_uuid, .iov_len = ts->current_uuid_len},
       STRCONST_IOVEC(" ok "), {.iov_base = (void *)str, .iov_len = sz},
-      STRCONST_IOVEC("\n"), );
+      STRCONST_IOVEC("\n"));
 
   JS_FreeValue(ts->ctx, parsed_arg);
   JS_FreeValue(ts->ctx, ret);
@@ -861,7 +861,7 @@ static int line_handler(const char *line, size_t len, ThreadState *ts,
           ts,
           {.iov_base = (void *)ts->current_uuid,
            .iov_len = ts->current_uuid_len},
-          STRCONST_IOVEC(" exception \"jsockd command was too long\n"), );
+          STRCONST_IOVEC(" exception \"jsockd command was too long\n"));
     } else {
       // we'll signal an error once the client has sent the third line
       ts->line_n++;
@@ -891,7 +891,7 @@ static int line_handler(const char *line, size_t len, ThreadState *ts,
     writev_to_stream(
         ts,
         {.iov_base = (void *)exec_time_buf, .iov_len = (size_t)exec_time_len},
-        STRCONST_IOVEC("\n"), );
+        STRCONST_IOVEC("\n"));
     return 0;
   }
   if (!strcmp("?memusage", line)) {
@@ -900,7 +900,7 @@ static int line_handler(const char *line, size_t len, ThreadState *ts,
     const char *memusage_str = format_memusage(&mu);
     writev_to_stream(
         ts, {.iov_base = (void *)memusage_str, .iov_len = strlen(memusage_str)},
-        STRCONST_IOVEC("\n"), );
+        STRCONST_IOVEC("\n"));
     free((void *)memusage_str);
     return 0;
   }
