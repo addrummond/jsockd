@@ -134,7 +134,7 @@ case $1 in
     run_jsockd_go_client_tests)
         (
             set -e
-            cd $GITHUB_WORKSPACE/clients/go
+            cd $GITHUB_WORKSPACE/clients/go/jsockdclient
             export JSOCKD="$GITHUB_WORKSPACE/jsockd_server/build_Debug/jsockd"
             go test ./...
         )
