@@ -74,7 +74,6 @@ static int send_message(JSRuntime *rt, const char *message, size_t message_len,
   }
 
   size_t total_read = 0;
-
   bool too_big = false;
 
   struct timespec polling_interval = {
