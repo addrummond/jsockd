@@ -1217,9 +1217,9 @@ static int inner_main(int argc, char *argv[]) {
   printf("READY %i %s\n", n_threads, STRINGIFY(VERSION));
   fflush(stdout);
 
-  // pthread_join can fail, but we can't do any useful error handling
   for (int i = 0; i < atomic_load_explicit(&g_n_threads, memory_order_relaxed);
        ++i) {
+    // pthread_join can fail, but we can't do any useful error handling
     pthread_join(g_threads[i], NULL);
     int rts = atomic_load_explicit(&g_thread_states[i].replacement_thread_state,
                                    memory_order_relaxed);
