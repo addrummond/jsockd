@@ -198,7 +198,7 @@ static JSValue jsockd_send_message(JSContext *ctx, JSValueConst this_val,
   if (argc < 1 || argc > 3) {
     return JS_ThrowInternalError(
         ctx, "JSockD.sendMessage requires 1-3 arguments (the message to send, "
-             "and optionally, 'replacer' and 'space' arguments to pass to "
+             "and, optionally, 'replacer' and 'space' arguments to pass to "
              "JSON.stringify)");
   }
   JSValue message_val = argv[0];
