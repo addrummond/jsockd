@@ -24,7 +24,7 @@ typedef struct {
 size_t get_cache_bucket(HashCacheUid uid, int n_bits);
 HashCacheUid get_hash_cache_uid(const void *data, size_t size);
 HashCacheBucket *get_hash_cache_bucket(HashCacheBucket buckets[], int n_bits,
-                                   HashCacheUid uid);
+                                       HashCacheUid uid);
 HashCacheBucket *get_hash_cache_entry(HashCacheBucket buckets[], int n_bits,
                                       HashCacheUid uid);
 
