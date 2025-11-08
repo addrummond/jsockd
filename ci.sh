@@ -140,6 +140,22 @@ case $1 in
         )
         ;;
 
+    run_jsockd_go_stress_tests_with_debug_build)
+        (
+            set -e
+            cd $GITHUB_WORKSPACE/jsockd_server/tests/go
+            go run main.go "$GITHUB_WORKSPACE/jsockd_server/build_Debug/jsockd"
+        )
+        ;;
+
+    run_jsockd_go_stress_tests_with_release_build)
+        (
+            set -e
+            cd $GITHUB_WORKSPACE/jsockd_server/tests/go
+            go run main.go "$GITHUB_WORKSPACE/jsockd_server/build_Release/jsockd"
+        )
+        ;;
+
     build_jsockd_server_linux_arm64)
         (
             set -e
