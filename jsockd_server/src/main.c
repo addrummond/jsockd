@@ -67,8 +67,8 @@ static cached_function_t *add_cached_function(HashCacheUid uid,
 
   mutex_lock(&g_cached_functions_mutex);
 
-  HashCacheBucket *b = add_to_hash_cache(g_cached_function_buckets,
-                                         CACHED_FUNCTION_HASH_BITS, uid);
+  HashCacheBucket *b = get_hash_cache_bucket(g_cached_function_buckets,
+                                             CACHED_FUNCTION_HASH_BITS, uid);
   size_t bi = b - g_cached_function_buckets;
   if (g_cached_functions[bi].bytecode) {
     if (g_cached_functions[bi].refcount <= 0) {
