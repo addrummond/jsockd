@@ -99,7 +99,7 @@ const messageHandlerInternalError = "internal_error"
 // returns a JSockDClient that can be used to send commands to the server.
 func InitJSockDClient(config Config, jsockdExec string) (*JSockDClient, error) {
 	client, err := initJSockDClient(config, jsockdExec)
-	if err != nil && client.socketTmpdir != "" {
+	if err != nil && client != nil && client.socketTmpdir != "" {
 		// Ignore error as it's just nice to have cleanup
 		os.RemoveAll(client.socketTmpdir)
 	}
@@ -113,11 +113,14 @@ func initJSockDClient(config Config, jsockdExec string) (*JSockDClient, error) {
 		sockets = config.Sockets
 	} else {
 		var err error
-		socketTmpdir, err = os.MkdirTemp("", "jsockd_go_client_sockets_")
+		// We want to use a short name here becasue Unix domain socket path
+		// length limits can be quite small on some systems, and the
+		// temporary dir may have quite a long path.
+		socketTmpdir, err = os.MkdirTemp("", "jsd_")
 		if err != nil {
 			return nil, err
 		}
-		sockets := make([]string, config.NThreads)
+		sockets = make([]string, config.NThreads)
 		for i := 0; i < config.NThreads; i++ {
 			sockets[i] = path.Join(socketTmpdir, fmt.Sprintf("jsockd_socket_%d.sock", i))
 		}

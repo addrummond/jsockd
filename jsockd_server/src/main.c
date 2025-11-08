@@ -193,11 +193,13 @@ static int initialize_and_listen_on_unix_socket(SocketState *socket_state) {
   }
 
   socket_state->addr.sun_family = AF_UNIX;
-  if (sizeof(socket_state->addr.sun_path) /
-          sizeof(socket_state->addr.sun_path[0]) <
+  if (sizeof(socket_state->addr.sun_path) <
       strlen(socket_state->unix_socket_filename) + 1 /* zeroterm */) {
-    jsockd_logf(LOG_ERROR, "Error: unix socket filename %s is too long\n",
-                socket_state->unix_socket_filename);
+    jsockd_logf(LOG_ERROR,
+                "Error: UNIX socket filename %s is too long (UNIX limitation, "
+                "not JSockD; max length on this system is %zu)\n",
+                socket_state->unix_socket_filename,
+                sizeof(socket_state->addr.sun_path) - 1);
 
     return -1;
   }

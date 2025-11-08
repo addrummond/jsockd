@@ -19,6 +19,7 @@ func TestSendRawCommand(t *testing.T) {
 		config := DefaultConfig()
 		config.SkipJSockDVersionCheck = true
 		config.NThreads = 1
+		//config.Logger = logger
 		client, err := InitJSockDClient(config, getJSockDPath(t))
 		if err != nil {
 			t.Fatal(err)
@@ -39,6 +40,7 @@ func TestSendRawCommand(t *testing.T) {
 		config := DefaultConfig()
 		config.SkipJSockDVersionCheck = true
 		config.NThreads = 1
+		//config.Logger = logger
 		client, err := InitJSockDClient(config, getJSockDPath(t))
 		if err != nil {
 			t.Fatal(err)
@@ -79,6 +81,7 @@ func TestSendRawCommand(t *testing.T) {
 		config := DefaultConfig()
 		config.SkipJSockDVersionCheck = true
 		config.NThreads = 1
+		//config.Logger = logger
 		client, err := InitJSockDClient(config, getJSockDPath(t))
 		if err != nil {
 			t.Fatal(err)
@@ -100,6 +103,7 @@ func TestSendCommand(t *testing.T) {
 		config := DefaultConfig()
 		config.SkipJSockDVersionCheck = true
 		config.NThreads = 1
+		//config.Logger = logger
 		client, err := InitJSockDClient(config, getJSockDPath(t))
 		if err != nil {
 			t.Fatal(err)
@@ -123,6 +127,7 @@ func TestSendCommand(t *testing.T) {
 		config := DefaultConfig()
 		config.SkipJSockDVersionCheck = true
 		config.NThreads = 1
+		//config.Logger = logger
 		client, err := InitJSockDClient(config, getJSockDPath(t))
 		if err != nil {
 			t.Fatal(err)
@@ -243,3 +248,7 @@ func TestMain(m *testing.M) {
 	}
 	os.Exit(code)
 }
+
+// func logger(timestamp time.Time, level string, message string) {
+// 	fmt.Printf("%s [%s] %s\n", timestamp.Format("2006-01-02 15:04:05"), level, message)
+// }
