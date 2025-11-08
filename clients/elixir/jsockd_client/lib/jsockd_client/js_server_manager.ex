@@ -90,7 +90,6 @@ defmodule JSockDClient.JsServerManager do
        port_id: port_id,
        unix_socket_paths: unix_socket_paths,
        unix_sockets_with_threads: [],
-       pending_calls: %{},
        current_line: [],
        skip_jsockd_version_check?: skip_jsockd_version_check?,
        current_log_line: []
@@ -98,12 +97,15 @@ defmodule JSockDClient.JsServerManager do
   end
 
   @impl true
-  def terminate(_reason, state) do
+  def terminate(reason, state) do
     Enum.each(state.unix_sockets_with_threads, fn {{_path, sock}, _pid} ->
       :ok = :socket.close(sock)
     end)
 
-    Port.close(state.port_id)
+    # Port.info returns nil if the port is already closed
+    if nil != Port.info(state.port_id) do
+      Port.close(state.port_id)
+    end
   end
 
   def start_link(arg) do
@@ -153,20 +155,8 @@ defmodule JSockDClient.JsServerManager do
 
   @impl true
   def handle_info({:send_reply, from, reply}, state) do
-    [uuid, contents] = String.split(reply, " ", parts: 2)
-
-    expected_uuid = Map.get(state.pending_calls, from)
-
-    if uuid != expected_uuid do
-      Logger.warning(
-        "Received reply with mismatched UUID: expected #{expected_uuid}, got #{uuid}"
-      )
-
-      {:noreply, state}
-    else
-      GenServer.reply(from, contents)
-      {:noreply, %{state | pending_calls: Map.delete(state.pending_calls, from)}}
-    end
+    GenServer.reply(from, reply)
+    {:noreply, state}
   end
 
   @impl true
@@ -179,16 +169,23 @@ defmodule JSockDClient.JsServerManager do
   end
 
   @impl true
-  def handle_call({:send_command, message_uuid, function, argument_string}, from, state) do
+  def handle_call(
+        {:send_command, message_uuid, function, argument_string, opts},
+        from,
+        state
+      ) do
     if state.unix_sockets_with_threads == [] do
       raise "JSockDClient.JsServerManager not ready to send commands: no unix sockets available"
     end
 
     {_, usockpid} = get_thread(state.unix_sockets_with_threads)
 
-    send(usockpid, {:send, message_uuid, function, argument_string, from, self()})
+    send(
+      usockpid,
+      {:send, message_uuid, function, argument_string, from, opts, self()}
+    )
 
-    {:noreply, %{state | pending_calls: Map.put(state.pending_calls, from, message_uuid)}}
+    {:noreply, state}
   end
 
   defp handle_jsockd_msg("", state), do: state
@@ -259,7 +256,7 @@ defmodule JSockDClient.JsServerManager do
     spawn_link(fn ->
       loop = fn loop ->
         receive do
-          {:send, message_uuid, function, argument, from, reply_pid} ->
+          {:send, message_uuid, function, argument, from, opts, reply_pid} ->
             function = String.trim(function)
             argument = String.trim(argument)
 
@@ -270,28 +267,10 @@ defmodule JSockDClient.JsServerManager do
 
             :ok = :socket.send(sock, [message_uuid, "\x00", function, "\x00", argument, "\x00"])
 
-            recv_loop = fn recv_loop, acc ->
-              case :socket.recv(sock, 0) do
-                {:ok, data} ->
-                  acc = [data | acc]
+            reply =
+              recv_loop(sock, message_uuid, from, opts, reply_pid)
 
-                  cond do
-                    String.ends_with?(data, "\n") ->
-                      send(
-                        reply_pid,
-                        {:send_reply, from, String.trim(acc |> Enum.reverse() |> Enum.join(""))}
-                      )
-
-                    String.contains?(data, "\n") ->
-                      raise "Unexpected data received: #{inspect(data)}"
-
-                    true ->
-                      recv_loop.(recv_loop, acc)
-                  end
-              end
-            end
-
-            recv_loop.(recv_loop, [])
+            send(reply_pid, {:send_reply, from, reply})
         end
 
         loop.(loop)
@@ -299,6 +278,65 @@ defmodule JSockDClient.JsServerManager do
 
       loop.(loop)
     end)
+  end
+
+  defp recv_loop(sock, message_uuid, from, opts, reply_pid, acc \\ []) do
+    {:ok, data} = :socket.recv(sock, 0)
+    acc = [data | acc]
+
+    cond do
+      String.ends_with?(data, "\n") ->
+        reply = Enum.reverse(acc) |> Enum.join()
+        [uuid, contents] = String.split(reply, " ", parts: 2)
+
+        if uuid != message_uuid do
+          raise "Mismatched message UUID received: expected #{inspect(message_uuid)}, got #{inspect(uuid)}"
+        end
+
+        recv_loop_inner(
+          sock,
+          String.replace_trailing(contents, "\n", ""),
+          message_uuid,
+          from,
+          opts,
+          reply_pid
+        )
+
+      String.contains?(data, "\n") ->
+        raise "Unexpected data received: #{inspect(acc)}"
+
+      true ->
+        recv_loop(sock, message_uuid, from, opts, reply_pid, acc)
+    end
+  end
+
+  defp recv_loop_inner(sock, data, message_uuid, from, opts, reply_pid) do
+    case data do
+      "exception " <> except ->
+        {:error, Jason.decode!(except)}
+
+      "ok " <> response ->
+        {:ok, Jason.decode!(response)}
+
+      "message " <> msg ->
+        response =
+          try do
+            # Reply with "null" if no message handler is specified
+            Jason.encode!(
+              opts[:message_handler] &&
+                opts[:message_handler].(Jason.decode!(msg, opts[:json_decode_opts] || []))
+            )
+          rescue
+            e ->
+              # Ignore any error response from :socket.send as we're about to raise anyway
+              :socket.send(sock, [message_uuid, "\x00internal_error\x00"])
+              reraise e, __STACKTRACE__
+          end
+
+        :ok = :socket.send(sock, [message_uuid, "\x00", response, "\x00"])
+
+        recv_loop(sock, message_uuid, from, opts, reply_pid)
+    end
   end
 
   defp make_unix_socket(path) do

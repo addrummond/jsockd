@@ -79,6 +79,12 @@ jobs:
       - name: Run JSockD Go client tests
         run: ./ci.sh run_jsockd_go_client_tests
 
+      - name: Run jsockd_server stress tests implemented in Go (Debug build)
+        run: ./ci.sh run_jsockd_go_stress_tests_with_debug_build
+
+      - name: Run jsockd_server stress tests implemented in Go (Release build)
+        run: ./ci.sh run_jsockd_go_stress_tests_with_release_build
+
       - name: Package binaries
         env:
           JSOCKD_RELEASE_ARTEFACT_PRIVATE_SIGNING_KEY: ${{ secrets.JSOCKD_RELEASE_ARTEFACT_PRIVATE_SIGNING_KEY }}

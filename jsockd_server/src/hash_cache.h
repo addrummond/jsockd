@@ -6,6 +6,7 @@
 #endif
 
 #include <stdbool.h>
+#include <stdlib.h>
 #include <xxHash/xxhash.h>
 
 typedef XXH128_hash_t HashCacheUid;
@@ -20,9 +21,10 @@ typedef struct {
 #define HASH_CACHE_BUCKET_ARRAY_SIZE_FROM_HASH_BITS(hash_bits)                 \
   (1 << (hash_bits))
 
+size_t get_cache_bucket(HashCacheUid uid, int n_bits);
 HashCacheUid get_hash_cache_uid(const void *data, size_t size);
-HashCacheBucket *add_to_hash_cache(HashCacheBucket buckets[], int n_bits,
-                                   HashCacheUid uid);
+HashCacheBucket *get_hash_cache_bucket(HashCacheBucket buckets[], int n_bits,
+                                       HashCacheUid uid);
 HashCacheBucket *get_hash_cache_entry(HashCacheBucket buckets[], int n_bits,
                                       HashCacheUid uid);
 

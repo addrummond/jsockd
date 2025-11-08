@@ -5,10 +5,14 @@
 #define _REENTRANT
 #endif
 
+#include "quickjs.h"
 #include <pthread.h>
 #include <stdint.h>
-#include <stdio.h>
+#include <sys/uio.h>
 #include <time.h>
+
+#define STRCONST_LEN(s) (sizeof(s) / sizeof(char) - sizeof(char))
+#define STRCONST_IOVEC(s) {.iov_base = (void *)(s), .iov_len = STRCONST_LEN(s)}
 
 void mutex_lock_(pthread_mutex_t *m, const char *file, int line);
 void mutex_unlock_(pthread_mutex_t *m, const char *file, int line);
@@ -19,14 +23,28 @@ void memswap_small(void *m1, void *m2, size_t size);
 int string_ends_with(const char *str, const char *suffix);
 int make_temp_dir(char out[], size_t out_size, const char *template);
 void timespec_to_iso8601(const struct timespec *ts, char *buf, size_t buflen);
+void dump_error(JSContext *ctx);
 
 #define mutex_lock(m) mutex_lock_((m), __FILE__, __LINE__)
 #define mutex_unlock(m) mutex_unlock_((m), __FILE__, __LINE__)
 #define mutex_init(m) mutex_init_((m), __FILE__, __LINE__)
 
 int write_all(int fd, const char *buf, size_t len);
+int writev_all(int fildes, struct iovec *iov, int iovcnt);
+
+typedef enum { READY, SIG_INTERRUPT_OR_ERROR, GO_AROUND } PollFdResult;
+PollFdResult poll_fd(int fd, int timeout_ms);
+PollFdResult ppoll_fd(int fd, const struct timespec *timeout);
+
+typedef struct {
+  char *buf;
+  size_t index;
+  size_t length;
+} WBuf;
+void write_to_wbuf(WBuf *buf, const char *inp, size_t size);
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define MAX(a, b) ((a) < (b) ? (b) : (a))
 
 #define STRINGIFY_(x) #x
 #define STRINGIFY(x) STRINGIFY_(x)

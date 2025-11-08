@@ -8,8 +8,10 @@ import (
 // The configuration for the JSockDClient. The zero value is not a sensible
 // configuration, so use DefaultConfig() and then modify the desired fields.
 type Config struct {
-	// The number of threads that JSockD should use. If 0, the number of CPU cores is used.
+	// The number of threads that JSockD should use. If 0, the number of CPU cores is used. This config value is ignored if the Sockets field is non-nil.
 	NThreads int
+	// The list of socket names to use for connections to JSockD. If nil, NThreads is used to determine the number of threads and socket names are generated automatically.
+	Sockets []string
 	// The filename of the bytecode module to load, or "" if no bytecode module should be loaded.
 	BytecodeModuleFile string
 	// The hex-encoded public key used to verify the signature of the bytecode module, or "" if none.

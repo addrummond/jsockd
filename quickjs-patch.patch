@@ -19,3 +19,20 @@ index 54a7a15..e0dd552 100644
              }
          } else {
              /* not a promise */
+diff --git a/quickjs.c b/quickjs.c
+index 92a7297..755e864 100644
+--- a/quickjs.c
++++ b/quickjs.c
+@@ -2006,9 +2006,11 @@ void JS_FreeRuntime(JSRuntime *rt)
+         if (count != 0)
+             printf("Secondary object leaks: %d\n", count);
+     }
+-#endif
++#else
++    // Alex D: These assertions cause an early exit which then makes Valgrind less useful, as tons of stuff is left unfreed.
+     assert(list_empty(&rt->gc_obj_list));
+     assert(list_empty(&rt->weakref_list));
++#endif
+ 
+     /* free the classes */
+     for(i = 0; i < rt->class_count; i++) {

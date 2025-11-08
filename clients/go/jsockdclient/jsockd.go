@@ -39,6 +39,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"path"
 	"regexp"
 	"strconv"
 	"strings"
@@ -57,10 +58,11 @@ var logLineRegex = regexp.MustCompile(`(\*|\$) jsockd ([^ ]+) \[([^][]+)\] (.*)`
 var nextCommandId uint64
 
 type command struct {
-	id           string
-	query        string
-	paramJson    string
-	responseChan chan RawResponse
+	id             string
+	query          string
+	paramJson      string
+	responseChan   chan RawResponse
+	messageHandler func(jsonMessage string) (string, error)
 }
 
 // RawResponse represents the raw response to a command sent to the JSockD
@@ -87,12 +89,46 @@ type JSockDClient struct {
 	quitCount       uint64
 	fatalError      error
 	fatalErrorMutex sync.Mutex
+	socketTmpdir    string
 }
 
-// InitJSockDClient starts a JSockD server process with the specified
+const messageHandlerInternalError = "internal_error"
+
+// InitJSockDClientWithSockets starts a JSockD server process with the specified
 // configuration, connects to it via the specified Unix domain sockets, and
 // returns a JSockDClient that can be used to send commands to the server.
-func InitJSockDClient(config Config, jsockdExec string, sockets []string) (*JSockDClient, error) {
+func InitJSockDClient(config Config, jsockdExec string) (*JSockDClient, error) {
+	if config.NThreads <= 0 {
+		return nil, errors.New("NThreads must be greater than zero. Did you forget to call jsockdclient.DefaultConfig() to initialize the Config struct?")
+	}
+	client, err := initJSockDClient(config, jsockdExec)
+	if err != nil && client != nil && client.socketTmpdir != "" {
+		// Ignore error as it's just nice to have cleanup
+		os.RemoveAll(client.socketTmpdir)
+	}
+	return client, err
+}
+
+func initJSockDClient(config Config, jsockdExec string) (*JSockDClient, error) {
+	var sockets []string
+	var socketTmpdir string
+	if config.Sockets != nil {
+		sockets = config.Sockets
+	} else {
+		var err error
+		// We want to use a short name here becasue Unix domain socket path
+		// length limits can be quite small on some systems, and the
+		// temporary dir may have quite a long path.
+		socketTmpdir, err = os.MkdirTemp("", "jsd_")
+		if err != nil {
+			return nil, err
+		}
+		sockets = make([]string, config.NThreads)
+		for i := 0; i < config.NThreads; i++ {
+			sockets[i] = path.Join(socketTmpdir, fmt.Sprintf("jsockd_socket_%d.sock", i))
+		}
+	}
+
 	cmdargs := prepareCmdArgs(config, jsockdExec, sockets)
 
 	// Start the process
@@ -154,10 +190,11 @@ func InitJSockDClient(config Config, jsockdExec string, sockets []string) (*JSoc
 
 	connChans := make([]chan command, readyCount)
 	client := &JSockDClient{
-		conns:     conns,
-		connChans: connChans,
-		config:    config,
-		cmd:       cmd,
+		conns:        conns,
+		connChans:    connChans,
+		config:       config,
+		cmd:          cmd,
+		socketTmpdir: socketTmpdir,
 	}
 
 	for i := range readyCount {
@@ -172,11 +209,58 @@ func InitJSockDClient(config Config, jsockdExec string, sockets []string) (*JSoc
 // response. The parameter is serialized to JSON via json.Marshal and the result
 // is deserialized from JSON via json.Unmarshal.
 func SendCommand[ResponseT any](client *JSockDClient, query string, jsonParam any) (Response[ResponseT], error) {
+	return sendCommand[ResponseT](client, query, jsonParam, nil)
+}
+
+// SendCommandWithMessageHandler is like SendCommand but with a message
+// handling function as an additional parameter. If there is an error
+// JSON-decoding the `message` argument of the message handler, or if
+// there is an error JSON-encoding its return value, then null will be
+// sent as the response to the JSockD server, and
+// SendCommandWithMessageHandler will return a non-nil error.
+//
+// Note that messageHandler, when called, will execute in a different
+// goroutine to the one that called SendCommandWithMessageHandler. This
+// goroutine is guaranteed to have finished executing by the time
+// SendCommandWithMessageHandler returns.
+func SendCommandWithMessageHandler[ResponseT any, MessageT any, MessageResponseT any](client *JSockDClient, query string, jsonParam any, messageHandler func(message MessageT) (MessageResponseT, error)) (Response[ResponseT], error) {
+	var msgHandlerErr error
+	wrappedHandler := func(jsonMessage string) (string, error) {
+		var message MessageT
+		msgHandlerErr = json.Unmarshal([]byte(jsonMessage), &message)
+		if msgHandlerErr != nil {
+			return "", msgHandlerErr
+		}
+		var response MessageResponseT
+		response, msgHandlerErr = messageHandler(message)
+		if msgHandlerErr != nil {
+			return "", msgHandlerErr
+		}
+		j, msgHandlerErr := json.Marshal(response)
+		if msgHandlerErr != nil {
+			return "", msgHandlerErr
+		}
+		return string(j), nil
+	}
+	res, err := sendCommand[ResponseT](client, query, jsonParam, wrappedHandler)
+	if err != nil && msgHandlerErr != nil {
+		return Response[ResponseT]{}, fmt.Errorf("message handler error: %w; command error: %v", msgHandlerErr, err)
+	}
+	if err != nil {
+		return Response[ResponseT]{}, err
+	}
+	if msgHandlerErr != nil {
+		return Response[ResponseT]{}, fmt.Errorf("message handler error: %w", msgHandlerErr)
+	}
+	return res, nil
+}
+
+func sendCommand[ResponseT any](client *JSockDClient, query string, jsonParam any, messageHandler func(jsonMessage string) (string, error)) (Response[ResponseT], error) {
 	j, err := json.Marshal(jsonParam)
 	if err != nil {
 		return Response[ResponseT]{}, fmt.Errorf("json marshal: %w", err)
 	}
-	rawResp, err := SendRawCommand(client, query, string(j))
+	rawResp, err := sendRawCommand(client, query, string(j), messageHandler)
 	if err != nil {
 		return Response[ResponseT]{}, err
 	}
@@ -196,16 +280,34 @@ func SendCommand[ResponseT any](client *JSockDClient, query string, jsonParam an
 // SendRawCommand sends a command to the JSockD server and returns the
 // response. JSON values are passed and returned as strings.
 func SendRawCommand(client *JSockDClient, query string, jsonParam string) (RawResponse, error) {
+	return sendRawCommand(client, query, jsonParam, nil)
+}
+
+// SendRawCommandWithMessageHandler is like SendRawCommand but with a message
+// handling function as an additional parameter. The message handling function
+// receives JSON-encoded messages and should return a valid JSON-encoded
+// response.
+//
+// Note that messageHandler, when called, will execute in a different
+// goroutine to the one that called SendRawCommandWithMessageHandler. This
+// goroutine is guaranteed to have finished executing by the time
+// SendRawCommandWithMessageHandler returns.
+func SendRawCommandWithMessageHandler(client *JSockDClient, query string, jsonParam string, messageHandler func(jsonMessage string) (string, error)) (RawResponse, error) {
+	return sendRawCommand(client, query, jsonParam, messageHandler)
+}
+
+func sendRawCommand(client *JSockDClient, query string, jsonParam string, messageHandler func(jsonMessage string) (string, error)) (RawResponse, error) {
 	if fe := getFatalError(client); fe != nil {
 		return RawResponse{}, fe
 	}
 
 	cmdId := atomic.AddUint64(&nextCommandId, 1)
 	cmd := command{
-		id:           strconv.FormatUint(cmdId, 10),
-		query:        query,
-		paramJson:    jsonParam,
-		responseChan: make(chan RawResponse),
+		id:             strconv.FormatUint(cmdId, 10),
+		query:          query,
+		paramJson:      jsonParam,
+		responseChan:   make(chan RawResponse),
+		messageHandler: messageHandler,
 	}
 	nconns := len(client.conns)
 	if nconns == 0 {
@@ -231,6 +333,11 @@ func (client *JSockDClient) Close() error {
 	if qs > 1 {
 		// Already quitting or quit
 		return nil
+	}
+
+	// Ignore error as it's just nice to have cleanup
+	if client.socketTmpdir != "" {
+		defer os.RemoveAll(client.socketTmpdir)
 	}
 
 	for _, c := range client.connChans {
@@ -280,10 +387,54 @@ func connHandler(conn net.Conn, cmdChan chan command, client *JSockDClient) {
 			setFatalError(client, fmt.Errorf("malformed response record: %q", rec))
 			return
 		}
-		if strings.HasPrefix(parts[1], "exception ") {
-			cmd.responseChan <- RawResponse{Exception: true, ResultJson: strings.TrimPrefix(parts[1], "exception ")}
+		if rest, ok := strings.CutPrefix(parts[1], "exception "); ok {
+			cmd.responseChan <- RawResponse{Exception: true, ResultJson: rest}
+		} else if rest, ok := strings.CutPrefix(parts[1], "ok "); ok {
+			cmd.responseChan <- RawResponse{Exception: false, ResultJson: rest}
+		} else if rest, ok := strings.CutPrefix(parts[1], "message "); ok {
+			for {
+				response := "null"
+				err := errors.New("internal error: no message handler")
+				if cmd.messageHandler != nil {
+					response, err = cmd.messageHandler(strings.TrimSuffix(rest, "\n"))
+				}
+				if err != nil {
+					setFatalError(client, fmt.Errorf("message handler error: %w", err))
+					_, _ = conn.Write(fmt.Appendf(nil, "%s\x00%s\x00", cmd.id, messageHandlerInternalError))
+					return
+				}
+				_, err = conn.Write(fmt.Appendf(nil, "%s\x00%s\x00", cmd.id, response))
+				if err != nil {
+					setFatalError(client, err)
+					return
+				}
+				mresp, err := readRecord(conn)
+				if err != nil {
+					setFatalError(client, err)
+					return
+				}
+				parts = strings.SplitN(mresp, " ", 2)
+				if parts[0] != cmd.id {
+					setFatalError(client, fmt.Errorf("mismatched command id in message response: got %q, wanted %q", parts[0], cmd.id))
+					return
+				}
+				var ok bool
+				if rest, ok = strings.CutPrefix(parts[1], "ok "); ok {
+					cmd.responseChan <- RawResponse{Exception: false, ResultJson: strings.TrimSuffix(rest, "\n")}
+					break
+				} else if rest, ok = strings.CutPrefix(parts[1], "exception "); ok {
+					cmd.responseChan <- RawResponse{Exception: true, ResultJson: strings.TrimSuffix(rest, "\n")}
+					return
+				} else if rest, ok = strings.CutPrefix(parts[1], "message "); ok {
+					continue
+				} else {
+					setFatalError(client, fmt.Errorf("malformed message response from JSockD: %q", mresp))
+					return
+				}
+			}
 		} else {
-			cmd.responseChan <- RawResponse{Exception: false, ResultJson: parts[1]}
+			setFatalError(client, fmt.Errorf("malformed command response from JSockD: %q", rec))
+			return
 		}
 	}
 }
@@ -323,6 +474,7 @@ func streamStderrLogs(stderr io.Reader, config Config) {
 
 	scanner := bufio.NewScanner(stderr)
 	var currentLine strings.Builder
+	lastWasDollar := true
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		groups := logLineRegex.FindStringSubmatch(line)
@@ -347,7 +499,10 @@ func streamStderrLogs(stderr io.Reader, config Config) {
 			}
 			currentLine.WriteString(msg)
 		} else if prefix == "$" {
-			currentLine.WriteByte('\n')
+			if !lastWasDollar {
+				lastWasDollar = false
+				currentLine.WriteByte('\n')
+			}
 			currentLine.WriteString(msg)
 			if config.Logger != nil {
 				config.Logger(t, level, currentLine.String())

@@ -11,13 +11,18 @@ defmodule JSockDClient do
 
   `argument` is JSON-encoded and then passed as the second argument to the function.
 
+  Optional keyword arguments:
+
+    * `message_handler` is a function that receives a message and returns a value that can be serialized via `Jason.encode!(message, jason_encode_opts)`.
+    * `jason_encode_opts` is a keyword list of options passed to `Jason.encode!/2` when serializing the response from the `message_handler`.
+
   The first argument passed to the JavaScript function is the precompiled bytecode module.
   """
 
   # keep in sync with config.h
   @default_max_command_runtime_us 250_000
 
-  def send_js(function, argument) do
+  def send_js(function, argument, opts \\ []) do
     message_uuid = :crypto.strong_rand_bytes(8) |> Base.encode64()
 
     timeout_ms =
@@ -28,12 +33,11 @@ defmodule JSockDClient do
       )
 
     try do
-      JSockDClient.JsServerManager
-      |> GenServer.call(
-        {:send_command, message_uuid, function, Jason.encode!(argument)},
+      GenServer.call(
+        JSockDClient.JsServerManager,
+        {:send_command, message_uuid, function, Jason.encode!(argument), opts},
         _timeout = timeout_ms
       )
-      |> parse_response()
     catch
       :exit, reason ->
         # The JS server implements its own timeout mechanism, so if we've been
@@ -46,10 +50,15 @@ defmodule JSockDClient do
   end
 
   def parse_response(response) do
-    if String.starts_with?(response, "exception ") do
-      {:error, Jason.decode!(String.trim_leading(response, "exception "))}
-    else
-      {:ok, Jason.decode!(response)}
+    cond do
+      String.starts_with?(response, "exception ") ->
+        {:error, Jason.decode!(String.trim_leading(response, "exception "))}
+
+      String.starts_with?(response, "ok ") ->
+        {:ok, Jason.decode!(response)}
+
+      true ->
+        {:error, "Invalid response from JSockD server: #{response}"}
     end
   end
 

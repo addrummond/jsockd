@@ -1,6 +1,14 @@
 #include "utils.h"
+#include "globals.h"
 #include "log.h"
+#include "quickjs-libc.h"
 #include <errno.h>
+#include <limits.h>
+#ifdef LINUX
+#define _GNU_SOURCE // make ppoll available
+#endif
+#include <poll.h>
+#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,25 +16,28 @@
 #include <unistd.h>
 
 void mutex_lock_(pthread_mutex_t *m, const char *file, int line) {
-  if (0 != pthread_mutex_lock(m)) {
+  int r;
+  if (0 != (r = pthread_mutex_lock(m))) {
     fprintf(stderr, "Failed to lock mutex at %s:%i: %s\n", file, line,
-            strerror(errno));
+            strerror(r));
     exit(1);
   }
 }
 
 void mutex_unlock_(pthread_mutex_t *m, const char *file, int line) {
-  if (0 != pthread_mutex_unlock(m)) {
+  int r;
+  if (0 != (r = pthread_mutex_unlock(m))) {
     fprintf(stderr, "Failed to unlock mutex at %s:%i: %s\n", file, line,
-            strerror(errno));
+            strerror(r));
     exit(1);
   }
 }
 
 void mutex_init_(pthread_mutex_t *m, const char *file, int line) {
-  if (0 != pthread_mutex_init(m, NULL)) {
+  int r;
+  if (0 != (r = pthread_mutex_init(m, NULL))) {
     fprintf(stderr, "Failed to initialized mutex at %s:%i: %s\n", file, line,
-            strerror(errno));
+            strerror(r));
     exit(1);
   }
 }
@@ -34,13 +45,49 @@ void mutex_init_(pthread_mutex_t *m, const char *file, int line) {
 int write_all(int fd, const char *buf, size_t len) {
   while (len > 0) {
     int n = write(fd, buf, len);
-    if (n < 0) {
+    if (n <= 0) {
       if (errno == EINTR)
         continue; // interrupted, try again
       return n;
     }
     len -= n;
     buf += n;
+  }
+  return 0;
+}
+
+int writev_all(int fildes, struct iovec *iov, int iovcnt) {
+  if (iovcnt <= 0)
+    return 0;
+
+  ssize_t total_len = 0;
+  for (int i = 0; i < iovcnt; i++) {
+    total_len += (ssize_t)iov[i].iov_len;
+  }
+  if (total_len == 0)
+    return 0;
+
+  while (iovcnt > 0) {
+    ssize_t n = writev(fildes, iov, iovcnt);
+    if (n <= 0) {
+      if (errno == EINTR)
+        continue;
+      return -1;
+    }
+
+    total_len -= n;
+    ssize_t remaining = n;
+
+    while (iovcnt > 0 && remaining >= (ssize_t)iov->iov_len) {
+      remaining -= (ssize_t)iov->iov_len;
+      iov++;
+      iovcnt--;
+    }
+
+    if (iovcnt > 0) {
+      iov->iov_base = (char *)iov->iov_base + remaining;
+      iov->iov_len -= (size_t)remaining;
+    }
   }
   return 0;
 }
@@ -109,4 +156,47 @@ void timespec_to_iso8601(const struct timespec *ts, char *buf, size_t buflen) {
   // Ensure enough space for .nnnnnnnnnZ and null terminator
   if (len + 8 < buflen)
     snprintf(buf + len, buflen - len, ".%06ldZ", ns_to_us(ts->tv_nsec));
+}
+
+void write_to_wbuf(WBuf *buf, const char *inp, size_t size) {
+  size_t to_write =
+      buf->length >= buf->index ? MIN(buf->length - buf->index, size) : 0;
+  memcpy(buf->buf + buf->index, inp, to_write);
+  buf->index += to_write;
+}
+
+void dump_error(JSContext *ctx) {
+  if (CMAKE_BUILD_TYPE_IS_DEBUG)
+    js_std_dump_error(ctx);
+  else
+    JS_FreeValue(ctx, JS_GetException(ctx));
+}
+
+PollFdResult poll_fd(int fd, int timeout_ms) {
+  struct pollfd pfd = {.fd = fd, .events = POLLIN | POLLPRI};
+  if (!poll(&pfd, 1, timeout_ms)) {
+    if (atomic_load_explicit(&g_interrupted_or_error, memory_order_relaxed))
+      return SIG_INTERRUPT_OR_ERROR;
+    return GO_AROUND;
+  }
+  return READY;
+}
+
+PollFdResult ppoll_fd(int fd, const struct timespec *timeout) {
+#ifdef MACOS
+  int ms =
+      MAX(1, (int)timeout->tv_sec * 1000 + (int)timeout->tv_nsec / 1000000);
+  return poll_fd(fd, ms);
+#else
+  struct pollfd pfd = {.fd = fd, .events = POLLIN | POLLPRI};
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wimplicit-function-declaration"
+  if (!ppoll(&pfd, 1, timeout, NULL)) {
+#pragma GCC diagnostic pop
+    if (atomic_load_explicit(&g_interrupted_or_error, memory_order_relaxed))
+      return SIG_INTERRUPT_OR_ERROR;
+    return GO_AROUND;
+  }
+  return READY;
+#endif
 }
