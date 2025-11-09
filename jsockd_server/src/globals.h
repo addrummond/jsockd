@@ -3,6 +3,7 @@
 
 #include "cmdargs.h"
 #include "threadstate.h"
+#include "wait_group.h"
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -32,5 +33,8 @@ extern atomic_int g_source_map_load_count;
 extern atomic_bool g_interrupted_or_error;
 
 extern CmdArgs g_cmd_args;
+
+extern WaitGroup g_thread_ready_wait_group;
+extern pthread_mutex_t g_cached_functions_mutex;
 
 #endif

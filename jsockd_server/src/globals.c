@@ -1,5 +1,6 @@
 #include "cmdargs.h"
 #include "threadstate.h"
+#include "wait_group.h"
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -24,3 +25,7 @@ atomic_int g_source_map_load_count = 0;
 atomic_bool g_interrupted_or_error = 0;
 
 CmdArgs g_cmd_args;
+
+// Global vars that need destruction before exit.
+WaitGroup g_thread_ready_wait_group;
+pthread_mutex_t g_cached_functions_mutex;

@@ -237,3 +237,41 @@ ThreadState *get_runtime_thread_state(JSRuntime *rt) {
   assert(0 && "ThreadState not found for given JSRuntime");
   return NULL;
 }
+
+static void release_cached_function(cached_function_t *cf) {
+  mutex_lock(&g_cached_functions_mutex);
+  --cf->refcount;
+  mutex_unlock(&g_cached_functions_mutex);
+}
+
+void cleanup_command_state(ThreadState *ts) {
+  JS_FreeValue(ts->ctx, ts->compiled_query);
+  free(ts->dangling_bytecode);
+  ts->dangling_bytecode = NULL;
+  ts->compiled_query = JS_UNDEFINED;
+  if (ts->cached_function_in_use) {
+    release_cached_function(ts->cached_function_in_use);
+    ts->cached_function_in_use = NULL;
+  }
+}
+
+void cleanup_thread_state(ThreadState *ts) {
+  if (ts->rt == NULL) // It's already been cleaned up;
+    return;
+
+  cleanup_command_state(ts);
+
+  js_std_free_handlers(ts->rt);
+
+  JS_FreeValue(ts->ctx, ts->backtrace_module);
+  JS_FreeValue(ts->ctx, ts->compiled_module);
+  JS_FreeValue(ts->ctx, ts->sourcemap_str);
+
+  // Valgrind seems to correctly have caught a memory leak in quickjs-libc.
+  js_free(ts->ctx, JS_GetRuntimeOpaque(ts->rt));
+
+  JS_FreeContext(ts->ctx);
+  JS_FreeRuntime(ts->rt);
+  ts->ctx = NULL;
+  ts->rt = NULL;
+}

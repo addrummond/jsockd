@@ -70,5 +70,7 @@ int init_thread_state(ThreadState *ts, SocketState *socket_state,
 
 void register_thread_state_runtime(JSRuntime *rt, ThreadState *ts);
 ThreadState *get_runtime_thread_state(JSRuntime *rt);
+void cleanup_command_state(ThreadState *ts);
+void cleanup_thread_state(ThreadState *ts);
 
 #endif

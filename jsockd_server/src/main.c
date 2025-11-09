@@ -50,10 +50,6 @@
 #define CACHED_FUNCTIONS_N_BUCKETS                                             \
   HASH_CACHE_BUCKET_ARRAY_SIZE_FROM_HASH_BITS(CACHED_FUNCTION_HASH_BITS)
 
-// Global vars that need destruction before exit.
-static WaitGroup g_thread_ready_wait_group;
-static pthread_mutex_t g_cached_functions_mutex;
-
 static atomic_bool g_global_init_complete;
 
 static HashCacheBucket g_cached_function_buckets[CACHED_FUNCTIONS_N_BUCKETS];
@@ -104,12 +100,6 @@ static cached_function_t *get_cached_function(HashCacheUid uid) {
   }
   mutex_unlock(&g_cached_functions_mutex);
   return NULL;
-}
-
-static void release_cached_function(cached_function_t *cf) {
-  mutex_lock(&g_cached_functions_mutex);
-  --cf->refcount;
-  mutex_unlock(&g_cached_functions_mutex);
 }
 
 static void init_socket_state(SocketState *ss,
@@ -419,39 +409,6 @@ static JSValue func_from_bytecode(JSContext *ctx, const uint8_t *bytecode,
   JSValue r = JS_GetPropertyStr(ctx, evald, "value");
   JS_FreeValue(ctx, evald);
   return r;
-}
-
-static void cleanup_command_state(ThreadState *ts) {
-  JS_FreeValue(ts->ctx, ts->compiled_query);
-  free(ts->dangling_bytecode);
-  ts->dangling_bytecode = NULL;
-  ts->compiled_query = JS_UNDEFINED;
-  if (ts->cached_function_in_use) {
-    release_cached_function(ts->cached_function_in_use);
-    ts->cached_function_in_use = NULL;
-  }
-}
-
-// called whenever we want to clean a thread a state up
-static void cleanup_thread_state(ThreadState *ts) {
-  if (ts->rt == NULL) // It's already been cleaned up;
-    return;
-
-  cleanup_command_state(ts);
-
-  js_std_free_handlers(ts->rt);
-
-  JS_FreeValue(ts->ctx, ts->backtrace_module);
-  JS_FreeValue(ts->ctx, ts->compiled_module);
-  JS_FreeValue(ts->ctx, ts->sourcemap_str);
-
-  // Valgrind seems to correctly have caught a memory leak in quickjs-libc.
-  js_free(ts->ctx, JS_GetRuntimeOpaque(ts->rt));
-
-  JS_FreeContext(ts->ctx);
-  JS_FreeRuntime(ts->rt);
-  ts->ctx = NULL;
-  ts->rt = NULL;
 }
 
 static void cleanup_old_runtime(ThreadState *ts) {
