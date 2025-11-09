@@ -28,6 +28,8 @@ type Config struct {
 	SkipJSockDVersionCheck bool
 	// If set, this function is called for each log message sent by JSockD.
 	Logger func(timestamp time.Time, level string, message string)
+	// The maximum number of times that the jscockd process will be restarted within one minute if it crashes. If 0, it will never be restarted.
+	MaxRestartsPerMinute int
 }
 
 // DefaultConfig returns the default JSockD client configuration.
@@ -40,5 +42,6 @@ func DefaultConfig() Config {
 		MaxIdleTimeUs:           0,
 		MaxCommandRuntimeUs:     0,
 		TimeoutUs:               15000000, // 15 seconds
+		MaxRestartsPerMinute:    1,
 	}
 }

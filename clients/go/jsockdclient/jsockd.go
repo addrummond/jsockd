@@ -90,6 +90,8 @@ type JSockDClient struct {
 	fatalError      error
 	fatalErrorMutex sync.Mutex
 	socketTmpdir    string
+	// The JSockdD server process. Typically you will not need to access this directly.
+	Process *os.Process
 }
 
 const messageHandlerInternalError = "internal_error"
@@ -195,6 +197,7 @@ func initJSockDClient(config Config, jsockdExec string) (*JSockDClient, error) {
 		config:       config,
 		cmd:          cmd,
 		socketTmpdir: socketTmpdir,
+		Process:      cmd.Process,
 	}
 
 	for i := range readyCount {

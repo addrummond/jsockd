@@ -5,6 +5,7 @@ import (
 	"os"
 	"runtime"
 	"sync"
+	"time"
 
 	rand "math/rand/v2"
 
@@ -17,9 +18,9 @@ func main() {
 	config.SkipJSockDVersionCheck = true
 
 	// uncomment for debugging assitance
-	//config.Logger = func(timestamp time.Time, level string, message string) {
-	//	fmt.Printf("[%s] %s: %s\n", timestamp.Format("2006-01-02 15:04:05"), level, message)
-	//}
+	config.Logger = func(timestamp time.Time, level string, message string) {
+		fmt.Printf("[%s] %s: %s\n", timestamp.Format("2006-01-02 15:04:05"), level, message)
+	}
 
 	client, err := jsockdclient.InitJSockDClient(config, os.Args[1])
 	if err != nil {
@@ -52,6 +53,15 @@ func main() {
 					fmt.Fprintf(os.Stderr, "Unexpected result for command (_m, p) => p + %v: got %v, expected %v\n", n, resp.Result, 2*n)
 					os.Exit(1)
 				}
+
+				if n%100 == 0 {
+					fmt.Fprintf(os.Stderr, "Randomly killing JSockD\n")
+					err := client.Process.Kill()
+					if err != nil {
+						fmt.Fprintf(os.Stderr, "Error killing JSockD process: %v\n", err)
+					}
+				}
+
 				//fmt.Printf("All good!\n")
 			}
 		}()
