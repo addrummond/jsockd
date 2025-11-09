@@ -16,6 +16,7 @@ func main() {
 	config := jsockdclient.DefaultConfig()
 	config.NThreads = 8
 	config.SkipJSockDVersionCheck = true
+	config.MaxRestartsPerMinute = 10000
 
 	// uncomment for debugging assitance
 	config.Logger = func(timestamp time.Time, level string, message string) {
@@ -38,12 +39,14 @@ func main() {
 			for j := 0; j < 10000; j++ {
 				n := rand.IntN(1000)
 				cmd := fmt.Sprintf("(_m, p) => { const x = p + %v; return JSockD.sendMessage(x) + 1; }", n)
+				fmt.Printf("Sending command: %v\n", cmd)
 				resp, err := jsockdclient.SendCommandWithMessageHandler[int](client, cmd, n, func(msg int) (int, error) {
 					return msg, nil
 				})
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "Error sending command: %v\n", err)
-					os.Exit(1)
+					//os.Exit(1)
+					continue
 				}
 				if resp.Exception {
 					fmt.Fprintf(os.Stderr, "Received exception: %v\n", resp.Exception)

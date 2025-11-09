@@ -24,7 +24,7 @@ type Config struct {
 	MaxCommandRuntimeUs int
 	// The timeout in microseconds when communicating with JSockD
 	TimeoutUs int
-	// If true, the JSockD server version is not checked against the version expected by this client
+	// If true, the JSockD server version is not checked against the version expected by this client. This should always be set to 'false' in production systems.
 	SkipJSockDVersionCheck bool
 	// If set, this function is called for each log message sent by JSockD.
 	Logger func(timestamp time.Time, level string, message string)

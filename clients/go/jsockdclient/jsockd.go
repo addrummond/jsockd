@@ -145,7 +145,7 @@ func initJSockDClient(config Config, jsockdExec string) (*JSockDClient, error) {
 		}
 		sockets = make([]string, config.NThreads)
 		for i := 0; i < config.NThreads; i++ {
-			sockets[i] = path.Join(socketTmpdir, fmt.Sprintf("jsockd_socket_%d.sock", i))
+			sockets[i] = path.Join(socketTmpdir, fmt.Sprintf("jsd_%d.sock", i))
 		}
 	}
 
@@ -250,6 +250,7 @@ func initJSockDClient(config Config, jsockdExec string) (*JSockDClient, error) {
 				return
 			}
 			client.iclient.Store(newIclient)
+			fmt.Fprintf(os.Stderr, "JSockD process restarted!!\n")
 		}
 	}()
 
@@ -275,6 +276,8 @@ func SendCommand[ResponseT any](client *JSockDClient, query string, jsonParam an
 // goroutine is guaranteed to have finished executing by the time
 // SendCommandWithMessageHandler returns.
 func SendCommandWithMessageHandler[ResponseT any, MessageT any, MessageResponseT any](client *JSockDClient, query string, jsonParam any, messageHandler func(message MessageT) (MessageResponseT, error)) (Response[ResponseT], error) {
+	fmt.Printf("SendCommandWithMessageHandler %p\n", client.iclient.Load())
+
 	var msgHandlerErr error
 	wrappedHandler := func(jsonMessage string) (string, error) {
 		var message MessageT
@@ -352,6 +355,8 @@ func sendRawCommand(iclient *jSockDInternalClient, query string, jsonParam strin
 	if fe := getFatalError(iclient); fe != nil {
 		return RawResponse{}, fe
 	}
+
+	fmt.Printf("SEND RAW %p\n", iclient)
 
 	cmdId := atomic.AddUint64(&nextCommandId, 1)
 	cmd := command{
