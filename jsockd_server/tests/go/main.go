@@ -56,7 +56,7 @@ func main() {
 
 				if n%100 == 0 {
 					fmt.Fprintf(os.Stderr, "Randomly killing JSockD\n")
-					err := client.Process.Kill()
+					err := client.GetJSockDProcess().Kill()
 					if err != nil {
 						fmt.Fprintf(os.Stderr, "Error killing JSockD process: %v\n", err)
 					}

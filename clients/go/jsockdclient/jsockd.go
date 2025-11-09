@@ -97,10 +97,18 @@ type jSockDInternalClient struct {
 	fatalErrorMutex sync.Mutex
 	socketTmpdir    string
 	restartCount    atomic.Int64
+	lastRestart     time.Time
 	process         *os.Process
 }
 
 const messageHandlerInternalError = "internal_error"
+
+// GetJSockDProcess returns the underlying JSockD process for the client.
+// You wouldn't usually need to use this.
+func (client *JSockDClient) GetJSockDProcess() *os.Process {
+	iclient := client.iclient.Load()
+	return iclient.process
+}
 
 // InitJSockDClientWithSockets starts a JSockD server process with the specified
 // configuration, connects to it via the specified Unix domain sockets, and
@@ -227,14 +235,21 @@ func initJSockDClient(config Config, jsockdExec string) (*JSockDClient, error) {
 			setFatalError(iclient, fmt.Errorf("jsockd process exited unexpectedly with code %v", cmd.ProcessState.ExitCode()))
 		}
 		fmt.Fprintf(os.Stderr, "JSockD process exited\n")
-		if iclient.restartCount.Add(1) <= int64(config.MaxRestartsPerMinute) {
+		minutesPassed := 0
+		if !iclient.lastRestart.IsZero() {
+			minutesPassed = int(time.Since(iclient.lastRestart).Minutes())
+		}
+		if iclient.restartCount.Add(1)-int64(minutesPassed*config.MaxRestartsPerMinute) <= int64(config.MaxRestartsPerMinute) {
 			fmt.Fprintf(os.Stderr, "JSockD process exited in here!\n")
+			iclient.lastRestart = time.Now()
 			newClient, err := initJSockDClient(config, jsockdExec)
+			newIclient := newClient.iclient.Load()
+			newIclient.lastRestart = time.Now()
 			if err != nil {
-				setFatalError(iclient, fmt.Errorf("restarting jsockd: %w", err))
+				setFatalError(newIclient, fmt.Errorf("restarting jsockd: %w", err))
 				return
 			}
-			client.iclient.Store(newClient.iclient.Load())
+			client.iclient.Store(newIclient)
 		}
 	}()
 
