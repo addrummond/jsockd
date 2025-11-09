@@ -82,6 +82,12 @@ type Response[T any] struct {
 // JSockDClient represents a client connection to a JSockD server. It should
 // be created via InitJSockDClient and closed via its Close method.
 type JSockDClient struct {
+	// We go indirectly via an atomic pointer to the real client state so that
+	// we can swap out the pointer in the case where jsockd is restarted.
+	iclient atomic.Pointer[jSockDInternalClient]
+}
+
+type jSockDInternalClient struct {
 	cmd             *exec.Cmd
 	conns           []net.Conn
 	connChans       []chan command
@@ -90,8 +96,8 @@ type JSockDClient struct {
 	fatalError      error
 	fatalErrorMutex sync.Mutex
 	socketTmpdir    string
-	// The JSockdD server process. Typically you will not need to access this directly.
-	Process *os.Process
+	restartCount    atomic.Int64
+	process         *os.Process
 }
 
 const messageHandlerInternalError = "internal_error"
@@ -104,14 +110,18 @@ func InitJSockDClient(config Config, jsockdExec string) (*JSockDClient, error) {
 		return nil, errors.New("NThreads must be greater than zero. Did you forget to call jsockdclient.DefaultConfig() to initialize the Config struct?")
 	}
 	client, err := initJSockDClient(config, jsockdExec)
-	if err != nil && client != nil && client.socketTmpdir != "" {
+	c := client.iclient.Load()
+	if err != nil && client != nil && c.socketTmpdir != "" {
 		// Ignore error as it's just nice to have cleanup
-		os.RemoveAll(client.socketTmpdir)
+		os.RemoveAll(c.socketTmpdir)
 	}
 	return client, err
 }
 
 func initJSockDClient(config Config, jsockdExec string) (*JSockDClient, error) {
+	// We set this before killing the jsockd process ourselves, so that any code Waiting on it knows if it was killed deliberately.
+	var jsockdKillCount atomic.Int32
+
 	var sockets []string
 	var socketTmpdir string
 	if config.Sockets != nil {
@@ -165,10 +175,12 @@ func initJSockDClient(config Config, jsockdExec string) (*JSockDClient, error) {
 	case readyCount = <-readyCh:
 		// success
 	case e := <-errCh:
+		jsockdKillCount.Add(1)
 		_ = cmd.Process.Kill()
 		_ = cmd.Wait()
 		return nil, fmt.Errorf("waiting for READY: %w", e)
 	case <-time.After(timeout):
+		jsockdKillCount.Add(1)
 		_ = cmd.Process.Kill()
 		_ = cmd.Wait()
 		return nil, fmt.Errorf("timeout (%s) waiting for READY line", timeout)
@@ -191,19 +203,40 @@ func initJSockDClient(config Config, jsockdExec string) (*JSockDClient, error) {
 	}
 
 	connChans := make([]chan command, readyCount)
-	client := &JSockDClient{
+	iclient := &jSockDInternalClient{
 		conns:        conns,
 		connChans:    connChans,
 		config:       config,
 		cmd:          cmd,
 		socketTmpdir: socketTmpdir,
-		Process:      cmd.Process,
+		process:      cmd.Process,
 	}
 
 	for i := range readyCount {
 		connChans[i] = make(chan command, chanBufferSize)
-		go connHandler(conns[i], connChans[i], client)
+		go connHandler(conns[i], connChans[i], iclient)
 	}
+
+	client := &JSockDClient{}
+	client.iclient.Store(iclient)
+
+	// Get notified when the process exits
+	go func() {
+		_, _ = cmd.Process.Wait()
+		if jsockdKillCount.Load() == 0 {
+			setFatalError(iclient, fmt.Errorf("jsockd process exited unexpectedly with code %v", cmd.ProcessState.ExitCode()))
+		}
+		fmt.Fprintf(os.Stderr, "JSockD process exited\n")
+		if iclient.restartCount.Add(1) <= int64(config.MaxRestartsPerMinute) {
+			fmt.Fprintf(os.Stderr, "JSockD process exited in here!\n")
+			newClient, err := initJSockDClient(config, jsockdExec)
+			if err != nil {
+				setFatalError(iclient, fmt.Errorf("restarting jsockd: %w", err))
+				return
+			}
+			client.iclient.Store(newClient.iclient.Load())
+		}
+	}()
 
 	return client, nil
 }
@@ -212,7 +245,7 @@ func initJSockDClient(config Config, jsockdExec string) (*JSockDClient, error) {
 // response. The parameter is serialized to JSON via json.Marshal and the result
 // is deserialized from JSON via json.Unmarshal.
 func SendCommand[ResponseT any](client *JSockDClient, query string, jsonParam any) (Response[ResponseT], error) {
-	return sendCommand[ResponseT](client, query, jsonParam, nil)
+	return sendCommand[ResponseT](client.iclient.Load(), query, jsonParam, nil)
 }
 
 // SendCommandWithMessageHandler is like SendCommand but with a message
@@ -245,7 +278,7 @@ func SendCommandWithMessageHandler[ResponseT any, MessageT any, MessageResponseT
 		}
 		return string(j), nil
 	}
-	res, err := sendCommand[ResponseT](client, query, jsonParam, wrappedHandler)
+	res, err := sendCommand[ResponseT](client.iclient.Load(), query, jsonParam, wrappedHandler)
 	if err != nil && msgHandlerErr != nil {
 		return Response[ResponseT]{}, fmt.Errorf("message handler error: %w; command error: %v", msgHandlerErr, err)
 	}
@@ -258,12 +291,12 @@ func SendCommandWithMessageHandler[ResponseT any, MessageT any, MessageResponseT
 	return res, nil
 }
 
-func sendCommand[ResponseT any](client *JSockDClient, query string, jsonParam any, messageHandler func(jsonMessage string) (string, error)) (Response[ResponseT], error) {
+func sendCommand[ResponseT any](iclient *jSockDInternalClient, query string, jsonParam any, messageHandler func(jsonMessage string) (string, error)) (Response[ResponseT], error) {
 	j, err := json.Marshal(jsonParam)
 	if err != nil {
 		return Response[ResponseT]{}, fmt.Errorf("json marshal: %w", err)
 	}
-	rawResp, err := sendRawCommand(client, query, string(j), messageHandler)
+	rawResp, err := sendRawCommand(iclient, query, string(j), messageHandler)
 	if err != nil {
 		return Response[ResponseT]{}, err
 	}
@@ -283,7 +316,7 @@ func sendCommand[ResponseT any](client *JSockDClient, query string, jsonParam an
 // SendRawCommand sends a command to the JSockD server and returns the
 // response. JSON values are passed and returned as strings.
 func SendRawCommand(client *JSockDClient, query string, jsonParam string) (RawResponse, error) {
-	return sendRawCommand(client, query, jsonParam, nil)
+	return sendRawCommand(client.iclient.Load(), query, jsonParam, nil)
 }
 
 // SendRawCommandWithMessageHandler is like SendRawCommand but with a message
@@ -296,11 +329,12 @@ func SendRawCommand(client *JSockDClient, query string, jsonParam string) (RawRe
 // goroutine is guaranteed to have finished executing by the time
 // SendRawCommandWithMessageHandler returns.
 func SendRawCommandWithMessageHandler(client *JSockDClient, query string, jsonParam string, messageHandler func(jsonMessage string) (string, error)) (RawResponse, error) {
-	return sendRawCommand(client, query, jsonParam, messageHandler)
+	iclient := client.iclient.Load()
+	return sendRawCommand(iclient, query, jsonParam, messageHandler)
 }
 
-func sendRawCommand(client *JSockDClient, query string, jsonParam string, messageHandler func(jsonMessage string) (string, error)) (RawResponse, error) {
-	if fe := getFatalError(client); fe != nil {
+func sendRawCommand(iclient *jSockDInternalClient, query string, jsonParam string, messageHandler func(jsonMessage string) (string, error)) (RawResponse, error) {
+	if fe := getFatalError(iclient); fe != nil {
 		return RawResponse{}, fe
 	}
 
@@ -312,17 +346,17 @@ func sendRawCommand(client *JSockDClient, query string, jsonParam string, messag
 		responseChan:   make(chan RawResponse),
 		messageHandler: messageHandler,
 	}
-	nconns := len(client.conns)
+	nconns := len(iclient.conns)
 	if nconns == 0 {
 		return RawResponse{}, errors.New("no connections available")
 	}
 
-	chooseChan(client.connChans) <- cmd
+	chooseChan(iclient.connChans) <- cmd
 
 	select {
 	case resp := <-cmd.responseChan:
 		return resp, nil
-	case <-time.After(time.Duration(client.config.TimeoutUs) * time.Microsecond):
+	case <-time.After(time.Duration(iclient.config.TimeoutUs) * time.Microsecond):
 		return RawResponse{}, errors.New("timeout waiting for response")
 	}
 }
@@ -332,62 +366,64 @@ func sendRawCommand(client *JSockDClient, query string, jsonParam string, messag
 // terminate. Close may be called multiple times without ill effect; subsequent
 // calls are no-ops.
 func (client *JSockDClient) Close() error {
-	qs := atomic.AddUint64(&client.quitCount, 1)
+	iclient := client.iclient.Load()
+
+	qs := atomic.AddUint64(&iclient.quitCount, 1)
 	if qs > 1 {
 		// Already quitting or quit
 		return nil
 	}
 
 	// Ignore error as it's just nice to have cleanup
-	if client.socketTmpdir != "" {
-		defer os.RemoveAll(client.socketTmpdir)
+	if iclient.socketTmpdir != "" {
+		defer os.RemoveAll(iclient.socketTmpdir)
 	}
 
-	for _, c := range client.connChans {
+	for _, c := range iclient.connChans {
 		close(c)
 	}
 	var err error
-	for _, c := range client.conns {
+	for _, c := range iclient.conns {
 		if connErr := c.Close(); err != nil && connErr != nil {
 			err = connErr
 		}
 	}
-	client.cmd.WaitDelay = time.Duration(client.config.TimeoutUs) * time.Microsecond
-	err2 := client.cmd.Wait()
+	iclient.cmd.WaitDelay = time.Duration(iclient.config.TimeoutUs) * time.Microsecond
+	err2 := iclient.cmd.Wait()
 	if err != nil {
 		return err
 	}
 	if err2 != nil {
 		return err2
 	}
-	if fe := getFatalError(client); fe != nil {
+	if fe := getFatalError(iclient); fe != nil {
 		return fe
 	}
 	return nil
 }
 
-func connHandler(conn net.Conn, cmdChan chan command, client *JSockDClient) {
+func connHandler(conn net.Conn, cmdChan chan command, iclient *jSockDInternalClient) {
 	defer conn.Close()
 
 	for cmd := range cmdChan {
 		_, err := conn.Write(fmt.Appendf(nil, "%s\x00%s\x00%s\x00", cmd.id, cmd.query, cmd.paramJson))
 		if err != nil {
-			setFatalError(client, err)
+			setFatalError(iclient, err)
 			return
 		}
 		rec, err := readRecord(conn)
 		if err != nil {
-			setFatalError(client, err)
+			setFatalError(iclient, err)
 			return
 		}
 		parts := strings.SplitN(rec, " ", 2)
 		commandId := parts[0]
 		if commandId != cmd.id {
-			setFatalError(client, fmt.Errorf("mismatched command id: got %q, wanted %q", commandId, cmd.id))
+			setFatalError(iclient, fmt.Errorf("mismatched command id: got %q, wanted %q", commandId, cmd.id))
 			return
 		}
 		if len(parts) != 2 {
-			setFatalError(client, fmt.Errorf("malformed response record: %q", rec))
+			setFatalError(iclient, fmt.Errorf("malformed response record: %q", rec))
 			return
 		}
 		if rest, ok := strings.CutPrefix(parts[1], "exception "); ok {
@@ -402,23 +438,23 @@ func connHandler(conn net.Conn, cmdChan chan command, client *JSockDClient) {
 					response, err = cmd.messageHandler(strings.TrimSuffix(rest, "\n"))
 				}
 				if err != nil {
-					setFatalError(client, fmt.Errorf("message handler error: %w", err))
+					setFatalError(iclient, fmt.Errorf("message handler error: %w", err))
 					_, _ = conn.Write(fmt.Appendf(nil, "%s\x00%s\x00", cmd.id, messageHandlerInternalError))
 					return
 				}
 				_, err = conn.Write(fmt.Appendf(nil, "%s\x00%s\x00", cmd.id, response))
 				if err != nil {
-					setFatalError(client, err)
+					setFatalError(iclient, err)
 					return
 				}
 				mresp, err := readRecord(conn)
 				if err != nil {
-					setFatalError(client, err)
+					setFatalError(iclient, err)
 					return
 				}
 				parts = strings.SplitN(mresp, " ", 2)
 				if parts[0] != cmd.id {
-					setFatalError(client, fmt.Errorf("mismatched command id in message response: got %q, wanted %q", parts[0], cmd.id))
+					setFatalError(iclient, fmt.Errorf("mismatched command id in message response: got %q, wanted %q", parts[0], cmd.id))
 					return
 				}
 				var ok bool
@@ -431,12 +467,12 @@ func connHandler(conn net.Conn, cmdChan chan command, client *JSockDClient) {
 				} else if rest, ok = strings.CutPrefix(parts[1], "message "); ok {
 					continue
 				} else {
-					setFatalError(client, fmt.Errorf("malformed message response from JSockD: %q", mresp))
+					setFatalError(iclient, fmt.Errorf("malformed message response from JSockD: %q", mresp))
 					return
 				}
 			}
 		} else {
-			setFatalError(client, fmt.Errorf("malformed command response from JSockD: %q", rec))
+			setFatalError(iclient, fmt.Errorf("malformed command response from JSockD: %q", rec))
 			return
 		}
 	}
@@ -535,17 +571,17 @@ func chooseChan(connChans []chan command) chan command {
 	return connChans[rand.Intn(len(connChans))]
 }
 
-func getFatalError(client *JSockDClient) error {
-	client.fatalErrorMutex.Lock()
-	defer client.fatalErrorMutex.Unlock()
-	return client.fatalError
+func getFatalError(iclient *jSockDInternalClient) error {
+	iclient.fatalErrorMutex.Lock()
+	defer iclient.fatalErrorMutex.Unlock()
+	return iclient.fatalError
 }
 
-func setFatalError(client *JSockDClient, err error) {
-	client.fatalErrorMutex.Lock()
-	defer client.fatalErrorMutex.Unlock()
-	if client.fatalError == nil {
-		client.fatalError = err
+func setFatalError(iclient *jSockDInternalClient, err error) {
+	iclient.fatalErrorMutex.Lock()
+	defer iclient.fatalErrorMutex.Unlock()
+	if iclient.fatalError == nil {
+		iclient.fatalError = err
 	}
 }
 
