@@ -59,7 +59,7 @@ func main() {
 				}
 
 				if (j+1)%1000 == 0 {
-					fmt.Fprintf(os.Stderr, "Randomly killing JSockD\n")
+					fmt.Fprintf(os.Stderr, "Killing JSockD\n")
 					err := client.GetJSockDProcess().Kill()
 					if err != nil {
 						fmt.Fprintf(os.Stderr, "Error killing JSockD process: %v\n", err)
