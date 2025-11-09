@@ -18,7 +18,7 @@ __BUST_CACHE=1 # increment to bust QuickJS build cache manually if needed
 
 QUICKJS_COMMIT=eb2c89087def1829ed99630cb14b549d7a98408c
 
-FILC_VERSION=0.673
+FILC_VERSION=0.674
 FILC_CLANG="${FILC_CLANG:-$HOME/filc-${FILC_VERSION}-linux-x86_64/build/bin/clang}"
 
 rm -rf .scratch
