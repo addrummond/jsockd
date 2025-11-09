@@ -17,6 +17,7 @@ func main() {
 	config.NThreads = 8
 	config.SkipJSockDVersionCheck = true
 	config.MaxRestartsPerMinute = 10000
+	config.TimeoutUs = 1000000 // 1 second
 
 	// uncomment for debugging assitance
 	config.Logger = func(timestamp time.Time, level string, message string) {
@@ -57,7 +58,7 @@ func main() {
 					os.Exit(1)
 				}
 
-				if n%100 == 0 {
+				if (j+1)%1000 == 0 {
 					fmt.Fprintf(os.Stderr, "Randomly killing JSockD\n")
 					err := client.GetJSockDProcess().Kill()
 					if err != nil {
