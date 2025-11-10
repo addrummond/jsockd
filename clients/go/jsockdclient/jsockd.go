@@ -131,23 +131,17 @@ func initJSockDClient(config Config, jsockdExec string) (*JSockDClient, error) {
 	// We set this before killing the jsockd process ourselves, so that any code Waiting on it knows if it was killed deliberately.
 	var jsockdKillCount atomic.Int32
 
-	var sockets []string
-	var socketTmpdir string
-	if config.Sockets != nil {
-		sockets = config.Sockets
-	} else {
-		var err error
-		// We want to use a short name here becasue Unix domain socket path
-		// length limits can be quite small on some systems, and the
-		// temporary dir may have quite a long path.
-		socketTmpdir, err = os.MkdirTemp("", "jsd_")
-		if err != nil {
-			return nil, err
-		}
-		sockets = make([]string, config.NThreads)
-		for i := 0; i < config.NThreads; i++ {
-			sockets[i] = path.Join(socketTmpdir, fmt.Sprintf("jsd_%d.sock", i))
-		}
+	sockets := make([]string, config.NThreads)
+	// We want to use a short name here becasue Unix domain socket path
+	// length limits can be quite small on some systems, and the
+	// temporary dir may have quite a long path.
+	socketTmpdir, err := os.MkdirTemp("", "jsd_")
+	fmt.Printf("SOCKET TMP DIR: %v\n", socketTmpdir)
+	if err != nil {
+		return nil, err
+	}
+	for i := 0; i < config.NThreads; i++ {
+		sockets[i] = path.Join(socketTmpdir, fmt.Sprintf("jsd_%d.sock", i))
 	}
 
 	cmdargs := prepareCmdArgs(config, jsockdExec, sockets)
@@ -224,13 +218,13 @@ func initJSockDClient(config Config, jsockdExec string) (*JSockDClient, error) {
 		process:      cmd.Process,
 	}
 
+	client := &JSockDClient{}
+	client.iclient.Store(iclient)
+
 	for i := range readyCount {
 		connChans[i] = make(chan command, chanBufferSize)
 		go connHandler(conns[i], connChans[i], iclient)
 	}
-
-	client := &JSockDClient{}
-	client.iclient.Store(iclient)
 
 	// Get notified when the process exits
 	go func() {
@@ -306,7 +300,7 @@ func SendCommandWithMessageHandler[ResponseT any, MessageT any, MessageResponseT
 		return Response[ResponseT]{}, fmt.Errorf("message handler error: %w; command error: %v", msgHandlerErr, err)
 	}
 	if err != nil {
-		return Response[ResponseT]{}, err
+		return Response[ResponseT]{}, fmt.Errorf("command error: %w", err)
 	}
 	if msgHandlerErr != nil {
 		return Response[ResponseT]{}, fmt.Errorf("message handler error: %w", msgHandlerErr)
