@@ -88,18 +88,19 @@ type JSockDClient struct {
 }
 
 type jSockDInternalClient struct {
-	cmd             *exec.Cmd
-	conns           []net.Conn
-	connChans       []chan command
-	config          Config
-	quitCount       uint64
-	fatalError      error
-	fatalErrorMutex sync.Mutex
-	socketTmpdir    string
-	restartCount    atomic.Int64
-	lastRestart     time.Time
-	quit            atomic.Bool
-	process         *os.Process
+	cmd                *exec.Cmd
+	conns              []net.Conn
+	connChans          []chan command
+	config             Config
+	quitCount          uint64
+	fatalError         error
+	fatalErrorMutex    sync.Mutex
+	socketTmpdir       string
+	restartCount       atomic.Int64
+	inProgressRestarts atomic.Int32
+	lastRestart        time.Time
+	quit               atomic.Bool
+	process            *os.Process
 }
 
 const messageHandlerInternalError = "internal_error"
@@ -239,17 +240,19 @@ func initJSockDClient(config Config, jsockdExec string) (*JSockDClient, error) {
 			minutesPassed = int(time.Since(iclient.lastRestart).Minutes())
 		}
 		if iclient.restartCount.Add(1)-int64(minutesPassed*config.MaxRestartsPerMinute) <= int64(config.MaxRestartsPerMinute) {
-			fmt.Fprintf(os.Stderr, "JSockD process exited in here!\n")
-			iclient.lastRestart = time.Now()
-			newClient, err := initJSockDClient(config, jsockdExec)
-			if err != nil {
-				setFatalError(iclient, fmt.Errorf("restarting jsockd: %w", err))
-				return
+			if iclient.inProgressRestarts.Add(1) == 1 {
+				fmt.Printf("\n\n**** Restarting JSockD process...\n\n")
+				iclient.lastRestart = time.Now()
+				newClient, err := initJSockDClient(config, jsockdExec)
+				if err != nil {
+					setFatalError(iclient, fmt.Errorf("restarting jsockd: %w", err))
+					return
+				}
+				newIclient := newClient.iclient.Load()
+				newIclient.lastRestart = time.Now()
+				client.iclient.Store(newIclient)
+				fmt.Fprintf(os.Stderr, "JSockD process restarted!!\n")
 			}
-			newIclient := newClient.iclient.Load()
-			newIclient.lastRestart = time.Now()
-			client.iclient.Store(newIclient)
-			fmt.Fprintf(os.Stderr, "JSockD process restarted!!\n")
 		}
 	}()
 
@@ -396,7 +399,10 @@ func (client *JSockDClient) Close() error {
 
 	// Ignore error as it's just nice to have cleanup
 	if iclient.socketTmpdir != "" {
-		defer os.RemoveAll(iclient.socketTmpdir)
+		defer func() {
+			err := os.RemoveAll(iclient.socketTmpdir)
+			fmt.Printf("Removed socket tmpdir %v: %v\n", iclient.socketTmpdir, err)
+		}()
 	}
 
 	for _, c := range iclient.connChans {

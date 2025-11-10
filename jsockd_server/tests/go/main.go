@@ -58,8 +58,8 @@ func main() {
 					os.Exit(1)
 				}
 
-				if (j+1)%8 == 0 {
-					fmt.Fprintf(os.Stderr, "Killing JSockD\n")
+				if i == 0 && (j+1)%8 == 0 {
+					fmt.Fprintf(os.Stderr, "\n\n****Killing JSockD\n\n")
 					err := client.GetJSockDProcess().Kill()
 					if err != nil {
 						fmt.Fprintf(os.Stderr, "Error killing JSockD process: %v\n", err)
