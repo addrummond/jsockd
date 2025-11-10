@@ -30,6 +30,8 @@ type Config struct {
 	Logger func(timestamp time.Time, level string, message string)
 	// The maximum number of times that the jscockd process will be restarted within one minute if it crashes. If 0, it will never be restarted.
 	MaxRestartsPerMinute int
+	// Value for JSOCKD_LOG_PREFIX env var
+	LogPrefix string
 }
 
 // DefaultConfig returns the default JSockD client configuration.

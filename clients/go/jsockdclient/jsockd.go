@@ -155,6 +155,9 @@ func initJSockDClient(config Config, jsockdExec string) (*JSockDClient, error) {
 	// Start the process
 	cmd := exec.Command(jsockdExec, cmdargs...)
 	cmd.Env = os.Environ()
+	if config.LogPrefix != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("JSOCKD_LOG_PREFIX=%s", config.LogPrefix))
+	}
 	if config.BytecodeModulePublicKey != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=%s", config.BytecodeModulePublicKey))
 	}

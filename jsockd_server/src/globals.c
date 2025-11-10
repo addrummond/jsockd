@@ -29,3 +29,5 @@ CmdArgs g_cmd_args;
 // Global vars that need destruction before exit.
 WaitGroup g_thread_ready_wait_group;
 pthread_mutex_t g_cached_functions_mutex;
+
+const char *g_log_prefix = NULL;

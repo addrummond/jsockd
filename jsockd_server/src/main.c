@@ -1054,10 +1054,21 @@ static void log_to_stderr(const char *fmt, ...) {
   vfprintf(stderr, fmt, vl);
 }
 
+static void set_log_prefix(void) {
+  const char *lp = getenv("JSOCKD_LOG_PREFIX");
+  if (lp && lp[0] != '\0') {
+    const char *nl = strchr(lp, '\n');
+    if (!nl)
+      g_log_prefix = lp;
+  }
+}
+
 static int inner_main(int argc, char *argv[]) {
   struct sigaction sa = {.sa_handler = SIGINT_and_SIGTERM_handler};
   sigaction(SIGINT, &sa, NULL);
   sigaction(SIGTERM, &sa, NULL);
+
+  set_log_prefix();
 
   mutex_init(&g_cached_functions_mutex);
 

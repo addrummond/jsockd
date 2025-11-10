@@ -37,4 +37,6 @@ extern CmdArgs g_cmd_args;
 extern WaitGroup g_thread_ready_wait_group;
 extern pthread_mutex_t g_cached_functions_mutex;
 
+extern const char *g_log_prefix;
+
 #endif

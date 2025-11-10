@@ -1,5 +1,6 @@
 #include "log.h"
 #include "config.h"
+#include "globals.h"
 #include "utils.h"
 #include <stdarg.h>
 #include <stdbool.h>
@@ -101,6 +102,8 @@ void jsockd_logf(LogLevel log_level, const char *fmt, ...) {
   m = remove_trailing_ws(log_buf, m);
 
   print_log_prefix(log_level, stderr, NULL == memchr(log_buf, '\n', (size_t)m));
+  if (g_log_prefix)
+    fprintf(stderr, "%s", g_log_prefix);
   log_with_prefix_for_subsequent_lines(log_level, stderr, log_buf, m);
   fputc('\n', stderr);
   fflush(stderr);
