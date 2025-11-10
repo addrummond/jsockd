@@ -98,6 +98,7 @@ type jSockDInternalClient struct {
 	socketTmpdir    string
 	restartCount    atomic.Int64
 	lastRestart     time.Time
+	quit            atomic.Bool
 	process         *os.Process
 }
 
@@ -231,6 +232,7 @@ func initJSockDClient(config Config, jsockdExec string) (*JSockDClient, error) {
 	// Get notified when the process exits
 	go func() {
 		_, _ = cmd.Process.Wait()
+		iclient.quit.Store(true)
 		if jsockdKillCount.Load() == 0 {
 			setFatalError(iclient, fmt.Errorf("jsockd process exited unexpectedly with code %v", cmd.ProcessState.ExitCode()))
 		}
@@ -243,12 +245,12 @@ func initJSockDClient(config Config, jsockdExec string) (*JSockDClient, error) {
 			fmt.Fprintf(os.Stderr, "JSockD process exited in here!\n")
 			iclient.lastRestart = time.Now()
 			newClient, err := initJSockDClient(config, jsockdExec)
-			newIclient := newClient.iclient.Load()
-			newIclient.lastRestart = time.Now()
 			if err != nil {
-				setFatalError(newIclient, fmt.Errorf("restarting jsockd: %w", err))
+				setFatalError(iclient, fmt.Errorf("restarting jsockd: %w", err))
 				return
 			}
+			newIclient := newClient.iclient.Load()
+			newIclient.lastRestart = time.Now()
 			client.iclient.Store(newIclient)
 			fmt.Fprintf(os.Stderr, "JSockD process restarted!!\n")
 		}
@@ -355,8 +357,9 @@ func sendRawCommand(iclient *jSockDInternalClient, query string, jsonParam strin
 	if fe := getFatalError(iclient); fe != nil {
 		return RawResponse{}, fe
 	}
-
-	fmt.Printf("SEND RAW %p\n", iclient)
+	if iclient.quit.Load() {
+		return RawResponse{}, errors.New("jsockd client has quit")
+	}
 
 	cmdId := atomic.AddUint64(&nextCommandId, 1)
 	cmd := command{

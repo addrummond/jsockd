@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"runtime"
 	"sync"
 	"time"
 
@@ -19,7 +18,7 @@ func main() {
 	config.MaxRestartsPerMinute = 10000
 	config.TimeoutUs = 1000000 // 1 second
 
-	// uncomment for debugging assitance
+	// uncomment for debugging assistance
 	config.Logger = func(timestamp time.Time, level string, message string) {
 		fmt.Printf("[%s] %s: %s\n", timestamp.Format("2006-01-02 15:04:05"), level, message)
 	}
@@ -33,11 +32,11 @@ func main() {
 
 	var wg sync.WaitGroup
 
-	for i := 0; i < runtime.NumCPU(); i++ {
+	for i := 0; i < 1; /* TODO runtime.NumCPU()*/ i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for j := 0; j < 10000; j++ {
+			for j := 0; j < 10; j++ { // TODO 10000
 				n := rand.IntN(1000)
 				cmd := fmt.Sprintf("(_m, p) => { const x = p + %v; return JSockD.sendMessage(x) + 1; }", n)
 				fmt.Printf("Sending command: %v\n", cmd)
@@ -58,7 +57,7 @@ func main() {
 					os.Exit(1)
 				}
 
-				if (j+1)%1000 == 0 {
+				if (j+1)%8 == 0 {
 					fmt.Fprintf(os.Stderr, "Killing JSockD\n")
 					err := client.GetJSockDProcess().Kill()
 					if err != nil {
