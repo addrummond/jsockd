@@ -58,7 +58,7 @@ func main() {
 					os.Exit(1)
 				}
 
-				if i == 0 && (j+1)%8 == 0 {
+				if i == 1 && (j+1)%8 == 0 {
 					fmt.Fprintf(os.Stderr, "\n\n****Killing JSockD\n\n")
 					err := client.GetJSockDProcess().Kill()
 					if err != nil {
