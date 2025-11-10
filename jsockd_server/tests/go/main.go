@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"runtime"
 	"sync"
 	"time"
 
@@ -32,7 +33,7 @@ func main() {
 
 	var wg sync.WaitGroup
 
-	for i := 0; i < 1; /* TODO runtime.NumCPU()*/ i++ {
+	for i := 0; i < runtime.NumCPU(); i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
