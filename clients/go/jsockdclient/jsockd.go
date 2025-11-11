@@ -137,7 +137,6 @@ func initJSockDClient(config Config, jsockdExec string) (*JSockDClient, error) {
 	// length limits can be quite small on some systems, and the
 	// temporary dir may have quite a long path.
 	socketTmpdir, err := os.MkdirTemp("", "jsd_")
-	fmt.Printf("SOCKET TMP DIR: %v\n", socketTmpdir)
 	if err != nil {
 		return nil, err
 	}
@@ -234,14 +233,13 @@ func initJSockDClient(config Config, jsockdExec string) (*JSockDClient, error) {
 		if jsockdKillCount.Load() == 0 {
 			setFatalError(iclient, fmt.Errorf("jsockd process exited unexpectedly with code %v", cmd.ProcessState.ExitCode()))
 		}
-		fmt.Fprintf(os.Stderr, "JSockD process exited\n")
+		_ = os.RemoveAll(iclient.socketTmpdir)
 		minutesPassed := 0
 		if !iclient.lastRestart.IsZero() {
 			minutesPassed = int(time.Since(iclient.lastRestart).Minutes())
 		}
 		if iclient.restartCount.Add(1)-int64(minutesPassed*config.MaxRestartsPerMinute) <= int64(config.MaxRestartsPerMinute) {
 			if iclient.inProgressRestarts.Add(1) == 1 {
-				fmt.Printf("\n\n**** Restarting JSockD process...\n\n")
 				iclient.lastRestart = time.Now()
 				newClient, err := initJSockDClient(config, jsockdExec)
 				if err != nil {
@@ -251,7 +249,6 @@ func initJSockDClient(config Config, jsockdExec string) (*JSockDClient, error) {
 				newIclient := newClient.iclient.Load()
 				newIclient.lastRestart = time.Now()
 				client.iclient.Store(newIclient)
-				fmt.Fprintf(os.Stderr, "JSockD process restarted!!\n")
 			}
 		}
 	}()
@@ -278,8 +275,6 @@ func SendCommand[ResponseT any](client *JSockDClient, query string, jsonParam an
 // goroutine is guaranteed to have finished executing by the time
 // SendCommandWithMessageHandler returns.
 func SendCommandWithMessageHandler[ResponseT any, MessageT any, MessageResponseT any](client *JSockDClient, query string, jsonParam any, messageHandler func(message MessageT) (MessageResponseT, error)) (Response[ResponseT], error) {
-	fmt.Printf("SendCommandWithMessageHandler %p\n", client.iclient.Load())
-
 	var msgHandlerErr error
 	wrappedHandler := func(jsonMessage string) (string, error) {
 		var message MessageT
@@ -400,8 +395,7 @@ func (client *JSockDClient) Close() error {
 	// Ignore error as it's just nice to have cleanup
 	if iclient.socketTmpdir != "" {
 		defer func() {
-			err := os.RemoveAll(iclient.socketTmpdir)
-			fmt.Printf("Removed socket tmpdir %v: %v\n", iclient.socketTmpdir, err)
+			_ = os.RemoveAll(iclient.socketTmpdir)
 		}()
 	}
 
