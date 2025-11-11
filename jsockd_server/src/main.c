@@ -1058,7 +1058,8 @@ static void set_log_prefix(void) {
   const char *lp = getenv("JSOCKD_LOG_PREFIX");
   if (lp && lp[0] != '\0') {
     const char *nl = strchr(lp, '\n');
-    if (!nl)
+    const char *cr = strchr(lp, '\r');
+    if (!nl && !cr)
       g_log_prefix = lp;
   }
 }

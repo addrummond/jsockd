@@ -153,7 +153,12 @@ jsockd -s <socket1> [<socket2> ...] [-m <module_bytecode_file>] [-sm <source_map
 | `-b`        | `<XX>`                      | Separator byte as two hex digits (e.g. `0A`).                                | `0A` (= `\n`) | No         | No       |
 | `--`        |                             | Indicates end of options for `-s` (allows socket paths starting with `-`).   |               | N/A        | No       |
 
-### 3.3 The socket protocol
+### 3.3 Environment variables
+
+* `JSOCKD_BYTECODE_MODULE_PUBLIC_KEY`: The hex-encoded ED25519 public key used to verify the signature of the module bytecode file specified with the `-m` option. If this variable is not set, the server refuses to start unless the bytecode file is unsigned and the server is a debug build, in which case the variable may be set to the special value `dangerously_allow_invalid_signatures`.
+* `JSOCKD_LOG_PREFIX`: This string is prepended to all logged messages (unless it contains a carriage return or line feed, in which case it is ignored.)
+
+### 3.4 The socket protocol
 
 The server listens for commands on the specified UNIX domain sockets. Each command consists of three fields separated
 by a separator byte:
@@ -219,7 +224,7 @@ following:
 
 JSockD will attempt to remove socket files when it exits, so it is not necessary for clients to clean these up.
 
-### 3.4 Error message and backtrace formats
+### 3.5 Error message and backtrace formats
 
 ```javascript
 {
@@ -241,7 +246,7 @@ JSockD will attempt to remove socket files when it exits, so it is not necessary
 }
 ```
 
-### 3.5 Source maps
+### 3.6 Source maps
 
 JSockD supports source maps for error backtrace reporting. Use the `-sm <source_map.js.map>`
 command line option to specify the path to a source map file for the bundle.
@@ -250,7 +255,7 @@ When a source map is provided, each entry in the `"trace"` array (see previous s
 
 It is recommended to specify a source map only for development and testing purposes, as the code for computing source mapped back traces is not optimized for performance. As long as you have a source map for your bundle, you always have the option of manually resolving the backtrace entries when looking at errors in production.
 
-### 3.6 Load balancing
+### 3.7 Load balancing
 
 The client should request a number of sockets roughly in line with the number of avaiable CPU cores (or fewer if a light load is anticipated).
 
@@ -259,7 +264,7 @@ if any socket except the first is unused for a significant period of time, the Q
 
 When an idle thread is woken, the typical time to initialize a new QuickJS runtime is on the order of a few milliseconds.
 
-### 3.7 Server log format
+### 3.8 Server log format
 
 When executed as a server (i.e. with the `-s` option), JSockD logs messages to standard error in the following format (all characters literal except `<VAR>` variables):
 
