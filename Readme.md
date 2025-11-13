@@ -155,8 +155,8 @@ jsockd -s <socket1> [<socket2> ...] [-m <module_bytecode_file>] [-sm <source_map
 
 ### 3.3 Environment variables
 
-* `JSOCKD_BYTECODE_MODULE_PUBLIC_KEY`: The hex-encoded ED25519 public key used to verify the signature of the module bytecode file specified with the `-m` option. If this variable is not set, the server refuses to start unless the bytecode file is unsigned and the server is a debug build, in which case the variable may be set to the special value `dangerously_allow_invalid_signatures`.
-* `JSOCKD_LOG_PREFIX`: This string is prepended to all logged messages (unless it contains a carriage return or line feed, in which case it is ignored.)
+* `JSOCKD_BYTECODE_MODULE_PUBLIC_KEY`: The hex-encoded ED25519 public key used to verify the signature of the module bytecode file specified with the `-m` option.
+* `JSOCKD_LOG_PREFIX`: This string is prepended to all logged messages (unless it contains a carriage return or line feed, in which case it is ignored).
 
 ### 3.4 The socket protocol
 
