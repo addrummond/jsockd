@@ -82,7 +82,7 @@ void jsockd_logf(LogLevel log_level, const char *fmt, ...) {
   va_start(args, fmt);
   va_copy(args2, args);
 
-  static char log_buf_[8192];
+  char log_buf_[8192];
   char *log_buf = log_buf_;
 
   int n = vsnprintf(NULL, 0, fmt, args);
