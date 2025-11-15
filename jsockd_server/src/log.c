@@ -94,12 +94,12 @@ void jsockd_logf(LogLevel log_level, const char *fmt, ...) {
   if ((size_t)n > sizeof(log_buf_) / sizeof(log_buf_[0]))
     log_buf = (char *)calloc((size_t)n, sizeof(char));
 
-  mutex_lock(&g_log_mutex);
-
   int m = vsnprintf(log_buf, n + 1, fmt, args2);
   va_end(args2);
   m = MIN(m, n);
   m = remove_trailing_ws(log_buf, m);
+
+  mutex_lock(&g_log_mutex);
 
   print_log_prefix(log_level, stderr, NULL == memchr(log_buf, '\n', (size_t)m));
   if (g_log_prefix)
