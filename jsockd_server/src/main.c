@@ -932,8 +932,8 @@ static void *listen_thread_func(void *data) {
   return NULL;
 }
 
-static pthread_t g_threads[MAX_THREADS];
-static SocketState g_socket_states[MAX_THREADS];
+static pthread_t *g_threads;
+static SocketState *g_socket_states;
 
 static const uint8_t *load_module_bytecode(const char *filename,
                                            size_t *out_size) {
@@ -1122,6 +1122,10 @@ static int inner_main(int argc, char *argv[]) {
   atomic_store_explicit(&g_n_ready_threads, g_cmd_args.n_sockets,
                         memory_order_relaxed);
 
+  g_thread_states = calloc(n_threads, sizeof(ThreadState));
+  g_threads = calloc(n_threads, sizeof(pthread_t));
+  g_socket_states = calloc(n_threads, sizeof(SocketState));
+
   if (0 != wait_group_init(&g_thread_ready_wait_group, n_threads)) {
     jsockd_logf(LOG_ERROR, "Error initializing wait group: %s\n",
                 strerror(errno));
@@ -1248,6 +1252,9 @@ int main(int argc, char **argv) {
   }
   int r = inner_main(argc, argv);
   destroy_log_mutex();
+  free(g_thread_states);
+  free(g_threads);
+  free(g_socket_states);
   return r;
 }
 
