@@ -1192,8 +1192,11 @@ static int inner_main(int argc, char *argv[]) {
 
   for (int i = 0; i < atomic_load_explicit(&g_n_threads, memory_order_relaxed);
        ++i) {
-    // pthread_join can fail, but we can't do any useful error handling
-    pthread_join(g_threads[i], NULL);
+    if (0 != pthread_join(g_threads[i], NULL)) {
+      jsockd_logf(LOG_ERROR, "Error joining thread %i: %s\n", i,
+                  strerror(errno));
+      continue;
+    }
     int rts = atomic_load_explicit(&g_thread_states[i].replacement_thread_state,
                                    memory_order_relaxed);
     if (rts != REPLACEMENT_THREAD_STATE_NONE) {
