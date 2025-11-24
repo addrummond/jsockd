@@ -26,7 +26,7 @@ int wait_group_init(WaitGroup *wg, int n_waiting_for) {
 int wait_group_inc(WaitGroup *wg, int n) {
   int r;
   int previous_value =
-      atomic_fetch_add_explicit(&wg->n_remaining, -n, memory_order_relaxed);
+      atomic_fetch_add_explicit(&wg->n_remaining, -n, memory_order_release);
   if (previous_value > 0 && previous_value <= n) {
     // We have just decremented the wait group to zero. If
     // wait_group_timed_wait has been called already then we need to call

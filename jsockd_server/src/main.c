@@ -421,7 +421,7 @@ static void cleanup_old_runtime(ThreadState *ts) {
   jsockd_log(LOG_DEBUG, "Thread state cleanup complete\n");
   atomic_store_explicit(&ts->replacement_thread_state,
                         REPLACEMENT_THREAD_STATE_CLEANUP_COMPLETE,
-                        memory_order_relaxed);
+                        memory_order_release);
 }
 
 // called only when destroying a thread state before program exit
@@ -477,14 +477,14 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
     register_thread_state_runtime(ts->rt, ts);
     atomic_store_explicit(&ts->replacement_thread_state,
                           REPLACEMENT_THREAD_STATE_CLEANUP,
-                          memory_order_relaxed);
+                          memory_order_release);
     if (0 != pthread_create(&ts->replacement_thread, NULL,
                             reset_thread_state_cleanup_old_runtime_thread,
                             ts)) {
       jsockd_logf(LOG_ERROR, "pthread_create failed: %s\n", strerror(errno));
       atomic_store_explicit(&ts->replacement_thread_state,
                             REPLACEMENT_THREAD_STATE_NONE,
-                            memory_order_relaxed);
+                            memory_order_release);
       return -1;
     }
     jsockd_log(LOG_INFO, "Trampolining to new thread state...\n");
@@ -493,7 +493,7 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
 
   if (rts == REPLACEMENT_THREAD_STATE_CLEANUP_COMPLETE) {
     atomic_store_explicit(&ts->replacement_thread_state,
-                          REPLACEMENT_THREAD_STATE_NONE, memory_order_relaxed);
+                          REPLACEMENT_THREAD_STATE_NONE, memory_order_release);
     // Reclaim pthread resources
     if (0 != pthread_join(ts->replacement_thread, NULL)) {
       jsockd_logf(LOG_ERROR, "pthread_join failed: %s\n", strerror(errno));
@@ -568,13 +568,13 @@ static void *reset_thread_state_thread(void *data) {
   if (0 != init_thread_state((ThreadState *)ts->my_replacement,
                              ts->socket_state, ts->thread_index)) {
     jsockd_log(LOG_ERROR, "Error initializing replacement thread state\n");
-    atomic_store_explicit(&g_interrupted_or_error, true, memory_order_relaxed);
+    atomic_store_explicit(&g_interrupted_or_error, true, memory_order_release);
     ts->exit_status = 1;
     return NULL;
   }
   atomic_store_explicit(&ts->replacement_thread_state,
                         REPLACEMENT_THREAD_STATE_INIT_COMPLETE,
-                        memory_order_relaxed);
+                        memory_order_release);
   return NULL;
 }
 
@@ -771,14 +771,14 @@ static int handle_line_3_parameter_helper(ThreadState *ts, const char *line,
         //   (iii) clean up the old thread state in a background thread.
         atomic_store_explicit(&ts->replacement_thread_state,
                               REPLACEMENT_THREAD_STATE_INIT,
-                              memory_order_relaxed);
+                              memory_order_release);
         if (0 != pthread_create(&ts->replacement_thread, NULL,
                                 reset_thread_state_thread, (void *)ts)) {
           jsockd_logf(LOG_ERROR, "pthread_create failed: %s\n",
                       strerror(errno));
           atomic_store_explicit(&ts->replacement_thread_state,
                                 REPLACEMENT_THREAD_STATE_NONE,
-                                memory_order_relaxed);
+                                memory_order_release);
           return -1;
         }
 
