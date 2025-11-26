@@ -432,7 +432,7 @@ static void destroy_thread_state(ThreadState *ts) {
   // that a new thread state was created but we never got round to using it and
   // then initiating cleanup of the old one before exiting.
   int rts =
-      atomic_load_explicit(&ts->replacement_thread_state, memory_order_relaxed);
+      atomic_load_explicit(&ts->replacement_thread_state, memory_order_acquire);
   if (rts == REPLACEMENT_THREAD_STATE_INIT_COMPLETE ||
       rts == REPLACEMENT_THREAD_STATE_CLEANUP) {
     cleanup_old_runtime(ts);
@@ -458,7 +458,7 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
   }
 
   int rts =
-      atomic_load_explicit(&ts->replacement_thread_state, memory_order_relaxed);
+      atomic_load_explicit(&ts->replacement_thread_state, memory_order_acquire);
 
   // Check to see if the thread state has been reinitialized (following a memory
   // increase).
@@ -744,7 +744,7 @@ static int handle_line_3_parameter_helper(ThreadState *ts, const char *line,
        0 == ts->memory_check_count) &&
       REPLACEMENT_THREAD_STATE_NONE ==
           atomic_load_explicit(&ts->replacement_thread_state,
-                               memory_order_relaxed)) {
+                               memory_order_acquire)) {
     JSMemoryUsage mu;
     JS_ComputeMemoryUsage(ts->rt, &mu);
     int64_t current_usage = memusage(&mu);
@@ -917,7 +917,7 @@ static void tick_handler(ThreadState *ts) {
   if (ns_diff / 1000ULL >= g_cmd_args.max_idle_time_us &&
       REPLACEMENT_THREAD_STATE_NONE ==
           atomic_load_explicit(&ts->replacement_thread_state,
-                               memory_order_relaxed)) {
+                               memory_order_acquire)) {
     atomic_fetch_add_explicit(&g_n_ready_threads, -1, memory_order_relaxed);
     jsockd_logf(LOG_DEBUG, "Shutting down QuickJS on thread %s\n",
                 ts->socket_state->unix_socket_filename);
@@ -1190,7 +1190,7 @@ int main(int argc, char **argv) {
       continue;
     }
     int rts = atomic_load_explicit(&g_thread_states[i].replacement_thread_state,
-                                   memory_order_relaxed);
+                                   memory_order_acquire);
     if (rts != REPLACEMENT_THREAD_STATE_NONE) {
       // As we've just joined the thread, we know it won't be concurrently
       // updating replacement_thread.
