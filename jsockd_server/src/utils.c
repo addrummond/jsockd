@@ -175,7 +175,7 @@ void dump_error(JSContext *ctx) {
 PollFdResult poll_fd(int fd, int timeout_ms) {
   struct pollfd pfd = {.fd = fd, .events = POLLIN | POLLPRI};
   if (!poll(&pfd, 1, timeout_ms)) {
-    if (atomic_load_explicit(&g_interrupted_or_error, memory_order_relaxed))
+    if (atomic_load_explicit(&g_interrupted_or_error, memory_order_acquire))
       return SIG_INTERRUPT_OR_ERROR;
     return GO_AROUND;
   }
@@ -193,7 +193,7 @@ PollFdResult ppoll_fd(int fd, const struct timespec *timeout) {
 #pragma GCC diagnostic ignored "-Wimplicit-function-declaration"
   if (!ppoll(&pfd, 1, timeout, NULL)) {
 #pragma GCC diagnostic pop
-    if (atomic_load_explicit(&g_interrupted_or_error, memory_order_relaxed))
+    if (atomic_load_explicit(&g_interrupted_or_error, memory_order_acquire))
       return SIG_INTERRUPT_OR_ERROR;
     return GO_AROUND;
   }

@@ -87,7 +87,7 @@ static int interrupt_handler(JSRuntime *rt, void *opaque) {
     }
   }
   return (int)atomic_load_explicit(&g_interrupted_or_error,
-                                   memory_order_relaxed);
+                                   memory_order_acquire);
 }
 
 static void write_to_wbuf_wrapper(void *opaque, const char *inp, size_t size) {

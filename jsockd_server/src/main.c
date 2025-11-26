@@ -356,7 +356,7 @@ error_no_inc:
   ts->socket_state->streamfd = -1;
   ts->socket_state->sockfd = -1;
 
-  atomic_store_explicit(&g_interrupted_or_error, true, memory_order_relaxed);
+  atomic_store_explicit(&g_interrupted_or_error, true, memory_order_release);
 }
 
 static const uint8_t *compile_buf(JSContext *ctx, const char *buf, int buf_len,
@@ -840,7 +840,7 @@ static int line_handler(const char *line, size_t len, ThreadState *ts,
   if (!strcmp("?quit", line)) {
     JS_FreeValue(ts->ctx, ts->compiled_query);
     ts->compiled_query = JS_UNDEFINED;
-    atomic_store_explicit(&g_interrupted_or_error, true, memory_order_relaxed);
+    atomic_store_explicit(&g_interrupted_or_error, true, memory_order_release);
     write_const_to_stream(ts, "quit\n");
     return EXIT_ON_QUIT_COMMAND;
   }
@@ -1033,7 +1033,7 @@ static void SIGINT_and_SIGTERM_handler(int sig) {
     return;
 
   atomic_store_explicit(&g_sig_triggered, sig, memory_order_relaxed);
-  atomic_store_explicit(&g_interrupted_or_error, true, memory_order_relaxed);
+  atomic_store_explicit(&g_interrupted_or_error, true, memory_order_release);
 
   // Using stdio inside an interrupt handler is not safe, but calls to write
   // are explicilty allowed.

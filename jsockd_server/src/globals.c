@@ -22,7 +22,7 @@ size_t g_source_map_size = 0;
 
 atomic_int g_source_map_load_count = 0;
 
-atomic_bool g_interrupted_or_error = 0;
+atomic_bool g_interrupted_or_error = false;
 
 CmdArgs g_cmd_args;
 
