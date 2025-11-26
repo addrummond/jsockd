@@ -16,7 +16,7 @@ fi
 
 QUICKJS_COMMIT=9688007ccbba2024b339ddcd52044b23e2a4d982
 
-FILC_VERSION=0.674
+FILC_VERSION=0.675
 FILC_CLANG="${FILC_CLANG:-$HOME/filc-${FILC_VERSION}-linux-x86_64/build/bin/clang}"
 
 rm -rf .scratch

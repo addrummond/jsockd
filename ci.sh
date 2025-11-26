@@ -2,7 +2,7 @@
 
 set -e
 
-FILC_VERSION=0.674
+FILC_VERSION=0.675
 FILC_CHECKSUM=a8ec349f383a49dacc09a9540643164c67081245e591c1e6823609653f2c9740
 
 if [ "$1" != "setup" ] && [ "$1" != "github_actions_create_release" ]; then
