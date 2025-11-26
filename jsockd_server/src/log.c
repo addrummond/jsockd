@@ -16,23 +16,11 @@
 #define CMAKE_BUILD_TYPE_IS_DEBUG 0
 #endif
 
-pthread_mutex_t g_log_mutex;
+static pthread_mutex_t g_log_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-int init_log_mutex(void) {
-  int r = pthread_mutex_init(&g_log_mutex, NULL);
-  if (r != 0) {
-    fprintf(stderr, "Failed to initalize log mutex\n");
-    return r;
-  }
-  return 0;
-}
+void lock_log_mutex(void) { mutex_lock(&g_log_mutex); }
 
-void destroy_log_mutex(void) {
-  if (0 != pthread_mutex_destroy(&g_log_mutex)) {
-    fprintf(stderr, "Unable to destroy log mutex\n");
-    exit(1);
-  }
-}
+void unlock_log_mutex(void) { mutex_unlock(&g_log_mutex); }
 
 void print_log_prefix(LogLevel log_level, FILE *f, bool last_line) {
   struct timespec ts;

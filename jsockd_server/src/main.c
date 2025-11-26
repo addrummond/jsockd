@@ -1249,12 +1249,7 @@ thread_init_error:
 }
 
 int main(int argc, char **argv) {
-  if (0 != init_log_mutex()) {
-    fprintf(stderr, "Error initializing log mutex\n");
-    return EXIT_FAILURE;
-  }
   int r = inner_main(argc, argv);
-  destroy_log_mutex();
   free(g_thread_states);
   free(g_threads);
   free(g_socket_states);
