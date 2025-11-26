@@ -15,6 +15,14 @@
 #include <errno.h>
 #include <stdatomic.h>
 
+static pthread_mutex_t cached_functions_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+void lock_cached_functions_mutex(void) { mutex_lock(&cached_functions_mutex); }
+
+void unlock_cached_functions_mutex(void) {
+  mutex_unlock(&cached_functions_mutex);
+}
+
 static int new_custom_context(JSRuntime *rt, JSContext **out_ctx) {
   JSContext *ctx;
   ctx = JS_NewContext(rt);
@@ -239,9 +247,9 @@ ThreadState *get_runtime_thread_state(JSRuntime *rt) {
 }
 
 static void release_cached_function(cached_function_t *cf) {
-  mutex_lock(&g_cached_functions_mutex);
+  lock_cached_functions_mutex();
   --cf->refcount;
-  mutex_unlock(&g_cached_functions_mutex);
+  unlock_cached_functions_mutex();
 }
 
 void cleanup_command_state(ThreadState *ts) {

@@ -16,11 +16,11 @@
 #define CMAKE_BUILD_TYPE_IS_DEBUG 0
 #endif
 
-static pthread_mutex_t g_log_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t log_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-void lock_log_mutex(void) { mutex_lock(&g_log_mutex); }
+void lock_log_mutex(void) { mutex_lock(&log_mutex); }
 
-void unlock_log_mutex(void) { mutex_unlock(&g_log_mutex); }
+void unlock_log_mutex(void) { mutex_unlock(&log_mutex); }
 
 void print_log_prefix(LogLevel log_level, FILE *f, bool last_line) {
   struct timespec ts;
@@ -87,7 +87,7 @@ void jsockd_logf(LogLevel log_level, const char *fmt, ...) {
   m = MIN(m, n);
   m = remove_trailing_ws(log_buf, m);
 
-  mutex_lock(&g_log_mutex);
+  mutex_lock(&log_mutex);
 
   print_log_prefix(log_level, stderr, NULL == memchr(log_buf, '\n', (size_t)m));
   if (g_log_prefix)
@@ -99,7 +99,7 @@ void jsockd_logf(LogLevel log_level, const char *fmt, ...) {
   if (log_buf != log_buf_)
     free(log_buf);
 
-  mutex_unlock(&g_log_mutex);
+  mutex_unlock(&log_mutex);
 }
 
 void jsockd_log(LogLevel log_level, const char *s) {

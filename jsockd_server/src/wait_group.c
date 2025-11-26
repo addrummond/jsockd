@@ -14,6 +14,7 @@ int wait_group_init(WaitGroup *wg, int n_waiting_for) {
   pthread_condattr_init(&attr);
   pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);
   pthread_cond_init(&wg->cond, &attr);
+  pthread_condattr_destroy(&attr);
 #else
   pthread_cond_init(&wg->cond, NULL);
 #endif

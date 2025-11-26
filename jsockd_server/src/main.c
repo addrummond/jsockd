@@ -61,7 +61,7 @@ static cached_function_t *add_cached_function(HashCacheUid uid,
                                               size_t bytecode_size) {
   assert(bytecode);
 
-  mutex_lock(&g_cached_functions_mutex);
+  lock_cached_functions_mutex();
 
   HashCacheBucket *b = get_hash_cache_bucket(g_cached_function_buckets,
                                              CACHED_FUNCTION_HASH_BITS, uid);
@@ -73,7 +73,7 @@ static cached_function_t *add_cached_function(HashCacheUid uid,
     } else {
       jsockd_log(LOG_DEBUG,
                  "Hash collision: existing cached function still in use!\n");
-      mutex_unlock(&g_cached_functions_mutex);
+      unlock_cached_functions_mutex();
       return NULL;
     }
   } else {
@@ -84,21 +84,21 @@ static cached_function_t *add_cached_function(HashCacheUid uid,
   g_cached_functions[bi].bytecode_size = bytecode_size;
   g_cached_functions[bi].refcount = 1;
 
-  mutex_unlock(&g_cached_functions_mutex);
+  unlock_cached_functions_mutex();
   return &g_cached_functions[bi];
 }
 
 static cached_function_t *get_cached_function(HashCacheUid uid) {
-  mutex_lock(&g_cached_functions_mutex);
+  unlock_cached_functions_mutex();
   HashCacheBucket *b = get_hash_cache_entry(g_cached_function_buckets,
                                             CACHED_FUNCTION_HASH_BITS, uid);
   if (b) {
     size_t bi = b - g_cached_function_buckets;
     ++g_cached_functions[bi].refcount;
-    mutex_unlock(&g_cached_functions_mutex);
+    unlock_cached_functions_mutex();
     return &g_cached_functions[bi];
   }
-  mutex_unlock(&g_cached_functions_mutex);
+  unlock_cached_functions_mutex();
   return NULL;
 }
 
@@ -1006,18 +1006,17 @@ static const uint8_t *load_module_bytecode(const char *filename,
 }
 
 static void global_cleanup(void) {
-  mutex_lock(&g_cached_functions_mutex);
+  lock_cached_functions_mutex();
   for (size_t i = 0;
        i < sizeof(g_cached_functions) / sizeof(g_cached_functions[0]); ++i) {
     if (g_cached_functions[i].bytecode) {
       free((void *)g_cached_functions[i].bytecode);
     }
   }
-  mutex_unlock(&g_cached_functions_mutex);
+  unlock_cached_functions_mutex();
 
   // These can fail, but we're calling this when we're about to exit, so there
   // is no useful error handling to be done.
-  pthread_mutex_destroy(&g_cached_functions_mutex);
   wait_group_destroy(&g_thread_ready_wait_group);
 
   if (g_module_bytecode_size != 0 && g_module_bytecode)
@@ -1064,23 +1063,19 @@ static void set_log_prefix(void) {
   }
 }
 
-static int inner_main(int argc, char *argv[]) {
+int main(int argc, char **argv) {
   struct sigaction sa = {.sa_handler = SIGINT_and_SIGTERM_handler};
   sigaction(SIGINT, &sa, NULL);
   sigaction(SIGTERM, &sa, NULL);
 
   set_log_prefix();
 
-  mutex_init(&g_cached_functions_mutex);
-
   if (0 != parse_cmd_args(argc, argv, log_to_stderr, &g_cmd_args)) {
-    pthread_mutex_destroy(&g_cached_functions_mutex);
     return EXIT_FAILURE;
   }
 
   if (g_cmd_args.version) {
     printf("jsockd %s", STRINGIFY(VERSION));
-    pthread_mutex_destroy(&g_cached_functions_mutex);
     return EXIT_SUCCESS;
   }
 
@@ -1102,7 +1097,6 @@ static int inner_main(int argc, char *argv[]) {
     g_module_bytecode = load_module_bytecode(
         g_cmd_args.es6_module_bytecode_file, &g_module_bytecode_size);
     if (g_module_bytecode == NULL) {
-      pthread_mutex_destroy(&g_cached_functions_mutex);
       return EXIT_FAILURE;
     }
   }
@@ -1132,8 +1126,7 @@ static int inner_main(int argc, char *argv[]) {
     if (g_module_bytecode_size != 0 && g_module_bytecode)
       munmap_or_warn((void *)g_module_bytecode,
                      g_module_bytecode_size + ED25519_SIGNATURE_SIZE);
-    pthread_mutex_destroy(&g_cached_functions_mutex);
-    return EXIT_FAILURE;
+    goto cleanup_on_error;
   }
   atomic_init(&g_global_init_complete, true);
 
@@ -1183,8 +1176,7 @@ static int inner_main(int argc, char *argv[]) {
         LOG_ERROR,
         "Error waiting for threads to be ready, or timeout; n_remaining=%i\n",
         wait_group_n_remaining(&g_thread_ready_wait_group));
-    global_cleanup();
-    return EXIT_FAILURE;
+    goto thread_init_error;
   }
 
   printf("READY %i %s\n", n_threads, STRINGIFY(VERSION));
@@ -1244,16 +1236,12 @@ static int inner_main(int argc, char *argv[]) {
 thread_init_error:
   for (int i = 0; i <= thread_init_n; ++i)
     destroy_thread_state(&g_thread_states[i]);
+cleanup_on_error:
   global_cleanup();
-  return EXIT_FAILURE;
-}
-
-int main(int argc, char **argv) {
-  int r = inner_main(argc, argv);
   free(g_thread_states);
   free(g_threads);
   free(g_socket_states);
-  return r;
+  return EXIT_FAILURE;
 }
 
 // supress the annoying warning that inttypes.h is not used directly

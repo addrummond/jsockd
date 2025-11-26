@@ -35,7 +35,6 @@ extern atomic_bool g_interrupted_or_error;
 extern CmdArgs g_cmd_args;
 
 extern WaitGroup g_thread_ready_wait_group;
-extern pthread_mutex_t g_cached_functions_mutex;
 
 extern const char *g_log_prefix;
 
