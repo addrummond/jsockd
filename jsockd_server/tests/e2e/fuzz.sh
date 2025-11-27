@@ -44,10 +44,7 @@ END
 # Compile the example module to QuickJS bytecode.
 ./build_Debug/jsockd -c /tmp/jsockd_fuzz_example_module.mjs /tmp/example_module.qjsb
 
-(
-    ./build_Debug/jsockd -m /tmp/example_module.qjsb -s /tmp/jsockd_fuzz_test_sock > /tmp/jsockd_fuzz_test_server_output 2>&1
-    echo $? > /tmp/jsockd_fuzz_test_exit_code
-) &
+./build_Debug/jsockd -m /tmp/example_module.qjsb -s /tmp/jsockd_fuzz_test_sock > /tmp/jsockd_fuzz_test_server_output 2>&1 &
 server_pid=$!
 
 sleep 1
@@ -68,43 +65,25 @@ sleep 1
 client_pid=$!
 
 wait $client_pid
+wait $server_pid
+server_exit_code=$?
 
-i=0
-while [ ! -f /tmp/jsockd_fuzz_test_exit_code ] && [ $i -lt 30 ]; do
-  echo "Waiting for server to exit"
-  sleep 1
-  i=$(($i + 1))
-done
+echo "The last 3 lines of the server output:"
+last_three_lines=$(tail -n 3 /tmp/jsockd_fuzz_test_output)
+echo "$last_three_lines"
+expected_last_three_lines=$(printf "reset\nx ok {}\nquit\n")
+if [ "$last_three_lines" != "$expected_last_three_lines" ]; then
+    echo "Unexpected last three lines of server output"
+    exit 1
+fi
 
-if ! [ -f /tmp/jsockd_fuzz_test_exit_code ]; then
-    echo "Server did not exit gracefully, killing it"
-    kill $server_pid || true
-    echo "The random data (base64):"
+if [ $server_exit_code -ne 0 ]; then
+    echo "Server exited with code $server_exit_code, which is unexpected."
+    echo "The random data that triggered this (base64):"
     echo "___START___"
     base64 /tmp/jsockd_fuzz_test_random_data
     echo "___END___"
     echo "The server output:"
     cat /tmp/jsockd_fuzz_test_server_output
-    exit 1
-else
-    echo "The last 3 lines of the server output:"
-    last_three_lines=$(tail -n 3 /tmp/jsockd_fuzz_test_output)
-    echo "$last_three_lines"
-    expected_last_three_lines=$(printf "reset\nx ok {}\nquit\n")
-    if [ "$last_three_lines" != "$expected_last_three_lines" ]; then
-        echo "Unexpected last three lines of server output"
-        exit 1
-    fi
-
-    exit_code=$(cat /tmp/jsockd_fuzz_test_exit_code)
-    if [ $exit_code -ne 0 ]; then
-        echo "Server exited with code $exit_code, which is unexpected."
-        echo "The random data that triggered this (base64):"
-        echo "___START___"
-        base64 /tmp/jsockd_fuzz_test_random_data
-        echo "___END___"
-        echo "The server output:"
-        cat /tmp/jsockd_fuzz_test_server_output
-    fi
-    exit $exit_code
 fi
+exit $server_exit_code
