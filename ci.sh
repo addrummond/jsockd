@@ -207,10 +207,6 @@ case $1 in
         done
         ;;
 
-    run_jsockd_server_fuzz_tests)
-        ./jsockd_server/tests/fuzz/fuzz.sh
-        ;;
-
     package_binaries)
         (
             set -e
