@@ -12,7 +12,6 @@
 typedef struct {
   const uint8_t *bytecode;
   size_t bytecode_size;
-  int refcount;
 } CachedFunction;
 
 // values for ThreadState.replacement_thread_state
@@ -67,8 +66,6 @@ typedef struct ThreadState {
 
 int init_thread_state(ThreadState *ts, SocketState *socket_state,
                       int thread_index);
-void lock_cached_functions_mutex(void);
-void unlock_cached_functions_mutex(void);
 void register_thread_state_runtime(JSRuntime *rt, ThreadState *ts);
 ThreadState *get_runtime_thread_state(JSRuntime *rt);
 void cleanup_command_state(ThreadState *ts);

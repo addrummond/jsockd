@@ -59,8 +59,14 @@ typedef struct {
 } CachedFunctionBucket;
 
 static CachedFunctionBucket
-    g_cached_function_buckets[CACHED_FUNCTIONS_N_BUCKETS];
+    g_cached_function_buckets_a[CACHED_FUNCTIONS_N_BUCKETS];
+static CachedFunctionBucket
+    g_cached_function_buckets_b[CACHED_FUNCTIONS_N_BUCKETS];
+static CachedFunctionBucket *_Atomic g_cached_function_buckets =
+    g_cached_function_buckets_a;
 static atomic_int g_n_cached_functions;
+static atomic_int g_n_cached_function_collisions;
+static atomic_int g_cached_functions_swap_lock;
 
 static CachedFunction *add_cached_function(HashCacheUid uid,
                                            const uint8_t *bytecode,
@@ -74,14 +80,44 @@ static CachedFunction *add_cached_function(HashCacheUid uid,
   CachedFunctionBucket *b = add_to_hash_cache(
       g_cached_function_buckets, CACHED_FUNCTION_HASH_BITS, uid, &to_add);
   if (!b) {
-    jsockd_log(LOG_DEBUG, "Hash collision\n");
+    int n_collisions =
+        1 + atomic_fetch_add_explicit(&g_n_cached_function_collisions, 1,
+                                      memory_order_relaxed);
+    jsockd_logf(LOG_INFO, "Hash collision (%i so far)\n", n_collisions);
+    if (n_collisions >= CACHED_FUNCTION_HASH_BITS) {
+      if (0 == atomic_fetch_add_explicit(&g_cached_functions_swap_lock, 1,
+                                         memory_order_acquire)) {
+        jsockd_logf(LOG_INFO,
+                    "Too many hash collisions (%i), switching hash caches\n",
+                    n_collisions);
+
+        // Even though we've acquired the 'lock' g_cached_functions_swap_lock,
+        // we have to do the swap atomically because other threads may be
+        // reading g_cached_function_buckets without holding any lock.
+        // However, given that we've acquired the 'lock', we can assume that one
+        // of the following strong swaps will succeed:
+        CachedFunctionBucket *expected_a = g_cached_function_buckets_a;
+        CachedFunctionBucket *expected_b = g_cached_function_buckets_b;
+        bool swap_done =
+            atomic_compare_exchange_strong(&g_cached_function_buckets,
+                                           &expected_a,
+                                           g_cached_function_buckets_b) ||
+            atomic_compare_exchange_strong(&g_cached_function_buckets,
+                                           &expected_b,
+                                           g_cached_function_buckets_a);
+        assert(swap_done);
+        atomic_store_explicit(&g_n_cached_function_collisions, 0,
+                              memory_order_relaxed);
+        atomic_store_explicit(&g_cached_functions_swap_lock, 0,
+                              memory_order_release);
+      }
+    }
     return NULL;
   }
   return &((CachedFunctionBucket *)b)->payload;
 }
 
 static CachedFunction *get_cached_function(HashCacheUid uid) {
-  unlock_cached_functions_mutex();
   CachedFunctionBucket *b = get_hash_cache_entry(
       g_cached_function_buckets, CACHED_FUNCTION_HASH_BITS, uid);
   if (b)
@@ -362,8 +398,8 @@ static const uint8_t *compile_buf(JSContext *ctx, const char *buf, int buf_len,
   jsockd_logf(LOG_DEBUG, "Compiled bytecode size: %zu\n", *bytecode_size);
 
   // We want to preserve the bytecode across runtime contexts, but js_free
-  // requires a context for some refcounting. So copy this over to some malloc'd
-  // memory.
+  // requires a context for some refcounting. So copy this over to some
+  // malloc'd memory.
   const uint8_t *malloc_bytecode = malloc(*bytecode_size);
   if (!malloc_bytecode) {
     js_free(ctx, (void *)bytecode);
@@ -414,10 +450,11 @@ static void cleanup_old_runtime(ThreadState *ts) {
 // called only when destroying a thread state before program exit
 static void destroy_thread_state(ThreadState *ts) {
   // We know that any running instance of
-  // reset_thread_state_cleanup_old_runtime_thread or reset_thread_state_thread
-  // has now been joined, so if we're in one of the following states, that means
-  // that a new thread state was created but we never got round to using it and
-  // then initiating cleanup of the old one before exiting.
+  // reset_thread_state_cleanup_old_runtime_thread or
+  // reset_thread_state_thread has now been joined, so if we're in one of the
+  // following states, that means that a new thread state was created but we
+  // never got round to using it and then initiating cleanup of the old one
+  // before exiting.
   int rts =
       atomic_load_explicit(&ts->replacement_thread_state, memory_order_acquire);
   if (rts == REPLACEMENT_THREAD_STATE_INIT_COMPLETE ||
@@ -447,11 +484,11 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
   int rts =
       atomic_load_explicit(&ts->replacement_thread_state, memory_order_acquire);
 
-  // Check to see if the thread state has been reinitialized (following a memory
-  // increase).
+  // Check to see if the thread state has been reinitialized (following a
+  // memory increase).
   if (rts == REPLACEMENT_THREAD_STATE_INIT_COMPLETE) {
-    // Join the thread that initialized the replacement thread state to reclaim
-    // pthread resources.
+    // Join the thread that initialized the replacement thread state to
+    // reclaim pthread resources.
     if (0 != pthread_join(ts->replacement_thread, NULL)) {
       jsockd_logf(LOG_ERROR, "pthread_join failed: %s\n", strerror(errno));
       return -1;
@@ -992,15 +1029,13 @@ static const uint8_t *load_module_bytecode(const char *filename,
 }
 
 static void global_cleanup(void) {
-  lock_cached_functions_mutex();
-  for (size_t i = 0; i < sizeof(g_cached_function_buckets) /
-                             sizeof(g_cached_function_buckets[0]);
+  for (size_t i = 0; i < sizeof(g_cached_function_buckets_a) /
+                             sizeof(g_cached_function_buckets_a[0]);
        ++i) {
     if (g_cached_function_buckets[i].payload.bytecode) {
       free((void *)g_cached_function_buckets[i].payload.bytecode);
     }
   }
-  unlock_cached_functions_mutex();
 
   // These can fail, but we're calling this when we're about to exit, so there
   // is no useful error handling to be done.
