@@ -19,7 +19,8 @@ HashCacheUid get_hash_cache_uid(const void *data, size_t len) {
 HashCacheBucket *add_to_hash_cache_(HashCacheBucket *buckets,
                                     size_t bucket_size, int n_bits,
                                     HashCacheUid uid, void *object,
-                                    size_t object_offset, size_t object_size) {
+                                    size_t object_offset, size_t object_size,
+                                    void (*cleanup)(HashCacheBucket *)) {
   char *buckets_ = (char *)buckets;
   size_t bucket_i = get_cache_bucket(uid, n_bits);
   size_t n_buckets = HASH_CACHE_BUCKET_ARRAY_SIZE_FROM_HASH_BITS(n_bits);
@@ -39,6 +40,7 @@ HashCacheBucket *add_to_hash_cache_(HashCacheBucket *buckets,
                    &bucket->refcount, &expected0int, 1, memory_order_acq_rel,
                    memory_order_acquire)) {
       atomic_store_explicit(&bucket->uid, 0, memory_order_release);
+      cleanup(bucket);
       memcpy((void *)((char *)bucket + object_offset), object, object_size);
       atomic_store_explicit(&bucket->uid, uid, memory_order_release);
     }

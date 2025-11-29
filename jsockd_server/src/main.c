@@ -58,16 +58,13 @@ typedef struct {
   CachedFunction payload;
 } CachedFunctionBucket;
 
-// Older implementations continuously prunded the hash cache by reference
-// counting bytecode blobs and then overwriting entries that were not currently
-// in use. This required locking for every access to the cache (or, possibly,
-// some fancy lock-free gymnastics well above my pay grade). Now we've moved to
-// a lock-free hash cache, it's easier to just keep two arrays of buckets and
-// switch between them once we ge to a certain number of failed insertions.
 static CachedFunctionBucket
     g_cached_function_buckets[CACHED_FUNCTIONS_N_BUCKETS];
 static atomic_int g_n_cached_functions;
-static atomic_int g_n_cached_function_failed_insertions;
+
+static void cleanup_unused_hash_cache_bucket(HashCacheBucket *b) {
+  free((void *)(((CachedFunctionBucket *)b)->payload.bytecode));
+}
 
 static CachedFunction *add_cached_function(HashCacheUid uid,
                                            const uint8_t *bytecode,
@@ -78,13 +75,11 @@ static CachedFunction *add_cached_function(HashCacheUid uid,
       .bytecode = bytecode,
       .bytecode_size = bytecode_size,
   };
-  CachedFunctionBucket *b = add_to_hash_cache(
-      g_cached_function_buckets, CACHED_FUNCTION_HASH_BITS, uid, &to_add);
+  CachedFunctionBucket *b =
+      add_to_hash_cache(g_cached_function_buckets, CACHED_FUNCTION_HASH_BITS,
+                        uid, &to_add, cleanup_unused_hash_cache_bucket);
   if (!b) {
-    int n_collisions =
-        1 + atomic_fetch_add_explicit(&g_n_cached_function_failed_insertions, 1,
-                                      memory_order_acquire);
-    jsockd_logf(LOG_INFO, "Hash collision (%i so far)\n", n_collisions);
+    jsockd_log(LOG_INFO, "Hash collision\n");
     return NULL;
   }
   return &((CachedFunctionBucket *)b)->payload;

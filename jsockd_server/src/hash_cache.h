@@ -19,7 +19,7 @@ typedef XXH64_hash_t HashCacheUid;
 //     HashCacheBucket bucket;
 //     WhateverType payload;
 //   }
-typedef struct {
+typedef struct HashCacheBucket {
   atomic_uint_fast64_t uid;
   atomic_int refcount;
 } HashCacheBucket;
@@ -32,16 +32,17 @@ HashCacheUid get_hash_cache_uid(const void *data, size_t size);
 HashCacheBucket *add_to_hash_cache_(HashCacheBucket *buckets,
                                     size_t bucket_size, int n_bits,
                                     HashCacheUid uid, void *object,
-                                    size_t object_offset, size_t object_size);
+                                    size_t object_offset, size_t object_size,
+                                    void (*cleanup)(HashCacheBucket *));
 HashCacheBucket *get_hash_cache_entry_(HashCacheBucket *buckets,
                                        size_t bucket_size, int n_bits,
                                        HashCacheUid uid);
 
-#define add_to_hash_cache(buckets, n_bits, uid, data_ptr)                      \
+#define add_to_hash_cache(buckets, n_bits, uid, data_ptr, cleanup)             \
   ((TYPEOF(buckets[0]) *)add_to_hash_cache_(                                   \
       &((buckets)[0].bucket), sizeof((buckets)[0]), (n_bits), (uid),           \
       ((void *)(data_ptr)), offsetof(TYPEOF(buckets[0]), payload),             \
-      sizeof(buckets[0].payload)))
+      sizeof(buckets[0].payload), (cleanup)))
 
 #define get_hash_cache_entry(buckets, n_bits, uid)                             \
   ((TYPEOF(buckets[0]) *)get_hash_cache_entry_(                                \
