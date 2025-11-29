@@ -106,12 +106,16 @@ static CachedFunction *add_cached_function(HashCacheUid uid,
             current_buckets == g_cached_function_buckets_a
                 ? g_cached_function_buckets_b
                 : g_cached_function_buckets_a;
+
         memset(new_buckets, 0, sizeof(g_cached_function_buckets_a));
         atomic_store_explicit(&g_cached_function_buckets, new_buckets,
                               memory_order_relaxed);
-
         atomic_store_explicit(&g_n_cached_function_failed_insertions, 0,
                               memory_order_release);
+
+        for (size_t i = 0; i < CACHED_FUNCTIONS_N_BUCKETS; ++i)
+          free((void *)current_buckets[i].payload.bytecode);
+
         atomic_store_explicit(&g_cached_functions_swap_lock, 0,
                               memory_order_release);
       }
@@ -1033,16 +1037,15 @@ static const uint8_t *load_module_bytecode(const char *filename,
 }
 
 static void global_cleanup(void) {
-  for (size_t i = 0; i < sizeof(g_cached_function_buckets_a) /
-                             sizeof(g_cached_function_buckets_a[0]);
-       ++i) {
-    if (g_cached_function_buckets[i].payload.bytecode) {
-      free((void *)g_cached_function_buckets[i].payload.bytecode);
-    }
+  for (size_t i = 0; i < CACHED_FUNCTIONS_N_BUCKETS; ++i) {
+    if (g_cached_function_buckets_a[i].payload.bytecode)
+      free((void *)g_cached_function_buckets_a[i].payload.bytecode);
+    if (g_cached_function_buckets_b[i].payload.bytecode)
+      free((void *)g_cached_function_buckets_b[i].payload.bytecode);
   }
 
-  // These can fail, but we're calling this when we're about to exit, so there
-  // is no useful error handling to be done.
+  // These can fail, but we're calling this when we're about to exit, so
+  // there is no useful error handling to be done.
   wait_group_destroy(&g_thread_ready_wait_group);
 
   if (g_module_bytecode_size != 0 && g_module_bytecode)
