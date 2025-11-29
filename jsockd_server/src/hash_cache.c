@@ -47,8 +47,8 @@ HashCacheBucket *add_to_hash_cache_(HashCacheBucket *buckets,
             &bucket->refcount, &expected0int, 1, memory_order_acq_rel,
             memory_order_acquire)) {
       atomic_store_explicit(&bucket->uid, 0, memory_order_release);
-      jsockd_log(LOG_DEBUG, "Calling cleanup in add_to_hash_cache_\n");
-      cleanup(bucket);
+      if (cleanup)
+        cleanup(bucket);
       memcpy((void *)((char *)bucket + object_offset), object, object_size);
       atomic_store_explicit(&bucket->uid, uid, memory_order_release);
       return bucket;
