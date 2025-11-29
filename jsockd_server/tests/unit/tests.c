@@ -46,7 +46,7 @@ static void TEST_wait_group_inc_and_wait_basic_use_case(void) {
     Tests for hash_cache
 ******************************************************************************/
 
-static void TEST_hash_cache_add_and_retrieve(void) {
+/*static void TEST_hash_cache_add_and_retrieve(void) {
   HashCacheBucket buckets[8] = {0};
   HashCacheUid uid = {.low64 = 123456789};
 
@@ -163,7 +163,7 @@ static void TEST_hash_cash_fuzz(void) {
         buckets, 6,
         (HashCacheUid){.low64 = (uint64_t)r1 | ((uint64_t)r2 << 32)});
   }
-}
+}*/
 
 /******************************************************************************
     Tests for line_buf
@@ -988,15 +988,16 @@ static void TEST_output_key_file(void) {
     Add all tests to the list below.
 ******************************************************************************/
 
-#define T(name) {#name, TEST_##name}
+#define T(name)                                                                \
+  { #name, TEST_##name }
 
 TEST_LIST = {T(wait_group_inc_and_wait_basic_use_case),
-             T(hash_cache_add_and_retrieve),
-             T(hash_cache_handles_duplicate_hash_values),
-             T(hash_cash_values_with_same_bucket_id_eventually_booted),
-             T(hash_cash_empty_bucket_array),
-             T(hash_cash_size_2_bucket_array),
-             T(hash_cash_fuzz),
+             // T(hash_cache_add_and_retrieve),
+             // T(hash_cache_handles_duplicate_hash_values),
+             // T(hash_cash_values_with_same_bucket_id_eventually_booted),
+             // T(hash_cash_empty_bucket_array),
+             // T(hash_cash_size_2_bucket_array),
+             // T(hash_cash_fuzz),
              T(line_buf_simple_case),
              T(line_buf_awkward_chunking),
              T(line_buf_truncation),

@@ -13,7 +13,7 @@ typedef struct {
   const uint8_t *bytecode;
   size_t bytecode_size;
   int refcount;
-} cached_function_t;
+} CachedFunction;
 
 // values for ThreadState.replacement_thread_state
 enum {
@@ -59,7 +59,7 @@ typedef struct ThreadState {
   pthread_t replacement_thread;
   struct timespec last_active_time;
   uint8_t *dangling_bytecode;
-  cached_function_t *cached_function_in_use;
+  CachedFunction *cached_function_in_use;
 #ifdef CMAKE_BUILD_TYPE_DEBUG
   bool manually_trigger_thread_state_reset;
 #endif

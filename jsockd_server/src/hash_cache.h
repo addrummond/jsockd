@@ -7,15 +7,16 @@
 
 #include <stdbool.h>
 #include <stdlib.h>
+#include <stdatomic.h>
 #include <xxHash/xxhash.h>
 
-typedef XXH128_hash_t HashCacheUid;
+typedef XXH64_hash_t HashCacheUid;
 
 // We don't actually store anything in the buckets. The idea is for the user
 // to define another array the same size as the bucket array holding the data
 // corresponding to each bucket. That way we don't need to do any void* casting.
 typedef struct {
-  HashCacheUid uid;
+    atomic_uint_fast64_t uid;
 } HashCacheBucket;
 
 #define HASH_CACHE_BUCKET_ARRAY_SIZE_FROM_HASH_BITS(hash_bits)                 \
@@ -23,9 +24,9 @@ typedef struct {
 
 size_t get_cache_bucket(HashCacheUid uid, int n_bits);
 HashCacheUid get_hash_cache_uid(const void *data, size_t size);
-HashCacheBucket *get_hash_cache_bucket(HashCacheBucket buckets[], int n_bits,
-                                       HashCacheUid uid);
-HashCacheBucket *get_hash_cache_entry(HashCacheBucket buckets[], int n_bits,
-                                      HashCacheUid uid);
+HashCacheBucket *add_to_hash_cache(HashCacheBucket *buckets, size_t bucket_size, int n_bits,
+                      HashCacheUid uid, void *object, size_t object_offset, size_t object_size);
+HashCacheBucket *get_hash_cache_entry(HashCacheBucket *buckets, size_t bucket_size,
+    int n_bits, HashCacheUid uid);
 
 #endif

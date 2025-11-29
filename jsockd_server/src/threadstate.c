@@ -246,7 +246,7 @@ ThreadState *get_runtime_thread_state(JSRuntime *rt) {
   return NULL;
 }
 
-static void release_cached_function(cached_function_t *cf) {
+static void release_cached_function(CachedFunction *cf) {
   lock_cached_functions_mutex();
   --cf->refcount;
   unlock_cached_functions_mutex();

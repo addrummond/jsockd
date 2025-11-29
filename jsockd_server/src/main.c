@@ -32,6 +32,7 @@
 #include <stdarg.h>
 #include <stdatomic.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -52,53 +53,43 @@
 
 static atomic_bool g_global_init_complete;
 
-static HashCacheBucket g_cached_function_buckets[CACHED_FUNCTIONS_N_BUCKETS];
-static cached_function_t g_cached_functions[CACHED_FUNCTIONS_N_BUCKETS];
+typedef struct {
+  HashCacheBucket bucket;
+  CachedFunction cached_function;
+} CachedFunctionBucket;
+
+static CachedFunctionBucket
+    g_cached_function_buckets[CACHED_FUNCTIONS_N_BUCKETS];
 static atomic_int g_n_cached_functions;
 
-static cached_function_t *add_cached_function(HashCacheUid uid,
-                                              const uint8_t *bytecode,
-                                              size_t bytecode_size) {
+static CachedFunction *add_cached_function(HashCacheUid uid,
+                                           const uint8_t *bytecode,
+                                           size_t bytecode_size) {
   assert(bytecode);
 
-  lock_cached_functions_mutex();
+  CachedFunction to_add = {
+      .bytecode = bytecode,
+      .bytecode_size = bytecode_size,
+  };
 
-  HashCacheBucket *b = get_hash_cache_bucket(g_cached_function_buckets,
-                                             CACHED_FUNCTION_HASH_BITS, uid);
-  size_t bi = b - g_cached_function_buckets;
-  if (g_cached_functions[bi].bytecode) {
-    if (g_cached_functions[bi].refcount <= 0) {
-      jsockd_log(LOG_DEBUG, "Hash collision: freeing existing bytecode\n");
-      free((void *)(g_cached_functions[bi].bytecode));
-    } else {
-      jsockd_log(LOG_DEBUG,
-                 "Hash collision: existing cached function still in use!\n");
-      unlock_cached_functions_mutex();
-      return NULL;
-    }
-  } else {
-    atomic_fetch_add_explicit(&g_n_cached_functions, 1, memory_order_relaxed);
+  HashCacheBucket *b = add_to_hash_cache(
+      &g_cached_function_buckets[0].bucket, sizeof(CachedFunctionBucket),
+      CACHED_FUNCTION_HASH_BITS, uid, &to_add,
+      offsetof(CachedFunctionBucket, cached_function), sizeof(to_add));
+  if (!b) {
+    jsockd_log(LOG_DEBUG, "Hash collision\n");
+    return NULL;
   }
-  b->uid = uid;
-  g_cached_functions[bi].bytecode = bytecode;
-  g_cached_functions[bi].bytecode_size = bytecode_size;
-  g_cached_functions[bi].refcount = 1;
-
-  unlock_cached_functions_mutex();
-  return &g_cached_functions[bi];
+  return &((CachedFunctionBucket *)b)->cached_function;
 }
 
-static cached_function_t *get_cached_function(HashCacheUid uid) {
+static CachedFunction *get_cached_function(HashCacheUid uid) {
   unlock_cached_functions_mutex();
-  HashCacheBucket *b = get_hash_cache_entry(g_cached_function_buckets,
-                                            CACHED_FUNCTION_HASH_BITS, uid);
-  if (b) {
-    size_t bi = b - g_cached_function_buckets;
-    ++g_cached_functions[bi].refcount;
-    unlock_cached_functions_mutex();
-    return &g_cached_functions[bi];
-  }
-  unlock_cached_functions_mutex();
+  HashCacheBucket *b = get_hash_cache_entry(
+      &g_cached_function_buckets[0].bucket, sizeof(CachedFunctionBucket),
+      CACHED_FUNCTION_HASH_BITS, uid);
+  if (b)
+    return &((CachedFunctionBucket *)b)->cached_function;
   return NULL;
 }
 
@@ -511,13 +502,12 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
 
 static int handle_line_2_query(ThreadState *ts, const char *line, int len) {
   const HashCacheUid uid = get_hash_cache_uid(line, len);
-  const cached_function_t *cf = get_cached_function(uid);
+  const CachedFunction *cf = get_cached_function(uid);
 
 #ifdef CMAKE_BUILD_TYPE_DEBUG
   jsockd_logf(LOG_DEBUG,
-              "Computed UID: %016" PRIx64 "%016" PRIx64
-              " [bits=%i, bucket=%zu] for %.*s\n",
-              uid.high64, uid.low64, CACHED_FUNCTION_HASH_BITS,
+              "Computed UID: %016" PRIx64 " [bits=%i, bucket=%zu] for %.*s\n",
+              uid, CACHED_FUNCTION_HASH_BITS,
               get_cache_bucket(uid, CACHED_FUNCTION_HASH_BITS), len, line);
 #endif
 
@@ -1007,10 +997,11 @@ static const uint8_t *load_module_bytecode(const char *filename,
 
 static void global_cleanup(void) {
   lock_cached_functions_mutex();
-  for (size_t i = 0;
-       i < sizeof(g_cached_functions) / sizeof(g_cached_functions[0]); ++i) {
-    if (g_cached_functions[i].bytecode) {
-      free((void *)g_cached_functions[i].bytecode);
+  for (size_t i = 0; i < sizeof(g_cached_function_buckets) /
+                             sizeof(g_cached_function_buckets[0]);
+       ++i) {
+    if (g_cached_function_buckets[i].cached_function.bytecode) {
+      free((void *)g_cached_function_buckets[i].cached_function.bytecode);
     }
   }
   unlock_cached_functions_mutex();
