@@ -6,9 +6,9 @@
 # should exercise all of the dynamic allocation code paths in the server.
 #
 
-N_ITERATIONS=50
+N_ITERATIONS=100
 
-rm -f /tmp/jsockd_test_sock1
+rm -f /tmp/jsockd_test_sock1 /tmp/jsockd_test_sock2
 rm -f /tmp/jsockd_test_valgrind_exit_code
 
 cat <<END > mod1.mjs
@@ -36,13 +36,13 @@ if [ ! -z "$JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX" ]; then
 fi
 
 # Start the server with Valgrind
-valgrind --error-exitcode=1 --leak-check=full --track-origins=yes -- ./build_Debug/jsockd $DASH_B_ARG -i 500000 -m /tmp/bundle.qjsb -s /tmp/jsockd_test_sock1 -sm tests/valgrind/bundle.mjs.map &
+valgrind --error-exitcode=1 --leak-check=full --track-origins=yes -- ./build_Debug/jsockd $DASH_B_ARG -i 500000 -m /tmp/bundle.qjsb -s /tmp/jsockd_test_sock1 /tmp/jsockd_test_sock2 -sm tests/valgrind/bundle.mjs.map &
 server_pid=$!
 
 # Start the client
 (
     i=0
-    while ! [ -e /tmp/jsockd_test_sock1 ] && [ $i -lt 15 ]; do
+    while ( ! [ -e /tmp/jsockd_test_sock1 ] || ! [ -e /tmp/jsockd_test_sock2 ] ) && [ $i -lt 15 ]; do
       echo "Waiting for server to start"
       sleep 1
       i=$(($i + 1))
@@ -58,6 +58,10 @@ server_pid=$!
       ./tests/valgrind/gen_test_cases.sh $N_ITERATIONS | awk 1 ORS=$(printf "\x${JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX}") > $test_input_file
       printf "?quit\x$$JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX}" >> $test_input_file
     fi
+
+    # Wait for a second so that the QuickJS env for /tmp/jsockd_test_sock2
+    # shuts down, to check that the env is cleaned up correctly.
+    ( printf "1\n() => 99\n99\n" ; sleep 1 ) | nc -w 5 -U /tmp/jsockd_test_sock2
 
     nc -w 5 -U /tmp/jsockd_test_sock1 < $test_input_file
 ) 2>&1 &
