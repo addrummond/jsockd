@@ -58,7 +58,10 @@ static CachedFunctionBucket
 static atomic_int g_n_cached_functions;
 
 static void cleanup_unused_hash_cache_bucket(HashCacheBucket *b) {
+  jsockd_logf(LOG_DEBUG, "Freeing bytecode %p\n",
+              ((CachedFunctionBucket *)b)->payload.bytecode);
   free((void *)(((CachedFunctionBucket *)b)->payload.bytecode));
+  ((CachedFunctionBucket *)b)->payload.bytecode = NULL;
 }
 
 static CachedFunctionBucket *add_cached_function(HashCacheUid uid,
@@ -364,6 +367,8 @@ static const uint8_t *compile_buf(JSContext *ctx, const char *buf, int buf_len,
   // requires a context for some refcounting. So copy this over to some
   // malloc'd memory.
   const uint8_t *malloc_bytecode = malloc(*bytecode_size);
+  jsockd_logf(LOG_DEBUG, "Mallocing bytecode %p (size=%zu)\n", malloc_bytecode,
+              *bytecode_size);
   memcpy((void *)malloc_bytecode, bytecode, *bytecode_size);
   js_free(ctx, (void *)bytecode);
 

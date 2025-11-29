@@ -1,4 +1,5 @@
 #include "hash_cache.h"
+#include "log.h"
 #include <memory.h>
 #include <stdatomic.h>
 #include <stdio.h>
@@ -23,6 +24,8 @@ HashCacheBucket *add_to_hash_cache_(HashCacheBucket *buckets,
                                     void (*cleanup)(HashCacheBucket *)) {
   char *buckets_ = (char *)buckets;
   size_t bucket_i = get_cache_bucket(uid, n_bits);
+  jsockd_logf(LOG_DEBUG, "Add to hash cache at %llu bucket %llu\n", uid,
+              bucket_i);
   size_t n_buckets = HASH_CACHE_BUCKET_ARRAY_SIZE_FROM_HASH_BITS(n_bits);
   const size_t bucket_look_forward = get_bucket_look_forward(n_bits);
   for (size_t i = bucket_i; i < bucket_i + bucket_look_forward; ++i) {
@@ -44,6 +47,7 @@ HashCacheBucket *add_to_hash_cache_(HashCacheBucket *buckets,
             &bucket->refcount, &expected0int, 1, memory_order_acq_rel,
             memory_order_acquire)) {
       atomic_store_explicit(&bucket->uid, 0, memory_order_release);
+      jsockd_log(LOG_DEBUG, "Calling cleanup in add_to_hash_cache_\n");
       cleanup(bucket);
       memcpy((void *)((char *)bucket + object_offset), object, object_size);
       atomic_store_explicit(&bucket->uid, uid, memory_order_release);
