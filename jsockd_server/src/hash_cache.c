@@ -30,13 +30,13 @@ HashCacheBucket *add_to_hash_cache_(HashCacheBucket *buckets,
     HashCacheBucket *bucket = (HashCacheBucket *)(buckets_ + j * bucket_size);
     uint_fast64_t expected0uint64 = 0;
     int expected0int = 0;
-    if (atomic_compare_exchange_weak_explicit(&bucket->uid, &expected0uint64, j,
-                                              memory_order_acq_rel,
-                                              memory_order_acquire)) {
+    if (atomic_compare_exchange_strong_explicit(&bucket->uid, &expected0uint64,
+                                                j, memory_order_acq_rel,
+                                                memory_order_acquire)) {
       atomic_fetch_add_explicit(&bucket->refcount, 1, memory_order_release);
       memcpy((void *)((char *)bucket + object_offset), object, object_size);
       return bucket;
-    } else if (atomic_compare_exchange_weak_explicit(
+    } else if (atomic_compare_exchange_strong_explicit(
                    &bucket->refcount, &expected0int, 1, memory_order_acq_rel,
                    memory_order_acquire)) {
       atomic_store_explicit(&bucket->uid, 0, memory_order_release);
