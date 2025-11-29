@@ -1,4 +1,5 @@
-// AI-generated nonsense, edited down to remove some heroic attempts to add legacy MSVC support.
+// AI-generated nonsense, edited down to remove some heroic attempts to add
+// legacy MSVC support.
 #ifndef TYPEOFSHIM_H
 #define TYPEOFSHIM_H
 
