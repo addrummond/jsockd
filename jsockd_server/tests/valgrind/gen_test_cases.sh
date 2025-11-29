@@ -5,13 +5,13 @@ set -e
 n_iterations=$1
 
 # A series of normal commands that succeed and yield a result.
-awk 'BEGIN { for (i = 0; i < ARGV[1]; i++) { print i"\n(m) => { "i"; return m.getAValue().foo; }\n\"dummy_input1\"" } }' $n_iterations
+# awk 'BEGIN { for (i = 0; i < ARGV[1]; i++) { print i"\n(m) => { "i"; return m.getAValue().foo; }\n\"dummy_input1\"" } }' $n_iterations
 
 # A use of TextEncoder and TextDecoder
-awk 'BEGIN { for (i = 0; i < ARGV[1]; i++) { print i"\n_ => new TextDecoder().decode(new TextEncoder().encode(\"foo bar amp\"))\n\"dummy_input2\"" } }' $n_iterations
+# awk 'BEGIN { for (i = 0; i < ARGV[1]; i++) { print i"\n_ => new TextDecoder().decode(new TextEncoder().encode(\"foo bar amp\"))\n\"dummy_input2\"" } }' $n_iterations
 
 # A series of normal commands that are aborted with `?reset` before input is sent.
-# awk 'BEGIN { for (i = 0; i < ARGV[1]; i++) { print i"\n(m) => { "i"; return m.getAValue().foo; }\n?reset" } }' $n_iterations
+awk 'BEGIN { for (i = 0; i < ARGV[1]; i++) { print i"\n(m) => { "i"; return m.getAValue().foo; }\n?reset" } }' $n_iterations
 
 # A series of commands that fail with a syntax error.
 # awk 'BEGIN { for (i = 0; i < ARGV[1]; i++) { print i"\n(m) => { "i"=99; }\n\"dummy_input2\"" } }' $n_iterations
