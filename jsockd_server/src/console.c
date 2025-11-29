@@ -1,6 +1,5 @@
 #include "log.h"
 #include "quickjs.h"
-#include "utils.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
