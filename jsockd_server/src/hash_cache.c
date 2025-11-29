@@ -16,9 +16,10 @@ HashCacheUid get_hash_cache_uid(const void *data, size_t len) {
   return v;
 }
 
-HashCacheBucket *add_to_hash_cache(HashCacheBucket *buckets, size_t bucket_size,
-                                   int n_bits, HashCacheUid uid, void *object,
-                                   size_t object_offset, size_t object_size) {
+HashCacheBucket *add_to_hash_cache_(HashCacheBucket *buckets,
+                                    size_t bucket_size, int n_bits,
+                                    HashCacheUid uid, void *object,
+                                    size_t object_offset, size_t object_size) {
   char *buckets_ = (char *)buckets;
   size_t bucket_i = get_cache_bucket(uid, n_bits);
   size_t n_buckets = HASH_CACHE_BUCKET_ARRAY_SIZE_FROM_HASH_BITS(n_bits);
@@ -35,9 +36,9 @@ HashCacheBucket *add_to_hash_cache(HashCacheBucket *buckets, size_t bucket_size,
   return NULL;
 }
 
-HashCacheBucket *get_hash_cache_entry(HashCacheBucket *buckets,
-                                      size_t bucket_size, int n_bits,
-                                      HashCacheUid uid) {
+HashCacheBucket *get_hash_cache_entry_(HashCacheBucket *buckets,
+                                       size_t bucket_size, int n_bits,
+                                       HashCacheUid uid) {
   char *buckets_ = (char *)buckets;
   size_t bucket_i = get_cache_bucket(uid, n_bits);
   size_t n_buckets = HASH_CACHE_BUCKET_ARRAY_SIZE_FROM_HASH_BITS(n_bits);

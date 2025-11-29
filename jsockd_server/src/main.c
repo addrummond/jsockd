@@ -55,7 +55,7 @@ static atomic_bool g_global_init_complete;
 
 typedef struct {
   HashCacheBucket bucket;
-  CachedFunction cached_function;
+  CachedFunction payload;
 } CachedFunctionBucket;
 
 static CachedFunctionBucket
@@ -71,25 +71,21 @@ static CachedFunction *add_cached_function(HashCacheUid uid,
       .bytecode = bytecode,
       .bytecode_size = bytecode_size,
   };
-
-  HashCacheBucket *b = add_to_hash_cache(
-      &g_cached_function_buckets[0].bucket, sizeof(CachedFunctionBucket),
-      CACHED_FUNCTION_HASH_BITS, uid, &to_add,
-      offsetof(CachedFunctionBucket, cached_function), sizeof(to_add));
+  CachedFunctionBucket *b = add_to_hash_cache(
+      g_cached_function_buckets, CACHED_FUNCTION_HASH_BITS, uid, &to_add);
   if (!b) {
     jsockd_log(LOG_DEBUG, "Hash collision\n");
     return NULL;
   }
-  return &((CachedFunctionBucket *)b)->cached_function;
+  return &((CachedFunctionBucket *)b)->payload;
 }
 
 static CachedFunction *get_cached_function(HashCacheUid uid) {
   unlock_cached_functions_mutex();
-  HashCacheBucket *b = get_hash_cache_entry(
-      &g_cached_function_buckets[0].bucket, sizeof(CachedFunctionBucket),
-      CACHED_FUNCTION_HASH_BITS, uid);
+  CachedFunctionBucket *b = get_hash_cache_entry(
+      g_cached_function_buckets, CACHED_FUNCTION_HASH_BITS, uid);
   if (b)
-    return &((CachedFunctionBucket *)b)->cached_function;
+    return &((CachedFunctionBucket *)b)->payload;
   return NULL;
 }
 
@@ -1000,8 +996,8 @@ static void global_cleanup(void) {
   for (size_t i = 0; i < sizeof(g_cached_function_buckets) /
                              sizeof(g_cached_function_buckets[0]);
        ++i) {
-    if (g_cached_function_buckets[i].cached_function.bytecode) {
-      free((void *)g_cached_function_buckets[i].cached_function.bytecode);
+    if (g_cached_function_buckets[i].payload.bytecode) {
+      free((void *)g_cached_function_buckets[i].payload.bytecode);
     }
   }
   unlock_cached_functions_mutex();
