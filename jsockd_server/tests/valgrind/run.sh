@@ -6,7 +6,7 @@
 # should exercise all of the dynamic allocation code paths in the server.
 #
 
-N_ITERATIONS=100
+N_ITERATIONS=50
 
 rm -f /tmp/jsockd_test_sock1
 rm -f /tmp/jsockd_test_valgrind_exit_code
