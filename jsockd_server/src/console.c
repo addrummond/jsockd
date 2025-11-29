@@ -39,8 +39,7 @@ static JSValue js_print(JSContext *ctx, JSValueConst this_val, int argc,
 JSValue my_js_console_log(JSContext *ctx, JSValueConst this_val, int argc,
                           JSValueConst *argv) {
   lock_log_mutex();
-  JSValue ret;
-  ret = js_print(ctx, this_val, argc, argv);
+  JSValue ret = js_print(ctx, this_val, argc, argv);
   fflush(stderr);
   unlock_log_mutex();
   return ret;
