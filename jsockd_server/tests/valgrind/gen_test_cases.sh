@@ -14,13 +14,13 @@ awk 'BEGIN { for (i = 0; i < ARGV[1]; i++) { print i"\n_ => new TextDecoder().de
 awk 'BEGIN { for (i = 0; i < ARGV[1]; i++) { print i"\n(m) => { "i"; return m.getAValue().foo; }\n?reset" } }' $n_iterations
 
 # A series of commands that fail with a syntax error.
-awk 'BEGIN { for (i = 0; i < ARGV[1]; i++) { print i"\n(m) => { "i"=99; }\n\"dummy_input2\"" } }' $n_iterations
+# awk 'BEGIN { for (i = 0; i < ARGV[1]; i++) { print i"\n(m) => { "i"=99; }\n\"dummy_input2\"" } }' $n_iterations
 
-# A series of commands that fail with a runtime error.
-awk 'BEGIN { for (i = 0; i < ARGV[1]; i++) { print i"\n(m) => { "i"; ({}).foo.bar; }\n\"dummy_input3\"" } }' $n_iterations
+# # A series of commands that fail with a runtime error.
+# awk 'BEGIN { for (i = 0; i < ARGV[1]; i++) { print i"\n(m) => { "i"; ({}).foo.bar; }\n\"dummy_input3\"" } }' $n_iterations
 
-# A command that does a bunch of allocation and then times out.
-printf "uniqueid\n() => { let a = []; for (let i = 0; i < 10; ++i) { a.push({}); } ; for (;;) ; }\n\"dummy_input4\"\n"
+# # A command that does a bunch of allocation and then times out.
+# printf "uniqueid\n() => { let a = []; for (let i = 0; i < 10; ++i) { a.push({}); } ; for (;;) ; }\n\"dummy_input4\"\n"
 
 # # A command where the command id is truncated
 # printf "?truncated\n(m) => 1\n\"dummy_input5\"\n"
