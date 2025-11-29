@@ -59,12 +59,12 @@ HashCacheBucket *get_hash_cache_entry_(HashCacheBucket *buckets,
     size_t j = i % n_buckets; // wrap around if we reach the end
     HashCacheBucket *bucket = (HashCacheBucket *)(buckets_ + j * bucket_size);
 
-    // We don't yet know if this is the bucket for us, but temporarily inc it's
-    // reference count so that nothing deletes it from under is if it is.
+    // We don't yet know if this is the bucket for us, but inc its
+    // reference count here so that nothing deletes it from under is if it is.
+    // If it's not, we can decrement it again.
     atomic_fetch_add_explicit(&bucket->refcount, 1, memory_order_release);
 
     if (atomic_load_explicit(&bucket->uid, memory_order_acquire) == uid) {
-      atomic_fetch_add_explicit(&bucket->refcount, -1, memory_order_release);
       return bucket;
     }
 
