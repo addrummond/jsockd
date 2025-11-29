@@ -5,7 +5,7 @@ set -e
 n_iterations=$1
 
 # A series of normal commands that succeed and yield a result.
-# awk 'BEGIN { for (i = 0; i < ARGV[1]; i++) { print i"\n(m) => { "i"; return m.getAValue().foo; }\n\"dummy_input1\"" } }' $n_iterations
+awk 'BEGIN { for (i = 0; i < ARGV[1]; i++) { print i"\n(m) => { "i"; return m.getAValue().foo; }\n\"dummy_input1\"" } }' $n_iterations
 
 # A use of TextEncoder and TextDecoder
 awk 'BEGIN { for (i = 0; i < ARGV[1]; i++) { print i"\n_ => new TextDecoder().decode(new TextEncoder().encode(\"foo bar amp\"))\n\"dummy_input2\"" } }' $n_iterations
