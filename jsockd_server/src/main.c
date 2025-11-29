@@ -74,7 +74,7 @@ static CachedFunctionBucket *add_cached_function(HashCacheUid uid,
       add_to_hash_cache(g_cached_function_buckets, CACHED_FUNCTION_HASH_BITS,
                         uid, &to_add, cleanup_unused_hash_cache_bucket);
   if (!b) {
-    jsockd_log(LOG_INFO, "Hash collision\n");
+    jsockd_log(LOG_INFO, "No empty slot for cached function\n");
     return NULL;
   }
   return b;
