@@ -30,6 +30,7 @@ HashCacheBucket *add_to_hash_cache_(HashCacheBucket *buckets,
     HashCacheBucket *bucket = (HashCacheBucket *)(buckets_ + j * bucket_size);
     uint_fast64_t expected0uint64 = 0;
     int expected0int = 0;
+    // There's an empty bucket
     if (atomic_compare_exchange_strong_explicit(&bucket->uid, &expected0uint64,
                                                 j, memory_order_acq_rel,
                                                 memory_order_acquire)) {
@@ -37,6 +38,8 @@ HashCacheBucket *add_to_hash_cache_(HashCacheBucket *buckets,
       memcpy((void *)((char *)bucket + object_offset), object, object_size);
       return bucket;
     }
+    // There's a non-empty bucket with a refcount of zero, so we can clean it up
+    // and then reuse it.
     if (atomic_compare_exchange_strong_explicit(
             &bucket->refcount, &expected0int, 1, memory_order_acq_rel,
             memory_order_acquire)) {
