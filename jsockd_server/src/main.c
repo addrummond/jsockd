@@ -409,10 +409,6 @@ static const uint8_t *compile_buf(JSContext *ctx, const char *buf, int buf_len,
   // requires a context for some refcounting. So copy this over to some
   // malloc'd memory.
   const uint8_t *malloc_bytecode = malloc(*bytecode_size);
-  if (!malloc_bytecode) {
-    js_free(ctx, (void *)bytecode);
-    return NULL;
-  }
   memcpy((void *)malloc_bytecode, bytecode, *bytecode_size);
   js_free(ctx, (void *)bytecode);
 
