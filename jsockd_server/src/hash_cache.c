@@ -64,9 +64,8 @@ HashCacheBucket *get_hash_cache_entry_(HashCacheBucket *buckets,
     // If it's not, we can decrement it again.
     atomic_fetch_add_explicit(&bucket->refcount, 1, memory_order_release);
 
-    if (atomic_load_explicit(&bucket->uid, memory_order_acquire) == uid) {
+    if (atomic_load_explicit(&bucket->uid, memory_order_acquire) == uid)
       return bucket;
-    }
 
     atomic_fetch_add_explicit(&bucket->refcount, -1, memory_order_release);
   }
