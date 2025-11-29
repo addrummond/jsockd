@@ -36,9 +36,10 @@ HashCacheBucket *add_to_hash_cache_(HashCacheBucket *buckets,
       atomic_fetch_add_explicit(&bucket->refcount, 1, memory_order_release);
       memcpy((void *)((char *)bucket + object_offset), object, object_size);
       return bucket;
-    } else if (atomic_compare_exchange_strong_explicit(
-                   &bucket->refcount, &expected0int, 1, memory_order_acq_rel,
-                   memory_order_acquire)) {
+    }
+    if (atomic_compare_exchange_strong_explicit(
+            &bucket->refcount, &expected0int, 1, memory_order_acq_rel,
+            memory_order_acquire)) {
       atomic_store_explicit(&bucket->uid, 0, memory_order_release);
       cleanup(bucket);
       memcpy((void *)((char *)bucket + object_offset), object, object_size);
