@@ -58,6 +58,12 @@ typedef struct {
   CachedFunction payload;
 } CachedFunctionBucket;
 
+// Older implementations continuously prunded the hash cache by reference
+// counting bytecode blobs and then overwriting entries that were not currently
+// in use. This required locking for every access to the cache (or, possibly,
+// some fancy lock-free gymnastics well above my pay grade). Now we've moved to
+// a lock-free hash cache, it's easier to just keep two arrays of buckets and
+// switch between them once we ge to a certain number of failed insertions.
 static CachedFunctionBucket
     g_cached_function_buckets_a[CACHED_FUNCTIONS_N_BUCKETS];
 static CachedFunctionBucket
@@ -65,7 +71,7 @@ static CachedFunctionBucket
 static CachedFunctionBucket *_Atomic g_cached_function_buckets =
     g_cached_function_buckets_a;
 static atomic_int g_n_cached_functions;
-static atomic_int g_n_cached_function_collisions;
+static atomic_int g_n_cached_function_failed_insertions;
 static atomic_int g_cached_functions_swap_lock;
 
 static CachedFunction *add_cached_function(HashCacheUid uid,
@@ -81,8 +87,8 @@ static CachedFunction *add_cached_function(HashCacheUid uid,
       g_cached_function_buckets, CACHED_FUNCTION_HASH_BITS, uid, &to_add);
   if (!b) {
     int n_collisions =
-        1 + atomic_fetch_add_explicit(&g_n_cached_function_collisions, 1,
-                                      memory_order_relaxed);
+        1 + atomic_fetch_add_explicit(&g_n_cached_function_failed_insertions, 1,
+                                      memory_order_acquire);
     jsockd_logf(LOG_INFO, "Hash collision (%i so far)\n", n_collisions);
     if (n_collisions >= CACHED_FUNCTION_HASH_BITS) {
       if (0 == atomic_fetch_add_explicit(&g_cached_functions_swap_lock, 1,
@@ -91,23 +97,27 @@ static CachedFunction *add_cached_function(HashCacheUid uid,
                     "Too many hash collisions (%i), switching hash caches\n",
                     n_collisions);
 
-        // Even though we've acquired the 'lock' g_cached_functions_swap_lock,
-        // we have to do the swap atomically because other threads may be
-        // reading g_cached_function_buckets without holding any lock.
-        // However, given that we've acquired the 'lock', we can assume that one
-        // of the following strong swaps will succeed:
-        CachedFunctionBucket *expected_a = g_cached_function_buckets_a;
-        CachedFunctionBucket *expected_b = g_cached_function_buckets_b;
-        bool swap_done =
-            atomic_compare_exchange_strong(&g_cached_function_buckets,
-                                           &expected_a,
-                                           g_cached_function_buckets_b) ||
-            atomic_compare_exchange_strong(&g_cached_function_buckets,
-                                           &expected_b,
-                                           g_cached_function_buckets_a);
-        assert(swap_done);
-        atomic_store_explicit(&g_n_cached_function_collisions, 0,
-                              memory_order_relaxed);
+        // We've acquired the 'lock' g_cached_functions_swap_lock, so we know
+        // that no other thread is trying to do this swap at the same time.
+        // Thus no need to use atomic_compare_exchange
+        CachedFunctionBucket *current_buckets = atomic_load_explicit(
+            &g_cached_function_buckets, memory_order_relaxed);
+        CachedFunctionBucket *new_buckets =
+            current_buckets == g_cached_function_buckets_a
+                ? g_cached_function_buckets_b
+                : g_cached_function_buckets_a;
+        memset(new_buckets, 0, sizeof(g_cached_function_buckets_a));
+        if (current_buckets == g_cached_function_buckets_a)
+          atomic_store_explicit(&g_cached_function_buckets,
+                                g_cached_function_buckets_b,
+                                memory_order_relaxed);
+        else
+          atomic_store_explicit(&g_cached_function_buckets,
+                                g_cached_function_buckets_a,
+                                memory_order_relaxed);
+
+        atomic_store_explicit(&g_n_cached_function_failed_insertions, 0,
+                              memory_order_release);
         atomic_store_explicit(&g_cached_functions_swap_lock, 0,
                               memory_order_release);
       }
