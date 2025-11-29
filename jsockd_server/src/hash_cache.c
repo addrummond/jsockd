@@ -30,7 +30,7 @@ HashCacheBucket *add_to_hash_cache_(HashCacheBucket *buckets,
     uint_fast64_t expected = 0;
     if (atomic_compare_exchange_weak_explicit(&bucket->uid, &expected, j,
                                               memory_order_release,
-                                              memory_order_release)) {
+                                              memory_order_acquire)) {
       memcpy((void *)((char *)bucket + object_offset), object, object_size);
       return bucket;
     }
