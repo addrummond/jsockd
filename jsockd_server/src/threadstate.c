@@ -15,14 +15,6 @@
 #include <errno.h>
 #include <stdatomic.h>
 
-static pthread_mutex_t cached_functions_mutex = PTHREAD_MUTEX_INITIALIZER;
-
-void lock_cached_functions_mutex(void) { mutex_lock(&cached_functions_mutex); }
-
-void unlock_cached_functions_mutex(void) {
-  mutex_unlock(&cached_functions_mutex);
-}
-
 static int new_custom_context(JSRuntime *rt, JSContext **out_ctx) {
   JSContext *ctx;
   ctx = JS_NewContext(rt);
@@ -246,19 +238,14 @@ ThreadState *get_runtime_thread_state(JSRuntime *rt) {
   return NULL;
 }
 
-static void release_cached_function(cached_function_t *cf) {
-  lock_cached_functions_mutex();
-  --cf->refcount;
-  unlock_cached_functions_mutex();
-}
-
 void cleanup_command_state(ThreadState *ts) {
   JS_FreeValue(ts->ctx, ts->compiled_query);
   free(ts->dangling_bytecode);
   ts->dangling_bytecode = NULL;
   ts->compiled_query = JS_UNDEFINED;
   if (ts->cached_function_in_use) {
-    release_cached_function(ts->cached_function_in_use);
+    atomic_fetch_add_explicit(&ts->cached_function_in_use->bucket.refcount, -1,
+                              memory_order_release);
     ts->cached_function_in_use = NULL;
   }
 }

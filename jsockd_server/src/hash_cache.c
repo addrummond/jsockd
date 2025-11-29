@@ -1,52 +1,82 @@
 #include "hash_cache.h"
+#include "log.h"
 #include <memory.h>
+#include <stdatomic.h>
 #include <stdio.h>
 
 size_t get_cache_bucket(HashCacheUid uid, int n_bits) {
-  return uid.low64 % (1 << n_bits);
+  return uid % (1 << n_bits);
 }
 
 static size_t get_bucket_look_forward(int n_bits) { return n_bits * 3 / 2; }
 
-static const HashCacheUid zero_uid;
-
-static bool hash_cache_uid_is_zero(const HashCacheUid *hcu) {
-  return memcmp(hcu, &zero_uid, sizeof(*hcu)) == 0;
-}
-
 HashCacheUid get_hash_cache_uid(const void *data, size_t len) {
-  return XXH3_128bits(data, len);
+  HashCacheUid v = XXH3_64bits(data, len);
+  if (v == 0)
+    return 1; // reserve 0 as "empty" value
+  return v;
 }
 
-HashCacheBucket *get_hash_cache_bucket(HashCacheBucket buckets[], int n_bits,
-                                       HashCacheUid uid) {
+HashCacheBucket *add_to_hash_cache_(HashCacheBucket *buckets,
+                                    size_t bucket_size, int n_bits,
+                                    HashCacheUid uid, void *object,
+                                    size_t object_offset, size_t object_size,
+                                    void (*cleanup)(HashCacheBucket *)) {
+  char *buckets_ = (char *)buckets;
   size_t bucket_i = get_cache_bucket(uid, n_bits);
-
+  jsockd_logf(LOG_DEBUG, "Add to hash cache at %llu bucket %llu\n", uid,
+              bucket_i);
   size_t n_buckets = HASH_CACHE_BUCKET_ARRAY_SIZE_FROM_HASH_BITS(n_bits);
   const size_t bucket_look_forward = get_bucket_look_forward(n_bits);
   for (size_t i = bucket_i; i < bucket_i + bucket_look_forward; ++i) {
     size_t j = i % n_buckets; // wrap around if we reach the end
-    if (hash_cache_uid_is_zero(&buckets[j].uid)) {
-      bucket_i = j;
-      break;
+    HashCacheBucket *bucket = (HashCacheBucket *)(buckets_ + j * bucket_size);
+    uint_fast64_t expected0uint64 = 0;
+    int expected0int = 0;
+    // There's an empty bucket
+    if (atomic_compare_exchange_strong_explicit(&bucket->uid, &expected0uint64,
+                                                uid, memory_order_acq_rel,
+                                                memory_order_acquire)) {
+      atomic_fetch_add_explicit(&bucket->refcount, 1, memory_order_release);
+      memcpy((void *)((char *)bucket + object_offset), object, object_size);
+      return bucket;
     }
-  };
-
-  HashCacheBucket *bucket = buckets + bucket_i;
-  return bucket;
+    // There's a non-empty bucket with a refcount of zero, so we can clean it up
+    // and then reuse it.
+    if (atomic_compare_exchange_strong_explicit(
+            &bucket->refcount, &expected0int, 1, memory_order_acq_rel,
+            memory_order_acquire)) {
+      atomic_store_explicit(&bucket->uid, 0, memory_order_release);
+      jsockd_log(LOG_DEBUG, "Calling cleanup in add_to_hash_cache_\n");
+      cleanup(bucket);
+      memcpy((void *)((char *)bucket + object_offset), object, object_size);
+      atomic_store_explicit(&bucket->uid, uid, memory_order_release);
+      return bucket;
+    }
+  }
+  return NULL;
 }
 
-HashCacheBucket *get_hash_cache_entry(HashCacheBucket buckets[], int n_bits,
-                                      HashCacheUid uid) {
-  size_t bucket = get_cache_bucket(uid, n_bits);
-
+HashCacheBucket *get_hash_cache_entry_(HashCacheBucket *buckets,
+                                       size_t bucket_size, int n_bits,
+                                       HashCacheUid uid) {
+  char *buckets_ = (char *)buckets;
+  size_t bucket_i = get_cache_bucket(uid, n_bits);
   size_t n_buckets = HASH_CACHE_BUCKET_ARRAY_SIZE_FROM_HASH_BITS(n_bits);
   const size_t bucket_look_forward = get_bucket_look_forward(n_bits);
-  for (size_t i = bucket; i < bucket + bucket_look_forward; ++i) {
+  for (size_t i = bucket_i; i < bucket_i + bucket_look_forward; ++i) {
     size_t j = i % n_buckets; // wrap around if we reach the end
-    if (0 == memcmp(&buckets[j].uid, &uid, sizeof(uid)))
-      return &buckets[j];
-  }
+    HashCacheBucket *bucket = (HashCacheBucket *)(buckets_ + j * bucket_size);
 
+    // We don't yet know if this is the bucket for us, but bump its
+    // reference count here so that nothing deletes it from under us if it is.
+    // If it's not, we can then decrement the reference count.
+    atomic_fetch_add_explicit(&bucket->refcount, 1, memory_order_release);
+
+    if (atomic_load_explicit(&bucket->uid, memory_order_acquire) == uid)
+      return bucket;
+
+    atomic_fetch_add_explicit(&bucket->refcount, -1, memory_order_release);
+  }
   return NULL;
 }

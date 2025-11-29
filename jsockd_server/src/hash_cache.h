@@ -5,17 +5,23 @@
 #define _REENTRANT
 #endif
 
+#include "typeofshim.h"
+#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <xxHash/xxhash.h>
 
-typedef XXH128_hash_t HashCacheUid;
+typedef XXH64_hash_t HashCacheUid;
 
-// We don't actually store anything in the buckets. The idea is for the user
-// to define another array the same size as the bucket array holding the data
-// corresponding to each bucket. That way we don't need to do any void* casting.
-typedef struct {
-  HashCacheUid uid;
+// This structure should be embedded in a larger structure with the following
+// field names for use with the macros defined:
+//   struct MyBucket {
+//     HashCacheBucket bucket;
+//     WhateverType payload;
+//   }
+typedef struct HashCacheBucket {
+  atomic_uint_fast64_t uid;
+  atomic_int refcount;
 } HashCacheBucket;
 
 #define HASH_CACHE_BUCKET_ARRAY_SIZE_FROM_HASH_BITS(hash_bits)                 \
@@ -23,9 +29,23 @@ typedef struct {
 
 size_t get_cache_bucket(HashCacheUid uid, int n_bits);
 HashCacheUid get_hash_cache_uid(const void *data, size_t size);
-HashCacheBucket *get_hash_cache_bucket(HashCacheBucket buckets[], int n_bits,
+HashCacheBucket *add_to_hash_cache_(HashCacheBucket *buckets,
+                                    size_t bucket_size, int n_bits,
+                                    HashCacheUid uid, void *object,
+                                    size_t object_offset, size_t object_size,
+                                    void (*cleanup)(HashCacheBucket *));
+HashCacheBucket *get_hash_cache_entry_(HashCacheBucket *buckets,
+                                       size_t bucket_size, int n_bits,
                                        HashCacheUid uid);
-HashCacheBucket *get_hash_cache_entry(HashCacheBucket buckets[], int n_bits,
-                                      HashCacheUid uid);
+
+#define add_to_hash_cache(buckets, n_bits, uid, data_ptr, cleanup)             \
+  ((TYPEOF(buckets[0]) *)add_to_hash_cache_(                                   \
+      &((buckets)[0].bucket), sizeof((buckets)[0]), (n_bits), (uid),           \
+      ((void *)(data_ptr)), offsetof(TYPEOF(buckets[0]), payload),             \
+      sizeof(buckets[0].payload), (cleanup)))
+
+#define get_hash_cache_entry(buckets, n_bits, uid)                             \
+  ((TYPEOF(buckets[0]) *)get_hash_cache_entry_(                                \
+      &((buckets)[0].bucket), sizeof((buckets)[0]), (n_bits), (uid)))
 
 #endif
