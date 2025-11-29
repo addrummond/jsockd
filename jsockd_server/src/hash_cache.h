@@ -21,6 +21,7 @@ typedef XXH64_hash_t HashCacheUid;
 //   }
 typedef struct {
   atomic_uint_fast64_t uid;
+  atomic_int refcount;
 } HashCacheBucket;
 
 #define HASH_CACHE_BUCKET_ARRAY_SIZE_FROM_HASH_BITS(hash_bits)                 \

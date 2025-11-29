@@ -65,14 +65,9 @@ typedef struct {
 // a lock-free hash cache, it's easier to just keep two arrays of buckets and
 // switch between them once we ge to a certain number of failed insertions.
 static CachedFunctionBucket
-    g_cached_function_buckets_a[CACHED_FUNCTIONS_N_BUCKETS];
-static CachedFunctionBucket
-    g_cached_function_buckets_b[CACHED_FUNCTIONS_N_BUCKETS];
-static CachedFunctionBucket *_Atomic g_cached_function_buckets =
-    g_cached_function_buckets_a;
+    g_cached_function_buckets[CACHED_FUNCTIONS_N_BUCKETS];
 static atomic_int g_n_cached_functions;
 static atomic_int g_n_cached_function_failed_insertions;
-static atomic_int g_cached_functions_swap_lock;
 
 static CachedFunction *add_cached_function(HashCacheUid uid,
                                            const uint8_t *bytecode,
@@ -90,36 +85,6 @@ static CachedFunction *add_cached_function(HashCacheUid uid,
         1 + atomic_fetch_add_explicit(&g_n_cached_function_failed_insertions, 1,
                                       memory_order_acquire);
     jsockd_logf(LOG_INFO, "Hash collision (%i so far)\n", n_collisions);
-    if (n_collisions >= CACHED_FUNCTION_HASH_BITS) {
-      if (0 == atomic_fetch_add_explicit(&g_cached_functions_swap_lock, 1,
-                                         memory_order_acquire)) {
-        jsockd_logf(LOG_INFO,
-                    "Too many hash collisions (%i), switching hash caches\n",
-                    n_collisions);
-
-        // We've acquired the 'lock' g_cached_functions_swap_lock, so we know
-        // that no other thread is trying to do this swap at the same time.
-        // Thus no need to use atomic_compare_exchange
-        CachedFunctionBucket *current_buckets = atomic_load_explicit(
-            &g_cached_function_buckets, memory_order_acquire);
-        CachedFunctionBucket *new_buckets =
-            current_buckets == g_cached_function_buckets_a
-                ? g_cached_function_buckets_b
-                : g_cached_function_buckets_a;
-
-        memset(new_buckets, 0, sizeof(g_cached_function_buckets_a));
-        atomic_store_explicit(&g_cached_function_buckets, new_buckets,
-                              memory_order_relaxed);
-        atomic_store_explicit(&g_n_cached_function_failed_insertions, 0,
-                              memory_order_release);
-
-        for (size_t i = 0; i < CACHED_FUNCTIONS_N_BUCKETS; ++i)
-          free((void *)current_buckets[i].payload.bytecode);
-
-        atomic_store_explicit(&g_cached_functions_swap_lock, 0,
-                              memory_order_release);
-      }
-    }
     return NULL;
   }
   return &((CachedFunctionBucket *)b)->payload;
@@ -1034,10 +999,7 @@ static const uint8_t *load_module_bytecode(const char *filename,
 
 static void global_cleanup(void) {
   for (size_t i = 0; i < CACHED_FUNCTIONS_N_BUCKETS; ++i) {
-    if (g_cached_function_buckets_a[i].payload.bytecode)
-      free((void *)g_cached_function_buckets_a[i].payload.bytecode);
-    if (g_cached_function_buckets_b[i].payload.bytecode)
-      free((void *)g_cached_function_buckets_b[i].payload.bytecode);
+    free((void *)g_cached_function_buckets[i].payload.bytecode);
   }
 
   // These can fail, but we're calling this when we're about to exit, so
