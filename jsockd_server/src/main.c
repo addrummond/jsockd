@@ -53,11 +53,6 @@
 
 static atomic_bool g_global_init_complete;
 
-typedef struct {
-  HashCacheBucket bucket;
-  CachedFunction payload;
-} CachedFunctionBucket;
-
 static CachedFunctionBucket
     g_cached_function_buckets[CACHED_FUNCTIONS_N_BUCKETS];
 static atomic_int g_n_cached_functions;
@@ -66,9 +61,9 @@ static void cleanup_unused_hash_cache_bucket(HashCacheBucket *b) {
   free((void *)(((CachedFunctionBucket *)b)->payload.bytecode));
 }
 
-static CachedFunction *add_cached_function(HashCacheUid uid,
-                                           const uint8_t *bytecode,
-                                           size_t bytecode_size) {
+static CachedFunctionBucket *add_cached_function(HashCacheUid uid,
+                                                 const uint8_t *bytecode,
+                                                 size_t bytecode_size) {
   assert(bytecode);
 
   CachedFunction to_add = {
@@ -82,7 +77,7 @@ static CachedFunction *add_cached_function(HashCacheUid uid,
     jsockd_log(LOG_INFO, "Hash collision\n");
     return NULL;
   }
-  return &((CachedFunctionBucket *)b)->payload;
+  return b;
 }
 
 static CachedFunction *get_cached_function(HashCacheUid uid) {

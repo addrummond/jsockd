@@ -238,11 +238,19 @@ ThreadState *get_runtime_thread_state(JSRuntime *rt) {
   return NULL;
 }
 
+static void release_cached_function(CachedFunctionBucket *cf) {
+  atomic_fetch_add_explicit(&cf->bucket.refcount, -1, memory_order_release);
+}
+
 void cleanup_command_state(ThreadState *ts) {
   JS_FreeValue(ts->ctx, ts->compiled_query);
   free(ts->dangling_bytecode);
   ts->dangling_bytecode = NULL;
   ts->compiled_query = JS_UNDEFINED;
+  if (ts->cached_function_in_use) {
+    release_cached_function(ts->cached_function_in_use);
+    ts->cached_function_in_use = NULL;
+  }
 }
 
 void cleanup_thread_state(ThreadState *ts) {
