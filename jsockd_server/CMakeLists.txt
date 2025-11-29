@@ -16,6 +16,8 @@ string(REPLACE "v" "" VERSION_STRING "${VERSION_STRING}")
 string(STRIP VERSION_STRING "${VERSION_STRING}")
 MESSAGE(STATUS "Version string: '${VERSION_STRING}'")
 
+set(CMAKE_CXX_STANDARD 23)
+
 # If the version string matches /-[0-9]+-g[0-9a-f]+$/ then the current commit is not
 # tagged, so we don't know the version
 if((NOT "${VERSION_STRING}" STREQUAL "") AND NOT (VERSION_STRING MATCHES "-[0-9]+-g[0-9a-f]+$"))
