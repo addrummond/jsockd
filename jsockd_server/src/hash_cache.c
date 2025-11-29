@@ -43,6 +43,7 @@ HashCacheBucket *add_to_hash_cache_(HashCacheBucket *buckets,
       cleanup(bucket);
       memcpy((void *)((char *)bucket + object_offset), object, object_size);
       atomic_store_explicit(&bucket->uid, uid, memory_order_release);
+      return bucket;
     }
   }
   return NULL;
