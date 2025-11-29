@@ -520,6 +520,7 @@ static int handle_line_2_query(ThreadState *ts, const char *line, int len) {
           add_cached_function(uid, bytecode, bytecode_size);
       if (!ts->cached_function_in_use) {
         assert(ts->dangling_bytecode == NULL);
+        jsockd_log(LOG_DEBUG, "Dangling bytecode\n");
         ts->dangling_bytecode = (uint8_t *)bytecode;
       }
       ts->compiled_query = func_from_bytecode(ts->ctx, bytecode, bytecode_size);
