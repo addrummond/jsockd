@@ -107,14 +107,8 @@ static CachedFunction *add_cached_function(HashCacheUid uid,
                 ? g_cached_function_buckets_b
                 : g_cached_function_buckets_a;
         memset(new_buckets, 0, sizeof(g_cached_function_buckets_a));
-        if (current_buckets == g_cached_function_buckets_a)
-          atomic_store_explicit(&g_cached_function_buckets,
-                                g_cached_function_buckets_b,
-                                memory_order_relaxed);
-        else
-          atomic_store_explicit(&g_cached_function_buckets,
-                                g_cached_function_buckets_a,
-                                memory_order_relaxed);
+        atomic_store_explicit(&g_cached_function_buckets, new_buckets,
+                              memory_order_relaxed);
 
         atomic_store_explicit(&g_n_cached_function_failed_insertions, 0,
                               memory_order_release);
