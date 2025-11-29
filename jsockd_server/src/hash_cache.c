@@ -32,7 +32,7 @@ HashCacheBucket *add_to_hash_cache_(HashCacheBucket *buckets,
     int expected0int = 0;
     // There's an empty bucket
     if (atomic_compare_exchange_strong_explicit(&bucket->uid, &expected0uint64,
-                                                j, memory_order_acq_rel,
+                                                uid, memory_order_acq_rel,
                                                 memory_order_acquire)) {
       atomic_fetch_add_explicit(&bucket->refcount, 1, memory_order_release);
       memcpy((void *)((char *)bucket + object_offset), object, object_size);
