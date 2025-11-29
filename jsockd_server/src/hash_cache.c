@@ -28,7 +28,9 @@ HashCacheBucket *add_to_hash_cache_(HashCacheBucket *buckets,
     size_t j = i % n_buckets; // wrap around if we reach the end
     HashCacheBucket *bucket = (HashCacheBucket *)(buckets_ + j * bucket_size);
     uint_fast64_t expected = 0;
-    if (atomic_compare_exchange_weak(&bucket->uid, &expected, j)) {
+    if (atomic_compare_exchange_weak_explicit(&bucket->uid, &expected, j,
+                                              memory_order_release,
+                                              memory_order_release)) {
       memcpy((void *)((char *)bucket + object_offset), object, object_size);
       return bucket;
     }
@@ -46,7 +48,7 @@ HashCacheBucket *get_hash_cache_entry_(HashCacheBucket *buckets,
   for (size_t i = bucket_i; i < bucket_i + bucket_look_forward; ++i) {
     size_t j = i % n_buckets; // wrap around if we reach the end
     HashCacheBucket *bucket = (HashCacheBucket *)(buckets_ + j * bucket_size);
-    if (atomic_load_explicit(&bucket->uid, memory_order_relaxed) == uid)
+    if (atomic_load_explicit(&bucket->uid, memory_order_acquire) == uid)
       return bucket;
   }
   return NULL;

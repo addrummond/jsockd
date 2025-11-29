@@ -101,7 +101,7 @@ static CachedFunction *add_cached_function(HashCacheUid uid,
         // that no other thread is trying to do this swap at the same time.
         // Thus no need to use atomic_compare_exchange
         CachedFunctionBucket *current_buckets = atomic_load_explicit(
-            &g_cached_function_buckets, memory_order_relaxed);
+            &g_cached_function_buckets, memory_order_acquire);
         CachedFunctionBucket *new_buckets =
             current_buckets == g_cached_function_buckets_a
                 ? g_cached_function_buckets_b
@@ -343,7 +343,7 @@ static void command_loop(ThreadState *ts,
       jsockd_log(LOG_DEBUG, "Re-initializing shut down thread state\n");
       assert(REPLACEMENT_THREAD_STATE_NONE ==
              atomic_load_explicit(&ts->replacement_thread_state,
-                                  memory_order_relaxed));
+                                  memory_order_acquire));
       init_thread_state(ts, ts->socket_state, ts->thread_index);
       atomic_fetch_add_explicit(&g_n_ready_threads, 1, memory_order_relaxed);
       register_thread_state_runtime(ts->rt, ts);
@@ -935,7 +935,7 @@ static void tick_handler(ThreadState *ts) {
   if (g_cmd_args.max_idle_time_us == 0 || ts->line_n != 0 || ts->rt == NULL)
     return;
   int n_ready_threads =
-      atomic_load_explicit(&g_n_ready_threads, memory_order_relaxed);
+      atomic_load_explicit(&g_n_ready_threads, memory_order_acquire);
   if (n_ready_threads <= 1 || n_ready_threads != ts->thread_index + 1)
     return;
   struct timespec now;
