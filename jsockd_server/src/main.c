@@ -503,8 +503,9 @@ static int handle_line_2_query(ThreadState *ts, const char *line, int len) {
 
 #ifdef CMAKE_BUILD_TYPE_DEBUG
   jsockd_logf(LOG_DEBUG,
-              "Computed UID: %016" PRIx64 " [bits=%i, bucket=%zu] for %.*s\n",
-              uid, CACHED_FUNCTION_HASH_BITS,
+              "Computed UID: " HASH_CACHE_UID_FORMAT_SPECIFIER
+              " [bits=%i, bucket=%zu] for %.*s\n",
+              HASH_CACHE_UID_FORMAT_ARGS(uid), CACHED_FUNCTION_HASH_BITS,
               get_cache_bucket(uid, CACHED_FUNCTION_HASH_BITS), len, line);
 #endif
 

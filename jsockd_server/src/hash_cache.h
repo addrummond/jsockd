@@ -6,12 +6,29 @@
 #endif
 
 #include "typeofshim.h"
+#include <inttypes.h>
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <xxHash/xxhash.h>
 
+// These platforms should provide lock-free 128-bit atomics. Robust compile-time
+// detection of this specific functionality appears to be a bit of a rabbit
+// hole.
+#if defined(__GNUC__) &&                                                       \
+    (defined(__x86_64__) || defined(__aarch64__) || defined(__arm64__))
+#define HASH_CACHE_USE_128_BIT_UIDS
+#endif
+
+#ifdef HASH_CACHE_USE_128_BIT_UIDS
+typedef __int128 HashCacheUid;
+#define HASH_CACHE_UID_FORMAT_SPECIFIER "%016" PRIx64 "%016" PRIx64
+#define HASH_CACHE_UID_FORMAT_ARGS(uid) (uint64_t)((uid) >> 64), (uint64_t)(uid)
+#else
 typedef XXH64_hash_t HashCacheUid;
+#define HASH_CACHE_UID_FORMHASH_CACHE_UID_FORMAT_SPECIFIER "%016" PRIx64
+#define HASH_CACHE_UID_FORMAT_ARGS(uid) (uint64_t)(uid)
+#endif
 
 // This structure should be embedded in a larger structure with the following
 // field names for use with the macros defined:

@@ -5,16 +5,27 @@
 #include <stdio.h>
 
 size_t get_cache_bucket(HashCacheUid uid, int n_bits) {
-  return uid % (1 << n_bits);
+  return uid % (HashCacheUid)(1 << n_bits);
 }
 
 static size_t get_bucket_look_forward(int n_bits) { return n_bits * 3 / 2; }
 
 HashCacheUid get_hash_cache_uid(const void *data, size_t len) {
-  HashCacheUid v = XXH3_64bits(data, len);
-  if (v == 0)
+  HashCacheUid r;
+#ifdef HASH_CACHE_USE_128_BIT_UIDS
+  XXH128_hash_t v = XXH3_128bits(data, len);
+  if (v.low64 == 0 && v.high64 == 0)
     return 1; // reserve 0 as "empty" value
-  return v;
+  r = v.high64;
+  r <<= 64;
+  r |= v.low64;
+  return r;
+#else
+  r = XXH3_64bits(data, len);
+#endif
+  if (r == 0)
+    return 1; // reserve 0 as "empty" value
+  return r;
 }
 
 HashCacheBucket *add_to_hash_cache_(HashCacheBucket *buckets,
@@ -24,8 +35,10 @@ HashCacheBucket *add_to_hash_cache_(HashCacheBucket *buckets,
                                     void (*cleanup)(HashCacheBucket *)) {
   char *buckets_ = (char *)buckets;
   size_t bucket_i = get_cache_bucket(uid, n_bits);
-  jsockd_logf(LOG_DEBUG, "Add to hash cache at %llu bucket %llu\n", uid,
-              bucket_i);
+  jsockd_logf(LOG_DEBUG,
+              "Add to hash cache at " HASH_CACHE_UID_FORMAT_SPECIFIER
+              " bucket %zu\n",
+              HASH_CACHE_UID_FORMAT_ARGS(uid), bucket_i);
   size_t n_buckets = HASH_CACHE_BUCKET_ARRAY_SIZE_FROM_HASH_BITS(n_bits);
   const size_t bucket_look_forward = get_bucket_look_forward(n_bits);
   for (size_t i = bucket_i; i < bucket_i + bucket_look_forward; ++i) {
