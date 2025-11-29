@@ -989,6 +989,10 @@ static const uint8_t *load_module_bytecode(const char *filename,
 
 static void global_cleanup(void) {
   for (size_t i = 0; i < CACHED_FUNCTIONS_N_BUCKETS; ++i) {
+    jsockd_logf(LOG_DEBUG,
+                "Freeing cached function bytecode %p with refcount %i\n",
+                g_cached_function_buckets[i].payload.bytecode,
+                g_cached_function_buckets[i].bucket.refcount);
     free((void *)g_cached_function_buckets[i].payload.bytecode);
   }
 
