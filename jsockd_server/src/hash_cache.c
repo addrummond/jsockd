@@ -14,8 +14,8 @@ HashCacheUid get_hash_cache_uid(const void *data, size_t len) {
   HashCacheUid r;
 #ifdef HASH_CACHE_USE_128_BIT_UIDS
   XXH128_hash_t v = XXH3_128bits(data, len);
-  if (v.low64 == 0 && v.high64 == 0)
-    return 1; // reserve 0 as "empty" value
+  if (v.low64 <= 1 && v.high64 == 0)
+    return 2; // reserve 0 and 1 as special values
   r = v.high64;
   r <<= 64;
   r |= v.low64;
@@ -23,8 +23,8 @@ HashCacheUid get_hash_cache_uid(const void *data, size_t len) {
 #else
   r = XXH3_64bits(data, len);
 #endif
-  if (r == 0)
-    return 1; // reserve 0 as "empty" value
+  if (r <= 1)
+    return 2; // reserve 0 and 1 as special values
   return r;
 }
 
@@ -46,19 +46,26 @@ HashCacheBucket *add_to_hash_cache_(HashCacheBucket *buckets,
     HashCacheBucket *bucket = (HashCacheBucket *)(buckets_ + j * bucket_size);
     uint_fast64_t expected0uint64 = 0;
     int expected0int = 0;
-    // There's an empty bucket
+
+    // There's an empty bucket. In the initial atomic compare/exchange, we set
+    // its uid to 1, which will neither match any real uid nor register as
+    // 'empty', so that no other thread will attempt to read from or modify this
+    // bucket while we mess around with it.
     if (atomic_compare_exchange_strong_explicit(&bucket->uid, &expected0uint64,
-                                                uid, memory_order_acq_rel,
+                                                1, memory_order_acq_rel,
                                                 memory_order_acquire)) {
       atomic_fetch_add_explicit(&bucket->refcount, 1, memory_order_release);
       memcpy((void *)((char *)bucket + object_offset), object, object_size);
+      atomic_store_explicit(&bucket->uid, uid, memory_order_release);
       return bucket;
     }
-    // There's a non-empty bucket with a refcount of zero, so we can clean it up
-    // and then reuse it.
+
+    // The bucket has a refcount of zero, so we can clean it up and then reuse
+    // it.
     if (atomic_compare_exchange_strong_explicit(
             &bucket->refcount, &expected0int, 1, memory_order_acq_rel,
             memory_order_acquire)) {
+      atomic_fetch_add_explicit(&bucket->update_count, 1, memory_order_release);
       if (cleanup)
         cleanup(bucket);
       memcpy((void *)((char *)bucket + object_offset), object, object_size);
@@ -80,15 +87,21 @@ HashCacheBucket *get_hash_cache_entry_(HashCacheBucket *buckets,
     size_t j = i % n_buckets; // wrap around if we reach the end
     HashCacheBucket *bucket = (HashCacheBucket *)(buckets_ + j * bucket_size);
 
-    // We don't yet know if this is the bucket for us, but bump its
-    // reference count here so that nothing deletes it from under us if it is.
-    // If it's not, we can then decrement the reference count.
-    atomic_fetch_add_explicit(&bucket->refcount, 1, memory_order_release);
+    for (int i = 0; i < 1000; ++i) {
+      int update_count_before =
+          atomic_load_explicit(&bucket->update_count, memory_order_acquire);
 
-    if (atomic_load_explicit(&bucket->uid, memory_order_acquire) == uid)
-      return bucket;
+      if (atomic_load_explicit(&bucket->uid, memory_order_acquire) != uid)
+        break;
 
-    atomic_fetch_add_explicit(&bucket->refcount, -1, memory_order_release);
+      if (atomic_load_explicit(&bucket->update_count, memory_order_acquire) !=
+          update_count_before)
+        continue; // bucket was modified while we were reding it; try again
+
+      atomic_fetch_add_explicit(&bucket->refcount, 1, memory_order_release);
+      break;
+    }
+    return NULL;
   }
   return NULL;
 }
