@@ -5,8 +5,18 @@ set -e
 FILC_VERSION=0.675
 FILC_CHECKSUM=ad2684a3532ad98bd0a952d0906dbd27afa857720d5be12e17ffbe547d74bb0c
 
-if [ "$1" != "setup" ] && [ "$1" != "github_actions_create_release" ]; then
+if ! [ -z "$GITHUB_WORKSPACE" ] && [ "$1" != "setup" ] && [ "$1" != "github_actions_create_release" ]; then
     eval $(mise env)
+fi
+
+# Useful when running the script locally
+if [ -z "$GITHUB_WORKSPACE" ]; then
+    GITHUB_WORKSPACE=$(pwd)
+else
+    GITHUB_WORKSPACE=$(
+      cd -- "$(dirname -- "$0")" >/dev/null 2>&1 || exit
+      pwd -P
+    )
 fi
 
 case $1 in
