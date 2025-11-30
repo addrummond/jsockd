@@ -59,7 +59,6 @@ HashCacheBucket *add_to_hash_cache_(HashCacheBucket *buckets,
     if (atomic_compare_exchange_strong_explicit(
             &bucket->refcount, &expected0int, 1, memory_order_acq_rel,
             memory_order_acquire)) {
-      atomic_store_explicit(&bucket->uid, 0, memory_order_release);
       if (cleanup)
         cleanup(bucket);
       memcpy((void *)((char *)bucket + object_offset), object, object_size);
