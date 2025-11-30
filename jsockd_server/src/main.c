@@ -995,11 +995,8 @@ static const uint8_t *load_module_bytecode(const char *filename,
 }
 
 static void global_cleanup(void) {
-  lock_cached_functions_mutex();
-  for (size_t i = 0;
-       i < sizeof(g_cached_functions) / sizeof(g_cached_functions[0]); ++i) {
-    free((void *)g_cached_functions[i].bytecode);
-  }
+  for (size_t i = 0; i < CACHED_FUNCTIONS_N_BUCKETS; ++i)
+    free((void *)g_cached_function_buckets[i].payload.bytecode);
 
   // These can fail, but we're calling this when we're about to exit, so
   // there is no useful error handling to be done.
