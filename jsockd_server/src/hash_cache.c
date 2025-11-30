@@ -13,12 +13,9 @@ HashCacheUid get_hash_cache_uid(const void *data, size_t len) {
   HashCacheUid r;
 #ifdef HASH_CACHE_USE_128_BIT_UIDS
   XXH128_hash_t v = XXH3_128bits(data, len);
-  if (v.low64 <= 1 && v.high64 == 0)
-    return 2; // reserve 0 and 1 as special values
   r = v.high64;
   r <<= 64;
   r |= v.low64;
-  return r;
 #else
   r = XXH3_64bits(data, len);
 #endif
