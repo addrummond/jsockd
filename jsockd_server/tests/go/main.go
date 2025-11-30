@@ -39,7 +39,7 @@ func main() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for j := 0; j < 10000; j++ { // TODO 10000
+			for j := 0; j < 10000; j++ {
 				n := rand.IntN(1000)
 				cmd := fmt.Sprintf("(_m, p) => { const x = p + %v; return JSockD.sendMessage(x) + 1; }", n)
 				//fmt.Printf("Sending command: %v\n", cmd)
