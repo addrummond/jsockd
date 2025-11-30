@@ -94,11 +94,14 @@ HashCacheBucket *get_hash_cache_entry_(HashCacheBucket *buckets,
       if (atomic_load_explicit(&bucket->uid, memory_order_acquire) != uid)
         break;
 
+      atomic_fetch_add_explicit(&bucket->refcount, 1, memory_order_release);
+
       if (atomic_load_explicit(&bucket->update_count, memory_order_acquire) !=
           update_count_before)
-        continue; // bucket was modified while we were reding it; try again
+        continue; // bucket was modified while we were raeding it; try again
 
-      atomic_fetch_add_explicit(&bucket->refcount, 1, memory_order_release);
+      atomic_fetch_add_explicit(&bucket->refcount, -1, memory_order_release);
+
       break;
     }
   }
