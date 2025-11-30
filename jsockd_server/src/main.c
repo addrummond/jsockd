@@ -312,7 +312,7 @@ static void command_loop(ThreadState *ts,
       jsockd_log(LOG_DEBUG, "Re-initializing shut down thread state\n");
       assert(REPLACEMENT_THREAD_STATE_NONE ==
              atomic_load_explicit(&ts->replacement_thread_state,
-                                  memory_order_relaxed));
+                                  memory_order_acquire));
       init_thread_state(ts, ts->socket_state, ts->thread_index);
       atomic_fetch_add_explicit(&g_n_ready_threads, 1, memory_order_relaxed);
       register_thread_state_runtime(ts->rt, ts);
@@ -375,13 +375,11 @@ static const uint8_t *compile_buf(JSContext *ctx, const char *buf, int buf_len,
   jsockd_logf(LOG_DEBUG, "Compiled bytecode size: %zu\n", *bytecode_size);
 
   // We want to preserve the bytecode across runtime contexts, but js_free
-  // requires a context for some refcounting. So copy this over to some malloc'd
-  // memory.
+  // requires a context for some refcounting. So copy this over to some
+  // malloc'd memory.
   const uint8_t *malloc_bytecode = malloc(*bytecode_size);
-  if (!malloc_bytecode) {
-    js_free(ctx, (void *)bytecode);
-    return NULL;
-  }
+  jsockd_logf(LOG_DEBUG, "Mallocing bytecode %p (size=%zu)\n", malloc_bytecode,
+              *bytecode_size);
   memcpy((void *)malloc_bytecode, bytecode, *bytecode_size);
   js_free(ctx, (void *)bytecode);
 
@@ -427,10 +425,11 @@ static void cleanup_old_runtime(ThreadState *ts) {
 // called only when destroying a thread state before program exit
 static void destroy_thread_state(ThreadState *ts) {
   // We know that any running instance of
-  // reset_thread_state_cleanup_old_runtime_thread or reset_thread_state_thread
-  // has now been joined, so if we're in one of the following states, that means
-  // that a new thread state was created but we never got round to using it and
-  // then initiating cleanup of the old one before exiting.
+  // reset_thread_state_cleanup_old_runtime_thread or
+  // reset_thread_state_thread has now been joined, so if we're in one of the
+  // following states, that means that a new thread state was created but we
+  // never got round to using it and then initiating cleanup of the old one
+  // before exiting.
   int rts =
       atomic_load_explicit(&ts->replacement_thread_state, memory_order_acquire);
   if (rts == REPLACEMENT_THREAD_STATE_INIT_COMPLETE ||
@@ -460,11 +459,11 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
   int rts =
       atomic_load_explicit(&ts->replacement_thread_state, memory_order_acquire);
 
-  // Check to see if the thread state has been reinitialized (following a memory
-  // increase).
+  // Check to see if the thread state has been reinitialized (following a
+  // memory increase).
   if (rts == REPLACEMENT_THREAD_STATE_INIT_COMPLETE) {
-    // Join the thread that initialized the replacement thread state to reclaim
-    // pthread resources.
+    // Join the thread that initialized the replacement thread state to
+    // reclaim pthread resources.
     if (0 != pthread_join(ts->replacement_thread, NULL)) {
       jsockd_logf(LOG_ERROR, "pthread_join failed: %s\n", strerror(errno));
       return -1;
@@ -538,6 +537,7 @@ static int handle_line_2_query(ThreadState *ts, const char *line, int len) {
           add_cached_function(uid, bytecode, bytecode_size);
       if (!ts->cached_function_in_use) {
         assert(ts->dangling_bytecode == NULL);
+        jsockd_log(LOG_DEBUG, "Dangling bytecode\n");
         ts->dangling_bytecode = (uint8_t *)bytecode;
       }
       ts->compiled_query = func_from_bytecode(ts->ctx, bytecode, bytecode_size);
@@ -904,7 +904,7 @@ static void tick_handler(ThreadState *ts) {
   if (g_cmd_args.max_idle_time_us == 0 || ts->line_n != 0 || ts->rt == NULL)
     return;
   int n_ready_threads =
-      atomic_load_explicit(&g_n_ready_threads, memory_order_relaxed);
+      atomic_load_explicit(&g_n_ready_threads, memory_order_acquire);
   if (n_ready_threads <= 1 || n_ready_threads != ts->thread_index + 1)
     return;
   struct timespec now;
@@ -1009,14 +1009,12 @@ static void global_cleanup(void) {
   lock_cached_functions_mutex();
   for (size_t i = 0;
        i < sizeof(g_cached_functions) / sizeof(g_cached_functions[0]); ++i) {
-    if (g_cached_functions[i].bytecode) {
-      free((void *)g_cached_functions[i].bytecode);
-    }
+    free((void *)g_cached_functions[i].bytecode);
   }
   unlock_cached_functions_mutex();
 
-  // These can fail, but we're calling this when we're about to exit, so there
-  // is no useful error handling to be done.
+  // These can fail, but we're calling this when we're about to exit, so
+  // there is no useful error handling to be done.
   wait_group_destroy(&g_thread_ready_wait_group);
 
   if (g_module_bytecode_size != 0 && g_module_bytecode)
