@@ -45,7 +45,12 @@ HashCacheBucket *add_to_hash_cache_(HashCacheBucket *buckets,
     if (atomic_compare_exchange_strong_explicit(
             &bucket->refcount, &expected0int, 1, memory_order_acq_rel,
             memory_order_acquire)) {
-      if (cleanup)
+      // This is the only code path that updates a bucket, so because of the
+      // atomic compare/exchange, we know that no other thread is currently
+      // doing so.
+      HashCacheUid existing_uid =
+          atomic_load_explicit(&bucket->uid, memory_order_acquire);
+      if (existing_uid && cleanup)
         cleanup(bucket);
       memcpy((void *)((char *)bucket + object_offset), object, object_size);
       atomic_store_explicit(&bucket->uid, uid, memory_order_release);
