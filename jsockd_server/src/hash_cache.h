@@ -39,7 +39,7 @@ typedef XXH64_hash_t HashCacheUid;
 //     HashCacheBucket bucket;
 //     WhateverType payload;
 //   }
-typedef struct HashCacheBucket {
+typedef struct {
   atomic_uint_fast64_t uid;
   atomic_int refcount;
   atomic_int update_count;
