@@ -19,8 +19,8 @@ HashCacheUid get_hash_cache_uid(const void *data, size_t len) {
 #else
   r = XXH3_64bits(data, len);
 #endif
-  if (r <= 1)
-    return 2; // reserve 0 and 1 as special values
+  if (r == 0) // reserve 0 as empty value
+    return 1;
   return r;
 }
 
@@ -43,7 +43,7 @@ HashCacheBucket *add_to_hash_cache_(HashCacheBucket *buckets,
 
     // There's an empty bucket.
     if (atomic_compare_exchange_strong_explicit(&bucket->uid, &expected0uint64,
-                                                1, memory_order_acq_rel,
+                                                0, memory_order_acq_rel,
                                                 memory_order_acquire)) {
       atomic_fetch_add_explicit(&bucket->refcount, 1, memory_order_release);
       memcpy((void *)((char *)bucket + object_offset), object, object_size);
@@ -83,7 +83,7 @@ HashCacheBucket *get_hash_cache_entry_(HashCacheBucket *buckets,
       int update_count_before =
           atomic_load_explicit(&bucket->update_count, memory_order_acquire);
 
-      if (uid != atomic_load_explicit(&bucket->uid, memory_order_acquire))
+      if (uid != atomic_load_explicit(&bucket->uid, memory_order_relaxed))
         break;
 
       atomic_fetch_add_explicit(&bucket->refcount, 1, memory_order_release);

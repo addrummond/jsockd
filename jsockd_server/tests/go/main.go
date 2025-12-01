@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"strconv"
 	"sync"
 	"sync/atomic"
 
@@ -13,8 +14,25 @@ import (
 )
 
 func main() {
+	nClientThreads := runtime.NumCPU()
+	if val, ok := os.LookupEnv("NCLIENTTHREADS"); ok {
+		n, err := strconv.Atoi(val)
+		if err == nil {
+			nClientThreads = n
+		}
+	}
+	nServerThreads := 8
+	if val, ok := os.LookupEnv("NSERVERTHREADS"); ok {
+		n, err := strconv.Atoi(val)
+		if err == nil {
+			nServerThreads = n
+		}
+	}
+
+	fmt.Fprintf(os.Stderr, "Using %v client threads and %v server threads\n", nClientThreads, nServerThreads)
+
 	config := jsockdclient.DefaultConfig()
-	config.NThreads = 8
+	config.NThreads = nServerThreads
 	config.SkipJSockDVersionCheck = true
 	config.MaxRestartsPerMinute = 10000
 	config.TimeoutUs = 1000000 // 1 second
@@ -35,7 +53,9 @@ func main() {
 
 	var exitCode atomic.Int32
 
-	for i := 0; i < runtime.NumCPU(); i++ {
+
+
+	for i := 0; i < nClientThreads; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
