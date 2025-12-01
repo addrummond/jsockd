@@ -16,8 +16,6 @@ string(REPLACE "v" "" VERSION_STRING "${VERSION_STRING}")
 string(STRIP VERSION_STRING "${VERSION_STRING}")
 MESSAGE(STATUS "Version string: '${VERSION_STRING}'")
 
-set(CMAKE_CXX_STANDARD 23)
-
 # If the version string matches /-[0-9]+-g[0-9a-f]+$/ then the current commit is not
 # tagged, so we don't know the version
 if((NOT "${VERSION_STRING}" STREQUAL "") AND NOT (VERSION_STRING MATCHES "-[0-9]+-g[0-9a-f]+$"))
@@ -130,15 +128,15 @@ set(JSOCKD_SERVER_SOURCES
 # This lib is just here to stop CMake building most of the sources twice, once
 # for the main executable and once for the tests.
 add_library(jsockd_lib STATIC ${JSOCKD_SERVER_SOURCES})
-target_compile_features(jsockd_lib PUBLIC c_std_11)
+target_compile_features(jsockd_lib PUBLIC c_std_23)
 
 add_executable(jsockd src/main.c)
 target_link_libraries(jsockd jsockd_lib xxHash::xxhash)
-target_compile_features(jsockd PUBLIC c_std_11)
+target_compile_features(jsockd PUBLIC c_std_23)
 
 add_executable(jsockd_tests tests/unit/tests.c tests/unit/lib/pcg.c)
 target_link_libraries(jsockd_tests jsockd_lib xxHash::xxhash)
-target_compile_features(jsockd_tests PUBLIC c_std_11)
+target_compile_features(jsockd_tests PUBLIC c_std_23)
 
 if (CMAKE_SIZEOF_VOID_P EQUAL 8 AND (CMAKE_SYSTEM_PROCESSOR MATCHES "arm" OR CMAKE_SYSTEM_PROCESSOR MATCHES "aarch"))
     set(QUICKJS_LIB_ARCH "arm64")
