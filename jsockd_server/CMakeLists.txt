@@ -47,7 +47,7 @@ if(CMAKE_BUILD_TYPE STREQUAL Debug)
           -Wno-missing-field-initializers)
     endif()
     if (CMAKE_C_COMPILER_ID MATCHES "GNU")
-        add_compile_options(-O0 -Wall -Wextra -Wpedantic -Werror -Wno-unused-parameter -Wno-unknown-pragma)
+        add_compile_options(-O0 -Wall -Wextra -Wpedantic -Werror -Wno-unused-parameter -Wno-unknown-pragmas)
     endif()
 endif()
 
