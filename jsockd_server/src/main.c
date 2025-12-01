@@ -946,15 +946,15 @@ static const uint8_t *load_module_bytecode(const char *filename,
              VERSION_STRING_SIZE,
          VERSION_STRING_SIZE);
   version_string[VERSION_STRING_SIZE - 1] = '\0';
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wconstant-logical-operand"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconstant-logical-operand"
   if (strcmp(version_string, STRINGIFY(VERSION)) &&
       (!(!strcmp(version_string, "unknown_version") &&
          !strcmp(STRINGIFY(VERSION), "unknown_version") &&
          CMAKE_BUILD_TYPE_IS_DEBUG)) &&
       !(!strcmp(pubkey, MAGIC_KEY_TO_ALLOW_INVALID_SIGNATURES) &&
         CMAKE_BUILD_TYPE_IS_DEBUG)) {
-#pragma clang diagnostic pop
+#pragma GCC diagnostic pop
     for (int i = 0; i < VERSION_STRING_SIZE && version_string[i] != '\0'; ++i) {
       if (version_string[i] < 32 || version_string[i] > 126)
         version_string[i] = '?';
