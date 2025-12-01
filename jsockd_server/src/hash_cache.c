@@ -63,6 +63,7 @@ HashCacheBucket *add_to_hash_cache_(HashCacheBucket *buckets,
       return bucket;
     }
 
+    // We didn't actually update the bucket, so decrement the update count.
     atomic_fetch_add_explicit(&bucket->update_count, -1, memory_order_release);
   }
   return NULL;
