@@ -29,7 +29,7 @@ typedef __int128 HashCacheUid;
 #define HASH_CACHE_UID_FORMAT_ARGS(uid) (uint64_t)((uid) >> 64), (uint64_t)(uid)
 #else
 typedef XXH64_hash_t HashCacheUid;
-#define HASH_CACHE_UID_FORMHASH_CACHE_UID_FORMAT_SPECIFIER "%016" PRIx64
+#define HASH_CACHE_UID_FORMAT_SPECIFIER "%016" PRIx64
 #define HASH_CACHE_UID_FORMAT_ARGS(uid) (uint64_t)(uid)
 #endif
 
@@ -40,10 +40,22 @@ typedef XXH64_hash_t HashCacheUid;
 //     WhateverType payload;
 //   }
 typedef struct {
-  atomic_uint_fast64_t uid;
-  atomic_int refcount;
-  atomic_int update_count;
+  // 16-byte align may be required for use of native 128-bit atomic
+  // instructions.
+  _Alignas(16) _Atomic(HashCacheUid) uid;
+  int32_t _Atomic refcount;
+  int32_t _Atomic update_count;
+#ifndef HASH_CACHE_USE_128_BIT_UIDS
+  // Padding to make the structure size a multiple of 16 bytes.
+  int64_t padding;
+#endif
 } HashCacheBucket;
+
+// We need to ensure that in arrays of these structures, each uid is at a
+// 16-byte alined offset (so that native 128-bit atomic instructions can be
+// used).
+_Static_assert(sizeof(HashCacheBucket) % 16 == 0,
+               "HashCacheBucket must be multiple of 16 bytes in size");
 
 #define HASH_CACHE_BUCKET_ARRAY_SIZE_FROM_HASH_BITS(hash_bits)                 \
   (1 << (hash_bits))

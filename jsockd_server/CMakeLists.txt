@@ -51,11 +51,9 @@ if(CMAKE_BUILD_TYPE STREQUAL Debug)
     endif()
 endif()
 
-if(CMAKE_C_COMPILER_ID MATCHES "GNU")
-    add_link_options(-lm)
-endif()
-if(CMAKE_SYSTEM_NAME MATCHES "BSD")
-    add_link_options(-lpthread)
+# For x86-64, ensure we have AVX support for 128-bit atomics
+if (CMAKE_SIZEOF_VOID_P EQUAL 8 AND (CMAKE_SYSTEM_PROCESSOR MATCHES "86" OR CMAKE_SYSTEM_PROCESSOR MATCHES "amd64"))
+    add_compile_options(-march=x86-64 -mcx16 -mtune=generic)
 endif()
 
 if(CMAKE_C_COMPILER MATCHES "filc")
@@ -129,18 +127,31 @@ set(JSOCKD_SERVER_SOURCES
 # for the main executable and once for the tests.
 add_library(jsockd_lib STATIC ${JSOCKD_SERVER_SOURCES})
 target_compile_features(jsockd_lib PUBLIC c_std_23)
+target_link_libraries(jsockd_lib PUBLIC qjs xxHash::xxhash)
+
+# Ensure anything that links qjs also links libm on Linux/*BSD
+if (UNIX AND NOT APPLE)
+    target_link_libraries(jsockd_lib INTERFACE m)
+endif()
+
+if(CMAKE_C_COMPILER_ID MATCHES "GNU")
+    target_link_libraries(jsockd_lib PUBLIC atomic)
+endif()
+if(CMAKE_SYSTEM_NAME MATCHES "BSD")
+    target_link_libraries(jsockd_lib PUBLIC pthread)
+endif()
 
 add_executable(jsockd src/main.c)
-target_link_libraries(jsockd jsockd_lib xxHash::xxhash)
+target_link_libraries(jsockd PRIVATE jsockd_lib)
 target_compile_features(jsockd PUBLIC c_std_23)
 
 add_executable(jsockd_tests tests/unit/tests.c tests/unit/lib/pcg.c)
-target_link_libraries(jsockd_tests jsockd_lib xxHash::xxhash)
+target_link_libraries(jsockd_tests PRIVATE jsockd_lib)
 target_compile_features(jsockd_tests PUBLIC c_std_23)
 
 if (CMAKE_SIZEOF_VOID_P EQUAL 8 AND (CMAKE_SYSTEM_PROCESSOR MATCHES "arm" OR CMAKE_SYSTEM_PROCESSOR MATCHES "aarch"))
     set(QUICKJS_LIB_ARCH "arm64")
-elseif (CMAKE_SIZEOF_VOID_P EQUAL 8 AND CMAKE_SYSTEM_PROCESSOR MATCHES "86" OR CMAKE_SYSTEM_PROCESSOR MATCHES "amd64")
+elseif (CMAKE_SIZEOF_VOID_P EQUAL 8 AND (CMAKE_SYSTEM_PROCESSOR MATCHES "86" OR CMAKE_SYSTEM_PROCESSOR MATCHES "amd64"))
     set(QUICKJS_LIB_ARCH "x86_64")
 else()
     message(FATAL_ERROR "No QuickJS lib has been built for this architecture: ${CMAKE_SYSTEM_PROCESSOR} / ${CMAKE_SIZEOF_VOID_P}")
@@ -153,4 +164,3 @@ set_target_properties(qjs PROPERTIES
   INTERFACE_INCLUDE_DIRECTORIES
     "${CMAKE_SOURCE_DIR}/../.scratch/quickjs;${CMAKE_SOURCE_DIR}/src/lib"
 )
-target_link_libraries(jsockd_lib qjs m xxHash::xxhash)
