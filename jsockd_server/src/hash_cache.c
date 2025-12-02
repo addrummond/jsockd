@@ -4,6 +4,10 @@
 #include <stdatomic.h>
 #include <stdio.h>
 
+// The implementation here makes use of seqlocks. See e.g.
+//   https://github.com/Amanieu/seqlock/blob/master/src/lib.rs
+// for an example implementation of the general concept.
+
 size_t get_cache_bucket(HashCacheUid uid, int n_bits) {
   return uid % (HashCacheUid)(1 << n_bits);
 }
