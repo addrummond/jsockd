@@ -93,10 +93,10 @@ HashCacheBucket *get_hash_cache_entry_(HashCacheBucket *buckets,
           update_count_before !=
           atomic_load_explicit(&bucket->update_count, memory_order_acquire);
 
-      atomic_fetch_add_explicit(&bucket->refcount, -1, memory_order_release);
-
-      if (updated)
+      if (updated) {
+        atomic_fetch_add_explicit(&bucket->refcount, -1, memory_order_release);
         continue;
+      }
 
       return bucket;
     }
