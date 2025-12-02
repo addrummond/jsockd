@@ -538,7 +538,9 @@ func streamStderrLogs(stderr io.Reader, config Config) {
 		line := strings.TrimSpace(scanner.Text())
 		groups := logLineRegex.FindStringSubmatch(line)
 		if len(groups) != 5 {
-			config.Logger(zeroTime, "INFO", line)
+			if config.Logger != nil {
+				config.Logger(zeroTime, "INFO", line)
+			}
 			continue
 		}
 		prefix := string(groups[1])
@@ -548,7 +550,9 @@ func streamStderrLogs(stderr io.Reader, config Config) {
 
 		t, err := time.Parse(time.RFC3339Nano, timestamp)
 		if err != nil {
-			config.Logger(zeroTime, level, msg)
+			if config.Logger != nil {
+				config.Logger(zeroTime, level, msg)
+			}
 			continue
 		}
 
@@ -567,7 +571,7 @@ func streamStderrLogs(stderr io.Reader, config Config) {
 				config.Logger(t, level, currentLine.String())
 			}
 			currentLine.Reset()
-		} else {
+		} else if config.Logger != nil {
 			config.Logger(zeroTime, "INFO", line)
 		}
 	}
