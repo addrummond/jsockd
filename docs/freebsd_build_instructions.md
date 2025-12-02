@@ -3,7 +3,7 @@
 ## Install necessary packages
 
 ```sh
-pkginstall -y git gmake node npm
+pkg install -y git gmake node npm
 ```
 
 ## Install CMake 4
