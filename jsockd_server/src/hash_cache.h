@@ -12,9 +12,9 @@
 #include <stdlib.h>
 #include <xxHash/xxhash.h>
 
-// These platforms should provide lock-free 128-bit atomics. Robust compile-time
-// detection of this specific functionality appears to be a bit of a rabbit
-// hole.
+// These platforms should provide lock-free 128-bit atomics (assuming
+// non-ancient processors in the x86 case). Robust compile-time detection of
+// this specific functionality appears to be a bit of a rabbit hole.
 #if defined(__GNUC__) &&                                                       \
     (defined(__x86_64__) || defined(__aarch64__) || defined(__arm64__))
 #define HASH_CACHE_USE_128_BIT_UIDS
