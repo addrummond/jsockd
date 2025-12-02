@@ -39,7 +39,8 @@ HashCacheBucket *add_to_hash_cache_(HashCacheBucket *buckets,
     HashCacheBucket *bucket = (HashCacheBucket *)(buckets_ + j * bucket_size);
     int expected0int = 0;
 
-    atomic_fetch_add_explicit(&bucket->update_count, 1, memory_order_release);
+    // Make odd
+    atomic_fetch_add_explicit(&bucket->update_count, 1, memory_order_relaxed);
 
     // The bucket has a refcount of zero, so we can clean it up and then reuse
     // it.
@@ -55,11 +56,13 @@ HashCacheBucket *add_to_hash_cache_(HashCacheBucket *buckets,
         cleanup(bucket);
       memcpy((void *)((char *)bucket + object_offset), object, object_size);
       atomic_store_explicit(&bucket->uid, uid, memory_order_release);
+      // Make even
+      atomic_fetch_add_explicit(&bucket->update_count, 1, memory_order_release);
       return bucket;
     }
 
     // We didn't actually update the bucket, so decrement the update count.
-    atomic_fetch_add_explicit(&bucket->update_count, -1, memory_order_release);
+    atomic_fetch_add_explicit(&bucket->update_count, -1, memory_order_relaxed);
   }
   return NULL;
 }
@@ -83,6 +86,9 @@ HashCacheBucket *get_hash_cache_entry_(HashCacheBucket *buckets,
     for (int i = 0; i < LOW_CONTENTION_SPIN_LOCK_MAX_TRIES; ++i) {
       int update_count_before =
           atomic_load_explicit(&bucket->update_count, memory_order_acquire);
+
+      if (update_count_before % 2 != 0)
+        continue;
 
       if (uid != atomic_load_explicit(&bucket->uid, memory_order_relaxed))
         break;
