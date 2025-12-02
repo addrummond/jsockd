@@ -8,10 +8,12 @@ pkginstall -y git gmake node npm
 
 ## Install CMake 4
 
+```sh
 wget https://github.com/Kitware/CMake/releases/download/v4.2.0/cmake-4.2.0.tar.gz
 tar -xzf cmake-4.2.0.tar.gz
 cd cmake-4.2.0
 ./bootstrap && make && sudo make install
+```
 
 ## Clone and build JSockD
 
