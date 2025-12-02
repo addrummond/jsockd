@@ -32,6 +32,7 @@
 #include <stdarg.h>
 #include <stdatomic.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -52,53 +53,42 @@
 
 static atomic_bool g_global_init_complete;
 
-static HashCacheBucket g_cached_function_buckets[CACHED_FUNCTIONS_N_BUCKETS];
-static cached_function_t g_cached_functions[CACHED_FUNCTIONS_N_BUCKETS];
+// 16-byte align may be required for use of native 128-bit atomic instructions.
+_Alignas(16) static CachedFunctionBucket
+    g_cached_function_buckets[CACHED_FUNCTIONS_N_BUCKETS];
 static atomic_int g_n_cached_functions;
 
-static cached_function_t *add_cached_function(HashCacheUid uid,
-                                              const uint8_t *bytecode,
-                                              size_t bytecode_size) {
-  assert(bytecode);
-
-  lock_cached_functions_mutex();
-
-  HashCacheBucket *b = get_hash_cache_bucket(g_cached_function_buckets,
-                                             CACHED_FUNCTION_HASH_BITS, uid);
-  size_t bi = b - g_cached_function_buckets;
-  if (g_cached_functions[bi].bytecode) {
-    if (g_cached_functions[bi].refcount <= 0) {
-      jsockd_log(LOG_DEBUG, "Hash collision: freeing existing bytecode\n");
-      free((void *)(g_cached_functions[bi].bytecode));
-    } else {
-      jsockd_log(LOG_DEBUG,
-                 "Hash collision: existing cached function still in use!\n");
-      unlock_cached_functions_mutex();
-      return NULL;
-    }
-  } else {
-    atomic_fetch_add_explicit(&g_n_cached_functions, 1, memory_order_relaxed);
-  }
-  b->uid = uid;
-  g_cached_functions[bi].bytecode = bytecode;
-  g_cached_functions[bi].bytecode_size = bytecode_size;
-  g_cached_functions[bi].refcount = 1;
-
-  unlock_cached_functions_mutex();
-  return &g_cached_functions[bi];
+static void cleanup_unused_hash_cache_bucket(HashCacheBucket *b) {
+  jsockd_logf(LOG_DEBUG, "Freeing bytecode %p\n",
+              ((CachedFunctionBucket *)b)->payload.bytecode);
+  free((void *)(((CachedFunctionBucket *)b)->payload.bytecode));
+  ((CachedFunctionBucket *)b)->payload.bytecode = NULL;
 }
 
-static cached_function_t *get_cached_function(HashCacheUid uid) {
-  unlock_cached_functions_mutex();
-  HashCacheBucket *b = get_hash_cache_entry(g_cached_function_buckets,
-                                            CACHED_FUNCTION_HASH_BITS, uid);
-  if (b) {
-    size_t bi = b - g_cached_function_buckets;
-    ++g_cached_functions[bi].refcount;
-    unlock_cached_functions_mutex();
-    return &g_cached_functions[bi];
+static CachedFunctionBucket *add_cached_function(HashCacheUid uid,
+                                                 const uint8_t *bytecode,
+                                                 size_t bytecode_size) {
+  assert(bytecode);
+
+  CachedFunction to_add = {
+      .bytecode = bytecode,
+      .bytecode_size = bytecode_size,
+  };
+  CachedFunctionBucket *b =
+      add_to_hash_cache(g_cached_function_buckets, CACHED_FUNCTION_HASH_BITS,
+                        uid, &to_add, cleanup_unused_hash_cache_bucket);
+  if (!b) {
+    jsockd_log(LOG_INFO, "No empty slot for cached function\n");
+    return NULL;
   }
-  unlock_cached_functions_mutex();
+  return b;
+}
+
+static CachedFunction *get_cached_function(HashCacheUid uid) {
+  CachedFunctionBucket *b = get_hash_cache_entry(
+      g_cached_function_buckets, CACHED_FUNCTION_HASH_BITS, uid);
+  if (b)
+    return &((CachedFunctionBucket *)b)->payload;
   return NULL;
 }
 
@@ -510,13 +500,13 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
 
 static int handle_line_2_query(ThreadState *ts, const char *line, int len) {
   const HashCacheUid uid = get_hash_cache_uid(line, len);
-  const cached_function_t *cf = get_cached_function(uid);
+  const CachedFunction *cf = get_cached_function(uid);
 
 #ifdef CMAKE_BUILD_TYPE_DEBUG
   jsockd_logf(LOG_DEBUG,
-              "Computed UID: %016" PRIx64 "%016" PRIx64
+              "Computed UID: " HASH_CACHE_UID_FORMAT_SPECIFIER
               " [bits=%i, bucket=%zu] for %.*s\n",
-              uid.high64, uid.low64, CACHED_FUNCTION_HASH_BITS,
+              HASH_CACHE_UID_FORMAT_ARGS(uid), CACHED_FUNCTION_HASH_BITS,
               get_cache_bucket(uid, CACHED_FUNCTION_HASH_BITS), len, line);
 #endif
 
@@ -957,12 +947,15 @@ static const uint8_t *load_module_bytecode(const char *filename,
              VERSION_STRING_SIZE,
          VERSION_STRING_SIZE);
   version_string[VERSION_STRING_SIZE - 1] = '\0';
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wconstant-logical-operand"
   if (strcmp(version_string, STRINGIFY(VERSION)) &&
       (!(!strcmp(version_string, "unknown_version") &&
          !strcmp(STRINGIFY(VERSION), "unknown_version") &&
          CMAKE_BUILD_TYPE_IS_DEBUG)) &&
       !(!strcmp(pubkey, MAGIC_KEY_TO_ALLOW_INVALID_SIGNATURES) &&
         CMAKE_BUILD_TYPE_IS_DEBUG)) {
+#pragma clang diagnostic pop
     for (int i = 0; i < VERSION_STRING_SIZE && version_string[i] != '\0'; ++i) {
       if (version_string[i] < 32 || version_string[i] > 126)
         version_string[i] = '?';
@@ -1006,12 +999,8 @@ static const uint8_t *load_module_bytecode(const char *filename,
 }
 
 static void global_cleanup(void) {
-  lock_cached_functions_mutex();
-  for (size_t i = 0;
-       i < sizeof(g_cached_functions) / sizeof(g_cached_functions[0]); ++i) {
-    free((void *)g_cached_functions[i].bytecode);
-  }
-  unlock_cached_functions_mutex();
+  for (size_t i = 0; i < CACHED_FUNCTIONS_N_BUCKETS; ++i)
+    free((void *)g_cached_function_buckets[i].payload.bytecode);
 
   // These can fail, but we're calling this when we're about to exit, so
   // there is no useful error handling to be done.

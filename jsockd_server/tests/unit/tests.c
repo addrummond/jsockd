@@ -46,87 +46,96 @@ static void TEST_wait_group_inc_and_wait_basic_use_case(void) {
     Tests for hash_cache
 ******************************************************************************/
 
+typedef struct {
+  HashCacheBucket bucket;
+  int payload;
+} MyHashCacheBucket;
+
 static void TEST_hash_cache_add_and_retrieve(void) {
-  HashCacheBucket buckets[8] = {0};
-  HashCacheUid uid = {.low64 = 123456789};
+  MyHashCacheBucket buckets[8] = {0};
+  HashCacheUid uid = HASH_CACHE_UID_FROM_INT(123456789);
 
-  HashCacheBucket *bucket = get_hash_cache_bucket(buckets, 3, uid);
+  int payload = 42;
+  MyHashCacheBucket *bucket =
+      add_to_hash_cache(buckets, 3, uid, &payload, NULL);
 
-  // doesn't update the bucket, so we have the option of deciding not to store
-  // the new value after calling get_hash_cache_bucket
-  TEST_ASSERT(bucket->uid.low64 == 0 && bucket->uid.high64 == 0);
+  TEST_ASSERT(bucket->bucket.uid == uid);
 
-  bucket->uid = uid;
-
-  void *retrieved_bucket = get_hash_cache_entry(buckets, 3, uid);
+  MyHashCacheBucket *retrieved_bucket = get_hash_cache_entry(buckets, 3, uid);
   TEST_ASSERT(retrieved_bucket == bucket);
 }
 
-static void TEST_hash_cache_handles_duplicate_hash_values(void) {
-  HashCacheBucket buckets[8] = {0};
-  HashCacheUid uid1 = {.low64 = 0x0000000000000001};
-  HashCacheUid uid2 = {
-      .low64 =
-          0xFF00000000000001}; // lower bits identical, so shares same bucket
+static void TEST_hash_cache_handles_duplicate_buckets(void) {
+  int payload = 99;
+  MyHashCacheBucket buckets[8] = {0};
+  HashCacheUid uid1 = HASH_CACHE_UID_FROM_INT(1);
+  HashCacheUid uid2 =
+      HASH_CACHE_UID_FROM_INT(9); // we have 8 buckets, so same bucket as uid1
 
-  HashCacheBucket *bucket1 = get_hash_cache_bucket(buckets, 3, uid1);
-  bucket1->uid = uid1;
+  TEST_ASSERT(NULL != add_to_hash_cache(buckets, 3, uid1, &payload, NULL));
+  TEST_ASSERT(NULL != add_to_hash_cache(buckets, 3, uid2, &payload, NULL));
 
-  HashCacheBucket *bucket2 = get_hash_cache_bucket(buckets, 3, uid2);
-  bucket2->uid = uid2;
+  MyHashCacheBucket *bucket1 = get_hash_cache_entry(buckets, 3, uid1);
+  MyHashCacheBucket *bucket2 = get_hash_cache_entry(buckets, 3, uid2);
 
-  HashCacheBucket *retrieved_bucket1 = get_hash_cache_entry(buckets, 3, uid1);
-  TEST_ASSERT(retrieved_bucket1 == bucket1);
-
-  HashCacheBucket *retrieved_bucket2 = get_hash_cache_entry(buckets, 3, uid2);
-  TEST_ASSERT(retrieved_bucket2 == bucket2);
+  TEST_ASSERT(bucket1 && bucket1->bucket.uid == uid1);
+  TEST_ASSERT(bucket2 && bucket2->bucket.uid == uid2);
 }
 
-static void TEST_hash_cash_values_with_same_bucket_id_eventually_booted(void) {
-  HashCacheBucket buckets[8] = {0};
+static int hash_cache_bucket_cleanup_call_count;
+static void hash_cache_bucket_cleanup(HashCacheBucket *b) {
+  ++hash_cache_bucket_cleanup_call_count;
+}
+
+static void
+TEST_hash_cash_values_with_same_bucket_id_booted_if_zero_refcount(void) {
+  MyHashCacheBucket buckets[8] = {0};
+  int payload = 33;
 
   for (uint64_t i = 0; i < 8; ++i) {
-    HashCacheUid uid = {.low64 = (i << 48) | 1};
-    HashCacheBucket *b = get_hash_cache_bucket(buckets, 3, uid);
-    b->uid = uid;
+    HashCacheUid uid = HASH_CACHE_UID_FROM_INT((i << 48) | 1);
+    MyHashCacheBucket *bucket =
+        add_to_hash_cache(buckets, 3, uid, &payload, hash_cache_bucket_cleanup);
+    atomic_store_explicit(&bucket->bucket.refcount, 0, memory_order_release);
   }
 
   int retrieved_count = 0;
   for (uint64_t i = 0; i < 8; ++i) {
-    void *retrieved_data = get_hash_cache_entry(
-        buckets, 3, (HashCacheUid){.low64 = (i << 48) | 1});
-    if (retrieved_data != NULL)
+    MyHashCacheBucket *retrieved = get_hash_cache_entry(
+        buckets, 3, HASH_CACHE_UID_FROM_INT((i << 48) | 1));
+    if (retrieved != NULL)
       ++retrieved_count;
   }
 
   // It won't have been possible to find an unoccupied bucket for all values, so
   // some of the buckets will still have NULL data.
   TEST_ASSERT(retrieved_count > 0 && retrieved_count < 8);
+  TEST_ASSERT(8 - retrieved_count == hash_cache_bucket_cleanup_call_count);
 }
 
 static void TEST_hash_cash_empty_bucket_array(void) {
   // empty arrays not standardized, so use size 1
-  HashCacheBucket buckets[1] = {0};
+  MyHashCacheBucket buckets[1] = {0};
+  int payload = 99;
 
-  TEST_ASSERT(buckets ==
-              get_hash_cache_bucket(buckets, 0, (HashCacheUid){.low64 = 123}));
-  TEST_ASSERT(NULL ==
-              get_hash_cache_entry(buckets, 0, (HashCacheUid){.low64 = 123}));
+  TEST_ASSERT(NULL == add_to_hash_cache(buckets, 0,
+                                        HASH_CACHE_UID_FROM_INT(123), &payload,
+                                        NULL));
 }
 
 static void TEST_hash_cash_size_2_bucket_array(void) {
-  HashCacheBucket buckets[2] = {0};
-  HashCacheUid uid = {.low64 = 123};
-  HashCacheBucket *b = get_hash_cache_bucket(buckets, 1, uid);
-  b->uid = uid;
-  TEST_ASSERT(b ==
-              get_hash_cache_entry(buckets, 1, (HashCacheUid){.low64 = 123}));
+  MyHashCacheBucket buckets[2] = {0};
+  int payload = 77;
+  HashCacheUid uid = HASH_CACHE_UID_FROM_INT(123);
+  MyHashCacheBucket *b = add_to_hash_cache(buckets, 1, uid, &payload, NULL);
+  TEST_ASSERT(b == get_hash_cache_entry(buckets, 1, uid));
 }
 
 static void TEST_hash_cash_fuzz(void) {
-  HashCacheBucket buckets[64] = {0};
+  MyHashCacheBucket buckets[64] = {0};
   pcg32_random_t rng = {.inc = 0x12345678, .state = 0x87654321};
   uint64_t next_uid = 0;
+  int payload = 111;
 
   // Adding at most 64 entries with sequential UIDs to a 64 bucket hash cache,
   // so we know that no old entries will be booted.
@@ -135,21 +144,21 @@ static void TEST_hash_cash_fuzz(void) {
     switch (r % 3) {
     case 0: {
       // Add a new entry
-      HashCacheUid uid = {.low64 = next_uid++};
-      HashCacheBucket *b = get_hash_cache_bucket(buckets, 6, uid);
-      b->uid = uid;
+      HashCacheUid uid = HASH_CACHE_UID_FROM_INT(next_uid);
+      ++next_uid;
+      add_to_hash_cache(buckets, 6, uid, &payload, NULL);
     } break;
     case 1:
       if (next_uid != 0) {
         // Retrieve existing entry
         void *v = get_hash_cache_entry(buckets, 6,
-                                       (HashCacheUid){.low64 = r % next_uid});
+                                       HASH_CACHE_UID_FROM_INT(r % next_uid));
         TEST_CHECK(v != NULL);
         break;
       } // fallthrough
     case 2: {
       // Try to retrieve a (probably) non-existing entry
-      void *v = get_hash_cache_entry(buckets, 6, (HashCacheUid){.low64 = r});
+      void *v = get_hash_cache_entry(buckets, 6, HASH_CACHE_UID_FROM_INT(r));
       TEST_CHECK(v == NULL);
     } break;
     }
@@ -159,9 +168,10 @@ static void TEST_hash_cash_fuzz(void) {
   for (int i = 0; i < 10000; ++i) {
     uint32_t r1 = pcg32_random_r(&rng);
     uint32_t r2 = pcg32_random_r(&rng);
-    get_hash_cache_bucket(
+    add_to_hash_cache(
         buckets, 6,
-        (HashCacheUid){.low64 = (uint64_t)r1 | ((uint64_t)r2 << 32)});
+        HASH_CACHE_UID_FROM_INT((uint64_t)r1 | ((uint64_t)r2 << 32)), &payload,
+        NULL);
   }
 }
 
@@ -992,8 +1002,8 @@ static void TEST_output_key_file(void) {
 
 TEST_LIST = {T(wait_group_inc_and_wait_basic_use_case),
              T(hash_cache_add_and_retrieve),
-             T(hash_cache_handles_duplicate_hash_values),
-             T(hash_cash_values_with_same_bucket_id_eventually_booted),
+             T(hash_cache_handles_duplicate_buckets),
+             T(hash_cash_values_with_same_bucket_id_booted_if_zero_refcount),
              T(hash_cash_empty_bucket_array),
              T(hash_cash_size_2_bucket_array),
              T(hash_cash_fuzz),

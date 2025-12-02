@@ -2,6 +2,7 @@
 #define THREADSTATE_H_
 
 #include "config.h"
+#include "hash_cache.h"
 #include "quickjs.h"
 #include <pthread.h>
 #include <stdatomic.h>
@@ -12,8 +13,12 @@
 typedef struct {
   const uint8_t *bytecode;
   size_t bytecode_size;
-  int refcount;
-} cached_function_t;
+} CachedFunction;
+
+typedef struct {
+  HashCacheBucket bucket;
+  CachedFunction payload;
+} CachedFunctionBucket;
 
 // values for ThreadState.replacement_thread_state
 enum {
@@ -59,7 +64,7 @@ typedef struct ThreadState {
   pthread_t replacement_thread;
   struct timespec last_active_time;
   uint8_t *dangling_bytecode;
-  cached_function_t *cached_function_in_use;
+  CachedFunctionBucket *cached_function_in_use;
 #ifdef CMAKE_BUILD_TYPE_DEBUG
   bool manually_trigger_thread_state_reset;
 #endif
@@ -67,8 +72,6 @@ typedef struct ThreadState {
 
 int init_thread_state(ThreadState *ts, SocketState *socket_state,
                       int thread_index);
-void lock_cached_functions_mutex(void);
-void unlock_cached_functions_mutex(void);
 void register_thread_state_runtime(JSRuntime *rt, ThreadState *ts);
 ThreadState *get_runtime_thread_state(JSRuntime *rt);
 void cleanup_command_state(ThreadState *ts);
