@@ -26,7 +26,7 @@ const char *get_backtrace(ThreadState *ts, const char *backtrace,
             : JS_NewStringLen(ts->ctx, (const char *)g_source_map,
                               g_source_map_size);
     int c = atomic_fetch_add_explicit(&g_source_map_load_count, 1,
-                                      memory_order_relaxed);
+                                      memory_order_acq_rel);
     if (c + 1 == g_n_threads && g_source_map_size != 0 && g_source_map) {
       jsockd_log(LOG_DEBUG,
                  "All threads have loaded the sourcemap, calling munmap...\n");
