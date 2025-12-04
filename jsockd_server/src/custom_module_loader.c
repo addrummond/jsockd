@@ -54,11 +54,8 @@ JSModuleDef *jsockd_js_module_loader(JSContext *ctx, const char *module_name,
                                      void *opaque, JSValueConst attributes) {
   for (size_t i = 0; i < sizeof(allowed_modules) / sizeof(allowed_modules[0]);
        ++i) {
-    fprintf(stderr, "CMP %s %s\n", module_name, allowed_modules[i]);
-    if (!strcmp(module_name, allowed_modules[i])) {
-      fprintf(stderr, "IMPORTING\n");
+    if (!strcmp(module_name, allowed_modules[i]))
       return js_module_loader(ctx, module_name, opaque, attributes);
-    }
   }
   JS_ThrowReferenceError(
       ctx, "JSockD doesn't allow module imports other than 'os' and 'std'");
