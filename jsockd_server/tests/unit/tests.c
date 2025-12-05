@@ -177,13 +177,6 @@ static void TEST_hash_cash_fuzz(void) {
   }
 }
 
-static HashCacheUid rand_uid(void) {
-  uint64_t a = (uint64_t)rand();
-  uint64_t b = (uint64_t)rand();
-  uint64_t x = (a << 32) ^ b;
-  return (HashCacheUid)x;
-}
-
 enum {
   HASH_CACHE_STRESS_TEST_N_BITS = 6,
   HASH_CACHE_STRESS_TEST_N_THREADS = 100,
