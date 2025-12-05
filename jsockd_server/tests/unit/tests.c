@@ -27,8 +27,10 @@
 
 static void *inc_wait_group_pthread_func(void *data) {
   WaitGroup *wg = (WaitGroup *)data;
-  for (int i = 0; i < 10; ++i)
-    assert(0 == wait_group_inc(wg, 1));
+  for (int i = 0; i < 10; ++i) {
+    int r = wait_group_inc(wg, 1);
+    assert(0 == r);
+  }
   return NULL;
 }
 

@@ -137,7 +137,11 @@ case $1 in
                 exit 1
             fi
 
+            echo "\n\nRunning tests for debug build...\n\n"
             ./mk.sh Debug test
+
+            echo "\n\nRunning tests for release build...\n\n"
+            ./mk.sh Release test
         )
         ;;
 
