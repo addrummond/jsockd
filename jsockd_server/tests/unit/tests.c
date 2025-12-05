@@ -177,6 +177,113 @@ static void TEST_hash_cash_fuzz(void) {
   }
 }
 
+static HashCacheUid rand_uid(void) {
+  uint64_t a = (uint64_t)rand();
+  uint64_t b = (uint64_t)rand();
+  uint64_t x = (a << 32) ^ b;
+  return (HashCacheUid)x;
+}
+
+enum {
+  HASH_CACHE_STRESS_TEST_N_BITS = 6,
+  HASH_CACHE_STRESS_TEST_N_THREADS = 100,
+  HASH_CACHE_STRESS_TEST_N_OPS_PER_THREAD = 10000
+};
+
+struct payload_t {
+  uint64_t tid;
+  uint64_t opidx;
+};
+
+struct thread_ctx {
+  MyHashCacheBucket *buckets;
+  size_t bucket_size;
+  int tid;
+};
+
+static atomic_bool hash_cash_stress_test_failed = false;
+static atomic_int hash_cash_stress_test_get_success_count;
+static atomic_int hash_cash_stress_test_get_failure_count;
+static HashCacheUid _Atomic uid_counter;
+
+static void *hash_cash_stress_test_worker(void *arg) {
+  struct thread_ctx *ctx = (struct thread_ctx *)arg;
+  for (int k = 0; k < HASH_CACHE_STRESS_TEST_N_OPS_PER_THREAD; ++k) {
+    HashCacheUid uid =
+        atomic_fetch_add_explicit(&uid_counter, 1, memory_order_relaxed);
+    int payload = ctx->tid | (k << 16);
+
+    MyHashCacheBucket *b = add_to_hash_cache(
+        ctx->buckets, HASH_CACHE_STRESS_TEST_N_BITS, uid, &payload, NULL);
+
+    if (b != NULL) {
+      MyHashCacheBucket *g = get_hash_cache_entry(
+          ctx->buckets, HASH_CACHE_STRESS_TEST_N_BITS, uid);
+      if (g == NULL) {
+        atomic_fetch_add_explicit(&hash_cash_stress_test_get_failure_count, 1,
+                                  memory_order_relaxed);
+        continue;
+      }
+      if (g->payload != payload) {
+        fprintf(stderr, "Payload mismatch: %i vs. %i\n", g->payload, payload);
+        atomic_store_explicit(&hash_cash_stress_test_failed, true,
+                              memory_order_relaxed);
+        continue;
+      }
+      atomic_fetch_add_explicit(&hash_cash_stress_test_get_success_count, 1,
+                                memory_order_relaxed);
+      atomic_fetch_add_explicit(&g->bucket.refcount, -1, memory_order_relaxed);
+    }
+  }
+  return NULL;
+}
+
+void TEST_hash_cash_stress_test(void) {
+  MyHashCacheBucket buckets[(1 << HASH_CACHE_STRESS_TEST_N_BITS)];
+  memset(buckets, 0, sizeof(buckets));
+
+  const size_t bucket_size = sizeof(MyHashCacheBucket);
+
+  /* Seed RNG if desired for reproducibility:
+     srand(12345); */
+
+  /* Launch threads */
+  pthread_t threads[HASH_CACHE_STRESS_TEST_N_THREADS];
+  struct thread_ctx ctxs[HASH_CACHE_STRESS_TEST_N_THREADS];
+  int t;
+  for (t = 0; t < HASH_CACHE_STRESS_TEST_N_THREADS; ++t) {
+    ctxs[t].buckets = buckets;
+    ctxs[t].bucket_size = bucket_size;
+    ctxs[t].tid = t;
+    if (pthread_create(&threads[t], NULL, hash_cash_stress_test_worker,
+                       &ctxs[t]) != 0) {
+      fprintf(stderr, "pthread_create failed\n");
+      exit(1);
+    }
+  }
+
+  for (t = 0; t < HASH_CACHE_STRESS_TEST_N_THREADS; ++t) {
+    pthread_join(threads[t], NULL);
+  }
+
+  TEST_ASSERT(!atomic_load_explicit(&hash_cash_stress_test_failed,
+                                    memory_order_relaxed));
+
+  int success_count = atomic_load_explicit(
+      &hash_cash_stress_test_get_success_count, memory_order_relaxed);
+  int failure_count = atomic_load_explicit(
+      &hash_cash_stress_test_get_failure_count, memory_order_relaxed);
+  TEST_ASSERT(failure_count * 10 < success_count);
+
+  // Sanity: no negative refcounts
+  size_t j;
+  for (j = 0; j < (1 << HASH_CACHE_STRESS_TEST_N_BITS); ++j) {
+    int rc =
+        atomic_load_explicit(&buckets[j].bucket.refcount, memory_order_relaxed);
+    TEST_ASSERT(rc >= 0);
+  }
+}
+
 /******************************************************************************
     Tests for line_buf
 ******************************************************************************/
@@ -1009,6 +1116,7 @@ TEST_LIST = {T(wait_group_inc_and_wait_basic_use_case),
              T(hash_cash_empty_bucket_array),
              T(hash_cash_size_2_bucket_array),
              T(hash_cash_fuzz),
+             T(hash_cash_stress_test),
              T(line_buf_simple_case),
              T(line_buf_awkward_chunking),
              T(line_buf_truncation),
