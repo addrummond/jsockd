@@ -183,12 +183,12 @@ enum {
   HASH_CACHE_STRESS_TEST_N_OPS_PER_THREAD = 10000
 };
 
-struct payload_t {
+struct HashCacheStressTestPayload {
   uint64_t tid;
   uint64_t opidx;
 };
 
-struct thread_ctx {
+struct HashCacheStressTestThreadCtx {
   MyHashCacheBucket *buckets;
   size_t bucket_size;
   int tid;
@@ -200,7 +200,8 @@ static atomic_int hash_cash_stress_test_get_failure_count;
 static HashCacheUid _Atomic uid_counter;
 
 static void *hash_cash_stress_test_worker(void *arg) {
-  struct thread_ctx *ctx = (struct thread_ctx *)arg;
+  struct HashCacheStressTestThreadCtx *ctx =
+      (struct HashCacheStressTestThreadCtx *)arg;
   for (int k = 0; k < HASH_CACHE_STRESS_TEST_N_OPS_PER_THREAD; ++k) {
     HashCacheUid uid =
         atomic_fetch_add_explicit(&uid_counter, 1, memory_order_relaxed);
@@ -242,7 +243,7 @@ void TEST_hash_cash_stress_test(void) {
 
   /* Launch threads */
   pthread_t threads[HASH_CACHE_STRESS_TEST_N_THREADS];
-  struct thread_ctx ctxs[HASH_CACHE_STRESS_TEST_N_THREADS];
+  struct HashCacheStressTestThreadCtx ctxs[HASH_CACHE_STRESS_TEST_N_THREADS];
   int t;
   for (t = 0; t < HASH_CACHE_STRESS_TEST_N_THREADS; ++t) {
     ctxs[t].buckets = buckets;
