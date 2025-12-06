@@ -5,6 +5,7 @@
 #include "backtrace.h"
 #include "cmdargs.h"
 #include "config.h"
+#include "custom_module_loader.h"
 #include "fchmod.h"
 #include "globals.h"
 #include "hash_cache.h"
@@ -1050,6 +1051,34 @@ static void set_log_prefix(void) {
   }
 }
 
+static int eval(void) {
+  if (g_cmd_args.es6_module_bytecode_file) {
+    g_module_bytecode = load_module_bytecode(
+        g_cmd_args.es6_module_bytecode_file, &g_module_bytecode_size);
+    if (g_module_bytecode == NULL) {
+      return EXIT_FAILURE;
+    }
+  }
+  if (g_cmd_args.source_map_file) {
+    g_source_map = mmap_file(g_cmd_args.source_map_file, &g_source_map_size);
+    if (!g_source_map) {
+      jsockd_logf(LOG_ERROR, "Error loading source map file %s: %s\n",
+                  strerror(errno));
+      jsockd_log(LOG_INFO, "Continuing without source map\n");
+      // TODO resource cleanup
+      return EXIT_FAILURE;
+    }
+  }
+
+  JSRuntime *rt = JS_NewRuntime();
+  JSContext *ctx = JS_NewContext(rt);
+
+  if (g_module_bytecode)
+    load_binary_module(ctx, g_module_bytecode, g_module_bytecode_size);
+
+  return EXIT_SUCCESS;
+}
+
 int main(int argc, char **argv) {
   struct sigaction sa = {.sa_handler = SIGINT_and_SIGTERM_handler};
   sigaction(SIGINT, &sa, NULL);
@@ -1064,6 +1093,10 @@ int main(int argc, char **argv) {
   if (g_cmd_args.version) {
     printf("jsockd %s", STRINGIFY(VERSION));
     return EXIT_SUCCESS;
+  }
+
+  if (g_cmd_args.eval) {
+    return eval();
   }
 
   int strip_flags = 0;

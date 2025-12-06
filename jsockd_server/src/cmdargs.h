@@ -30,6 +30,8 @@ typedef struct {
   const char *mod_to_compile;
   const char *mod_output_file;
   CompileOpts compile_opts;
+  bool eval;
+  const char *eval_input;
 } CmdArgs;
 
 int parse_cmd_args(int argc, char **argv, void (*errlog)(const char *fmt, ...),

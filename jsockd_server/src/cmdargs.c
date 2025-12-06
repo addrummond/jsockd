@@ -170,6 +170,8 @@ static int parse_cmd_args_helper(int argc, char **argv,
       cmdargs->compile_opts = (0 == strcmp(argv[i], "-ss"))
                                   ? COMPILE_OPTS_STRIP_SOURCE
                                   : COMPILE_OPTS_STRIP_DEBUG;
+    } else if (0 == strcmp(argv[i], "-e")) {
+
     } else if (argv[i][0] == '-') {
       errlog("Error: unrecognized option: %s\n", argv[i]);
       return -1;
@@ -183,6 +185,15 @@ static int parse_cmd_args_helper(int argc, char **argv,
   if (cmdargs->version && n_flags > 1) {
     errlog("Error: -v (version) cannot be used with other flags.\n");
     return -1;
+  }
+  if (cmdargs->eval) {
+    int expected_count = 1 + (cmdargs->source_map_file != NULL) +
+                         (cmdargs->es6_module_bytecode_file != NULL);
+    if (n_flags != expected_count) {
+      if (cmdargs->source_map_file && !cmdargs->es6_module_bytecode_file)
+        errlog("Error: -e (eval) can only be used with -m and -sm options\n");
+      return -1;
+    }
   }
 
   if (cmdargs->key_file_prefix && !(n_flags == 1 || cmdargs->mod_to_compile)) {
@@ -206,7 +217,8 @@ static int parse_cmd_args_helper(int argc, char **argv,
     }
   }
 
-  if (cmdargs->version || cmdargs->key_file_prefix || cmdargs->mod_to_compile)
+  if (cmdargs->version || cmdargs->key_file_prefix || cmdargs->mod_to_compile ||
+      cmdargs->eval)
     return 0;
 
   if (cmdargs->n_sockets == 0) {
