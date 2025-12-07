@@ -38,4 +38,6 @@ extern WaitGroup g_thread_ready_wait_group;
 
 extern const char *g_log_prefix;
 
+extern bool g_interactive_logging_mode;
+
 #endif

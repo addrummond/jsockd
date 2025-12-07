@@ -30,3 +30,5 @@ CmdArgs g_cmd_args;
 WaitGroup g_thread_ready_wait_group;
 
 const char *g_log_prefix = NULL;
+
+bool g_interactive_logging_mode = false;
