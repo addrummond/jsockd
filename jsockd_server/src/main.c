@@ -1091,35 +1091,6 @@ static int eval(void) {
   JS_PrintValue(ts->ctx, print_value_to_stdout, NULL, result, NULL);
 
   return EXIT_SUCCESS;
-
-  // TODO cleanup
-
-  /*JSRuntime *rt = JS_NewRuntime();
-  JSContext *ctx = JS_NewContext(rt);
-
-  override_console_log(ctx);
-
-  if (g_module_bytecode)
-    load_binary_module(ctx, g_module_bytecode, g_module_bytecode_size);
-
-  JSValue result =
-      JS_Eval(ctx, g_cmd_args.eval_input, strlen(g_cmd_args.eval_input),
-              "<cmdline>", JS_EVAL_TYPE_GLOBAL);
-
-  if (JS_IsException(result)) {
-    dump_error(ctx);
-    JS_FreeValue(ctx, result);
-    JS_FreeContext(ctx);
-    JS_FreeRuntime(rt);
-    return EXIT_FAILURE;
-  }
-
-  JS_PrintValue(ctx, print_value_to_stdout, NULL, result, NULL);
-  JS_FreeValue(ctx, result);
-  JS_FreeContext(ctx);
-  JS_FreeRuntime(rt);
-
-  return EXIT_SUCCESS;*/
 }
 
 int main(int argc, char **argv) {
