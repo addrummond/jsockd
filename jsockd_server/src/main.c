@@ -5,6 +5,7 @@
 #include "backtrace.h"
 #include "cmdargs.h"
 #include "config.h"
+#include "console.h"
 #include "custom_module_loader.h"
 #include "fchmod.h"
 #include "globals.h"
@@ -1070,13 +1071,53 @@ static int eval(void) {
     }
   }
 
-  JSRuntime *rt = JS_NewRuntime();
+  g_thread_states = malloc(sizeof(ThreadState));
+  memset(g_thread_states, 0, sizeof(ThreadState));
+  ThreadState *ts = &g_thread_states[0];
+  init_thread_state(ts, NULL, 0);
+
+  JSValue result =
+      JS_Eval(g_thread_states[0].ctx, g_cmd_args.eval_input,
+              strlen(g_cmd_args.eval_input), "<cmdline>", JS_EVAL_TYPE_GLOBAL);
+
+  if (JS_IsException(result)) {
+    // TODO cleanup
+    dump_error(ts->ctx);
+    return EXIT_FAILURE;
+  }
+
+  JS_PrintValue(ts->ctx, print_value_to_stdout, NULL, result, NULL);
+
+  return EXIT_SUCCESS;
+
+  // TODO cleanup
+
+  /*JSRuntime *rt = JS_NewRuntime();
   JSContext *ctx = JS_NewContext(rt);
+
+  override_console_log(ctx);
 
   if (g_module_bytecode)
     load_binary_module(ctx, g_module_bytecode, g_module_bytecode_size);
 
-  return EXIT_SUCCESS;
+  JSValue result =
+      JS_Eval(ctx, g_cmd_args.eval_input, strlen(g_cmd_args.eval_input),
+              "<cmdline>", JS_EVAL_TYPE_GLOBAL);
+
+  if (JS_IsException(result)) {
+    dump_error(ctx);
+    JS_FreeValue(ctx, result);
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
+    return EXIT_FAILURE;
+  }
+
+  JS_PrintValue(ctx, print_value_to_stdout, NULL, result, NULL);
+  JS_FreeValue(ctx, result);
+  JS_FreeContext(ctx);
+  JS_FreeRuntime(rt);
+
+  return EXIT_SUCCESS;*/
 }
 
 int main(int argc, char **argv) {
@@ -1137,6 +1178,7 @@ int main(int argc, char **argv) {
                         memory_order_relaxed);
 
   g_thread_states = calloc(n_threads, sizeof(ThreadState));
+  memset(g_thread_states, 0, sizeof(ThreadState) * n_threads);
   g_threads = calloc(n_threads, sizeof(pthread_t));
   g_socket_states = calloc(n_threads, sizeof(SocketState));
 

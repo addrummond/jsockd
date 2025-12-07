@@ -200,3 +200,8 @@ PollFdResult ppoll_fd(int fd, const struct timespec *timeout) {
   return READY;
 #endif
 }
+
+void print_value_to_stdout(void *opaque, const char *buf, size_t size) {
+  (void)opaque;
+  fwrite(buf, 1, size, stdout);
+}

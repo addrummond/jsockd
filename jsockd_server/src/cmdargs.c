@@ -171,7 +171,19 @@ static int parse_cmd_args_helper(int argc, char **argv,
                                   ? COMPILE_OPTS_STRIP_SOURCE
                                   : COMPILE_OPTS_STRIP_DEBUG;
     } else if (0 == strcmp(argv[i], "-e")) {
-
+      if (cmdargs->eval) {
+        errlog("Error: -e can be specified at most once\n");
+        return -1;
+      }
+      ++i;
+      if (i >= argc) {
+        errlog(
+            "Error: -e requires an argument (JavaScript code to evaluate)\n");
+        fprintf(stderr, "HERE!3\n");
+        return -1;
+      }
+      cmdargs->eval = true;
+      cmdargs->eval_input = argv[i];
     } else if (argv[i][0] == '-') {
       errlog("Error: unrecognized option: %s\n", argv[i]);
       return -1;
@@ -190,9 +202,10 @@ static int parse_cmd_args_helper(int argc, char **argv,
     int expected_count = 1 + (cmdargs->source_map_file != NULL) +
                          (cmdargs->es6_module_bytecode_file != NULL);
     if (n_flags != expected_count) {
-      if (cmdargs->source_map_file && !cmdargs->es6_module_bytecode_file)
+      if (cmdargs->source_map_file && !cmdargs->es6_module_bytecode_file) {
         errlog("Error: -e (eval) can only be used with -m and -sm options\n");
-      return -1;
+        return -1;
+      }
     }
   }
 
