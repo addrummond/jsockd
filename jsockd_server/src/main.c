@@ -104,6 +104,8 @@ static void init_socket_state(SocketState *ss,
 }
 
 static void cleanup_socket_state(SocketState *socket_state) {
+  if (!socket_state)
+    return;
   // We're about to exit, so we don't need to check for errors.
   if (socket_state->streamfd != -1)
     close(socket_state->streamfd);
@@ -1058,18 +1060,18 @@ static int eval(void) {
   if (g_cmd_args.es6_module_bytecode_file) {
     g_module_bytecode = load_module_bytecode(
         g_cmd_args.es6_module_bytecode_file, &g_module_bytecode_size);
-    if (g_module_bytecode == NULL) {
+    if (g_module_bytecode == NULL)
       return EXIT_FAILURE;
-    }
   }
   if (g_cmd_args.source_map_file) {
     g_source_map = mmap_file(g_cmd_args.source_map_file, &g_source_map_size);
     if (!g_source_map) {
-      jsockd_logf(LOG_ERROR, "Error loading source map file %s: %s\n",
-                  strerror(errno));
-      jsockd_log(LOG_INFO, "Continuing without source map\n");
-      // TODO resource cleanup
-      return EXIT_FAILURE;
+      if (g_module_bytecode && g_module_bytecode_size != 0)
+        munmap_or_warn((void *)g_module_bytecode,
+                       g_module_bytecode_size + ED25519_SIGNATURE_SIZE);
+      jsockd_logf(LOG_ERROR | LOG_INTERACTIVE,
+                  "Error loading source map file %s: %s\n", strerror(errno));
+      jsockd_log(LOG_INFO | LOG_INTERACTIVE, "Continuing without source map\n");
     }
   }
 
@@ -1082,15 +1084,22 @@ static int eval(void) {
       JS_Eval(g_thread_states[0].ctx, g_cmd_args.eval_input,
               strlen(g_cmd_args.eval_input), "<cmdline>", JS_EVAL_TYPE_GLOBAL);
 
+  int exit_status = EXIT_SUCCESS;
+
   if (JS_IsException(result)) {
-    // TODO cleanup
     dump_error(ts->ctx);
-    return EXIT_FAILURE;
+    exit_status = EXIT_FAILURE;
   }
 
   JS_PrintValue(ts->ctx, print_value_to_stdout, NULL, result, NULL);
+  destroy_thread_state(&g_thread_states[0]);
+  if (g_module_bytecode && g_module_bytecode_size != 0)
+    munmap_or_warn((void *)g_module_bytecode,
+                   g_module_bytecode_size + ED25519_SIGNATURE_SIZE);
+  if (g_source_map_size != 0 && g_source_map)
+    munmap_or_warn((void *)g_source_map, g_source_map_size);
 
-  return EXIT_SUCCESS;
+  return exit_status;
 }
 
 int main(int argc, char **argv) {
@@ -1130,9 +1139,8 @@ int main(int argc, char **argv) {
   if (g_cmd_args.es6_module_bytecode_file) {
     g_module_bytecode = load_module_bytecode(
         g_cmd_args.es6_module_bytecode_file, &g_module_bytecode_size);
-    if (g_module_bytecode == NULL) {
+    if (g_module_bytecode == NULL)
       return EXIT_FAILURE;
-    }
   }
 
   if (g_cmd_args.source_map_file) {
