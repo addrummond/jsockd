@@ -1079,12 +1079,22 @@ static int eval(void) {
   memset(g_thread_states, 0, sizeof(ThreadState));
   ThreadState *ts = &g_thread_states[0];
   init_thread_state(ts, NULL, 0);
+  int exit_status = EXIT_SUCCESS;
+
+  const char *eval_input = g_cmd_args.eval_input;
+  if (eval_input == EVAL_INPUT_STDIN_SENTINEL) {
+    eval_input = read_all_stdin();
+    if (!eval_input) {
+      jsockd_logf(LOG_ERROR | LOG_INTERACTIVE,
+                  "Error reading stdin for eval input: %s\n", strerror(errno));
+      exit_status = EXIT_FAILURE;
+      goto cleanup;
+    }
+  }
 
   JSValue result =
-      JS_Eval(g_thread_states[0].ctx, g_cmd_args.eval_input,
-              strlen(g_cmd_args.eval_input), "<cmdline>", JS_EVAL_TYPE_GLOBAL);
-
-  int exit_status = EXIT_SUCCESS;
+      JS_Eval(g_thread_states[0].ctx, eval_input, strlen(g_cmd_args.eval_input),
+              "<cmdline>", JS_EVAL_TYPE_GLOBAL);
 
   if (JS_IsException(result)) {
     dump_error(ts->ctx);
@@ -1092,6 +1102,10 @@ static int eval(void) {
   }
 
   JS_PrintValue(ts->ctx, print_value_to_stdout, NULL, result, NULL);
+
+cleanup:
+  if (eval_input && eval_input != g_cmd_args.eval_input)
+    free((void *)eval_input);
   destroy_thread_state(&g_thread_states[0]);
   if (g_module_bytecode && g_module_bytecode_size != 0)
     munmap_or_warn((void *)g_module_bytecode,

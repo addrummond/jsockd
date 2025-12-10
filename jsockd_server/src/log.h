@@ -7,7 +7,13 @@
 
 #define ISO8601_MAX_LEN 29
 
-typedef enum { LOG_DEBUG, LOG_INFO, LOG_WARN, LOG_ERROR, LOG_INTERACTIVE = 0xF000000 } LogLevel;
+typedef enum {
+  LOG_DEBUG,
+  LOG_INFO,
+  LOG_WARN,
+  LOG_ERROR,
+  LOG_INTERACTIVE = 0xF000000
+} LogLevel;
 
 void lock_log_mutex(void);
 void unlock_log_mutex(void);

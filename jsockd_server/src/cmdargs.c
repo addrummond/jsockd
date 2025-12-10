@@ -6,6 +6,8 @@
 #include <stdbool.h>
 #include <string.h>
 
+const char EVAL_INPUT_STDIN_SENTINEL[1] = {'\0'};
+
 static int n_flags_set(const CmdArgs *cmdargs) {
   return (cmdargs->es6_module_bytecode_file != NULL) +
          (cmdargs->socket_path[0] != NULL) +
@@ -177,13 +179,17 @@ static int parse_cmd_args_helper(int argc, char **argv,
       }
       ++i;
       if (i >= argc) {
-        errlog(
-            "Error: -e requires an argument (JavaScript code to evaluate)\n");
+        errlog("Error: -e requires an argument (JavaScript code to evaluate, "
+               "or ')\n");
         fprintf(stderr, "HERE!3\n");
         return -1;
       }
       cmdargs->eval = true;
-      cmdargs->eval_input = argv[i];
+      const char *arg = argv[i];
+      if (0 == strcmp(arg, "-"))
+        cmdargs->eval_input = EVAL_INPUT_STDIN_SENTINEL;
+      else
+        cmdargs->eval_input = argv[i];
     } else if (argv[i][0] == '-') {
       errlog("Error: unrecognized option: %s\n", argv[i]);
       return -1;
