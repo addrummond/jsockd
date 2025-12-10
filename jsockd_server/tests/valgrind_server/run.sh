@@ -28,7 +28,7 @@ rm -f valgrind_private_signing_key*
 export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=$(cat valgrind_private_signing_key.pubkey)
 
 # Compile the example module to QuickJS bytecode.
-./build_Debug/jsockd -c tests/valgrind/bundle.mjs /tmp/bundle.qjsb -k valgrind_private_signing_key.privkey
+./build_Debug/jsockd -c tests/valgrind_server/bundle.mjs /tmp/bundle.qjsb -k valgrind_private_signing_key.privkey
 
 DASH_B_ARG=""
 if [ ! -z "$JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX" ]; then
@@ -52,10 +52,10 @@ server_pid=$!
     test_input_file="/tmp/jsockd_js_server_valgrind_test_input${JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX}"
 
     if [ -z "$JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX" ]; then
-      ./tests/valgrind/gen_test_cases.sh $N_ITERATIONS > $test_input_file
+      ./tests/valgrind_server/gen_test_cases.sh $N_ITERATIONS > $test_input_file
       echo "?quit" >> $test_input_file
     else
-      ./tests/valgrind/gen_test_cases.sh $N_ITERATIONS | awk 1 ORS=$(printf "\x${JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX}") > $test_input_file
+      ./tests/valgrind_server/gen_test_cases.sh $N_ITERATIONS | awk 1 ORS=$(printf "\x${JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX}") > $test_input_file
       printf "?quit\x$$JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX}" >> $test_input_file
     fi
 
