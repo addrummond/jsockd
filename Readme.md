@@ -148,6 +148,8 @@ jsockd [-m <module_bytecode_file>] [-sm <source_map_file>] -e '<javascript_expre
 jsockd [-m <module_bytecode_file>] [-sm <source_map_file>] -e -
 ```
 
+Exit code is non-zero iff there is a parse error or an exception occurs during evaluation.
+
 #### Run the server
 
 ```sh

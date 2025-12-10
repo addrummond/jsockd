@@ -1078,6 +1078,7 @@ static int eval(void) {
   g_thread_states = malloc(sizeof(ThreadState));
   memset(g_thread_states, 0, sizeof(ThreadState));
   ThreadState *ts = &g_thread_states[0];
+  JSContext *ctx = g_thread_states[0].ctx;
   init_thread_state(ts, NULL, 0);
   int exit_status = EXIT_SUCCESS;
 
@@ -1090,6 +1091,14 @@ static int eval(void) {
       exit_status = EXIT_FAILURE;
       goto cleanup;
     }
+  }
+
+  if (JS_SetPropertyStr(ctx, JS_GetGlobalObject(ctx), "M", todomodule) < 0) {
+    jsockd_logf(LOG_ERROR | LOG_INTERACTIVE,
+                "Error setting M property for eval\n");
+    dump_error(ctx);
+    exit_status = EXIT_FAILURE;
+    goto cleanup;
   }
 
   JSValue result =
@@ -1132,9 +1141,8 @@ int main(int argc, char **argv) {
     return EXIT_SUCCESS;
   }
 
-  if (g_cmd_args.eval) {
+  if (g_cmd_args.eval)
     return eval();
-  }
 
   int strip_flags = 0;
   if (g_cmd_args.compile_opts == COMPILE_OPTS_STRIP_DEBUG)
