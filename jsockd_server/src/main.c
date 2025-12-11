@@ -1116,7 +1116,7 @@ static int eval(void) {
 cleanup:
   if (eval_input && eval_input != g_cmd_args.eval_input)
     free((void *)eval_input);
-  destroy_thread_state(&g_thread_states[0]);
+  cleanup_thread_state(&g_thread_states[0]);
   if (g_module_bytecode && g_module_bytecode_size != 0)
     munmap_or_warn((void *)g_module_bytecode,
                    g_module_bytecode_size + ED25519_SIGNATURE_SIZE);
