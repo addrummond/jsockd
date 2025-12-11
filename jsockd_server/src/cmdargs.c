@@ -262,11 +262,10 @@ int parse_cmd_args(int argc, char **argv, void (*errlog)(const char *fmt, ...),
   if (parse_cmd_args_helper(argc, argv, errlog, cmdargs) < 0) {
     const char *cmdname = argc > 0 ? basename(argv[0]) : "jsockd";
     errlog("Usage: %s [-m <module_bytecode_file>] [-sm <source_map_file>] [-b "
-           "XX] [-t <max_command_runtime_us>] [-i <max_idle_time_us>] -s "
-           "<socket1_path> "
-           "[<socket2_path> ...]\n       %s -c <module_to_compile> "
-           "<output_file> [-k "
-           "<private_key_file>]\n       %s -k <key_file_prefix>\n",
+           "XX] [-t <max_command_runtime_us>] [-i <max_idle_time_us>] [-e <JS "
+           "expression>] -s <socket1_path> [<socket2_path> ...]\n       %s -c "
+           "<module_to_compile> <output_file> [-k <private_key_file>]\n       "
+           "%s -k <key_file_prefix>\n",
            cmdname, cmdname, cmdname);
     return -1;
   }
