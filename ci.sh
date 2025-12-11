@@ -212,6 +212,10 @@ case $1 in
         )
         ;;
 
+    run_jsockd_server_valgrind_eval_tests)
+        ./jsockd_server/tests/valgrind_eval/run.sh
+        ;;
+
     run_jsockd_server_e2e_tests)
         for test_script in jsockd_server/tests/e2e/*.sh; do
             if [ -f "$test_script" ]; then
