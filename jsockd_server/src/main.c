@@ -1078,8 +1078,8 @@ static int eval(void) {
   g_thread_states = malloc(sizeof(ThreadState));
   memset(g_thread_states, 0, sizeof(ThreadState));
   ThreadState *ts = &g_thread_states[0];
-  JSContext *ctx = g_thread_states[0].ctx;
   init_thread_state(ts, NULL, 0);
+  JSContext *ctx = g_thread_states[0].ctx;
   int exit_status = EXIT_SUCCESS;
 
   const char *eval_input = g_cmd_args.eval_input;
