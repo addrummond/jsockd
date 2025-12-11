@@ -1116,8 +1116,8 @@ static int eval(void) {
   JS_PrintValue(ts->ctx, print_value_to_stdout, NULL, result, NULL);
 
 cleanup:
-  JS_FreeValue(ts->ctx, glob);
   JS_FreeValue(ts->ctx, result);
+  JS_FreeValue(ts->ctx, glob);
   if (eval_input && eval_input != g_cmd_args.eval_input)
     free((void *)eval_input);
   cleanup_thread_state(&g_thread_states[0]);
