@@ -266,7 +266,7 @@ void cleanup_thread_state(ThreadState *ts) {
   js_free(ts->ctx, JS_GetRuntimeOpaque(ts->rt));
 
   JS_FreeContext(ts->ctx);
-  // JS_FreeRuntime(ts->rt);
+  JS_FreeRuntime(ts->rt);
   ts->ctx = NULL;
   ts->rt = NULL;
 }
