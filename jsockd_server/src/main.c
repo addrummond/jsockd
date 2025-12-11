@@ -1093,7 +1093,8 @@ static int eval(void) {
     }
   }
 
-  if (JS_SetPropertyStr(ctx, JS_GetGlobalObject(ctx), "M", todomodule) < 0) {
+  if (JS_SetPropertyStr(ctx, JS_GetGlobalObject(ctx), "M",
+                        ts->compiled_module) < 0) {
     jsockd_logf(LOG_ERROR | LOG_INTERACTIVE,
                 "Error setting M property for eval\n");
     dump_error(ctx);
