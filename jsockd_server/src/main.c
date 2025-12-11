@@ -1081,6 +1081,8 @@ static int eval(void) {
   init_thread_state(ts, NULL, 0);
   JSContext *ctx = g_thread_states[0].ctx;
   int exit_status = EXIT_SUCCESS;
+  JSValue glob = JS_UNDEFINED;
+  JSValue result = JS_UNDEFINED;
 
   const char *eval_input = g_cmd_args.eval_input;
   if (eval_input == EVAL_INPUT_STDIN_SENTINEL) {
@@ -1093,8 +1095,8 @@ static int eval(void) {
     }
   }
 
-  if (JS_SetPropertyStr(ctx, JS_GetGlobalObject(ctx), "M",
-                        ts->compiled_module) < 0) {
+  glob = JS_GetGlobalObject(ctx);
+  if (JS_SetPropertyStr(ctx, glob, "M", ts->compiled_module) < 0) {
     jsockd_logf(LOG_ERROR | LOG_INTERACTIVE,
                 "Error setting M property for eval\n");
     dump_error(ctx);
@@ -1102,7 +1104,7 @@ static int eval(void) {
     goto cleanup;
   }
 
-  JSValue result =
+  result =
       JS_Eval(g_thread_states[0].ctx, eval_input, strlen(g_cmd_args.eval_input),
               "<cmdline>", JS_EVAL_TYPE_GLOBAL);
 
@@ -1114,6 +1116,8 @@ static int eval(void) {
   JS_PrintValue(ts->ctx, print_value_to_stdout, NULL, result, NULL);
 
 cleanup:
+  JS_FreeValue(ts->ctx, glob);
+  JS_FreeValue(ts->ctx, result);
   if (eval_input && eval_input != g_cmd_args.eval_input)
     free((void *)eval_input);
   cleanup_thread_state(&g_thread_states[0]);
