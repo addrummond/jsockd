@@ -1101,10 +1101,8 @@ static int eval(void) {
                 "Error setting M property for eval\n");
     dump_error(ctx);
     exit_status = EXIT_FAILURE;
-    JS_FreeValue(ctx, ts->compiled_module);
     goto cleanup;
   }
-  JS_FreeValue(ctx, ts->compiled_module);
 
   result =
       JS_Eval(g_thread_states[0].ctx, eval_input, strlen(g_cmd_args.eval_input),
