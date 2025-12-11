@@ -9,16 +9,6 @@
 N_ITERATIONS=100
 
 rm -f /tmp/jsockd_test_sock1 /tmp/jsockd_test_sock2
-rm -f /tmp/jsockd_test_valgrind_exit_code
-
-cat <<END > mod1.mjs
-export const getAValue = () => ({
-  foo: "bar",
-});
-END
-cat <<END > mod2.mjs
-export const myIdentityFunction = (x) => x;
-END
 
 cd jsockd_server
 ./mk.sh Debug
