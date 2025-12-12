@@ -1062,6 +1062,9 @@ static int eval(void) {
   if (g_cmd_args.es6_module_bytecode_file) {
     g_module_bytecode = load_module_bytecode(
         g_cmd_args.es6_module_bytecode_file, &g_module_bytecode_size);
+    jsockd_logf(LOG_ERROR | LOG_INTERACTIVE,
+                "Error loading module bytecode file %s: %s\n",
+                g_cmd_args.es6_module_bytecode_file, strerror(errno));
     if (g_module_bytecode == NULL)
       return EXIT_FAILURE;
   }
