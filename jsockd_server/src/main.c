@@ -1094,6 +1094,7 @@ static int eval(void) {
       goto cleanup;
     }
   }
+  fprintf(stderr, "XXXXXX\n");
 
   glob = JS_GetGlobalObject(ctx);
   if (JS_SetPropertyStr(ctx, glob, "M", ts->compiled_module) < 0) {
