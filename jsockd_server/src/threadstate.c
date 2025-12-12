@@ -275,7 +275,7 @@ void cleanup_thread_state(ThreadState *ts) {
 
   JS_FreeContext(ts->ctx);
   fprintf(stderr, "CLEANUP START 11\n");
-  JS_FreeRuntime(ts->rt);
+  // JS_FreeRuntime(ts->rt);
   fprintf(stderr, "CLEANUP START 12\n");
   ts->ctx = NULL;
   ts->rt = NULL;
