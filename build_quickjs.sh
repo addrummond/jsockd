@@ -2,19 +2,21 @@
 
 set -e
 
-MAKE=make
 if [ -z "$MAKE" ]; then
-    if [ "GNU Make" = "$( ( gmake --version 2>/dev/null || true ) | head -n 1 | awk '{print $1,$2}' )" ]; then
-        MAKE=gmake
-    else
-        echo "Cannot find GNU Make. Please install it as 'make' or 'gmake', or set the MAKE environment variable to point to it."
-        exit 1
+    MAKE=make
+    if [ "GNU Make" != "$( ( make --version 2>/dev/null || true ) | head -n 1 | awk '{print $1,$2}' )" ]; then
+        if [ "GNU Make" = "$( ( gmake --version 2>/dev/null || true ) | head -n 1 | awk '{print $1,$2}' )" ]; then
+            MAKE=gmake
+        else
+            echo "Cannot find GNU Make. Please install it as 'make' or 'gmake', or set the MAKE environment variable to point to it."
+            exit 1
+        fi
     fi
 fi
 
 QUICKJS_COMMIT=c73a435f365e5250dd529cde00675528d7609edf
 
-FILC_VERSION=0.675
+FILC_VERSION=0.676
 FILC_CLANG="${FILC_CLANG:-$HOME/filc-${FILC_VERSION}-linux-x86_64/build/bin/clang}"
 
 rm -rf .scratch
