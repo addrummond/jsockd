@@ -20,7 +20,7 @@ HashCacheUid get_hash_cache_uid(const void *data, size_t len) {
   XXH128_hash_t v = XXH3_128bits(data, len);
   r = v.high64;
   r <<= 64;
-  return r = v.low64;
+  return r |= v.low64;
 #else
   return XXH3_64bits(data, len);
 #endif
