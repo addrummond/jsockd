@@ -255,28 +255,17 @@ void cleanup_thread_state(ThreadState *ts) {
 
   cleanup_command_state(ts);
 
-  fprintf(stderr, "CLEANUP START 5\n");
-
   js_std_free_handlers(ts->rt);
 
-  fprintf(stderr, "CLEANUP START 6\n");
-
   JS_FreeValue(ts->ctx, ts->backtrace_module);
-  fprintf(stderr, "CLEANUP START 7\n");
   JS_FreeValue(ts->ctx, ts->compiled_module);
-  fprintf(stderr, "CLEANUP START 8\n");
   JS_FreeValue(ts->ctx, ts->sourcemap_str);
-  fprintf(stderr, "CLEANUP START 9\n");
 
   // Valgrind seems to correctly have caught a memory leak in quickjs-libc.
   js_free(ts->ctx, JS_GetRuntimeOpaque(ts->rt));
 
-  fprintf(stderr, "CLEANUP START 10\n");
-
   JS_FreeContext(ts->ctx);
-  fprintf(stderr, "CLEANUP START 11\n");
-  // JS_FreeRuntime(ts->rt);
-  fprintf(stderr, "CLEANUP START 12\n");
+  JS_FreeRuntime(ts->rt);
   ts->ctx = NULL;
   ts->rt = NULL;
 }
