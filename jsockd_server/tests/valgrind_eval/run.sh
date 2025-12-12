@@ -16,7 +16,7 @@ export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=$(cat valgrind_private_signing_key.pubk
 
 JSOCKD="valgrind --error-exitcode=1 --leak-check=full --track-origins=yes -- ./build_Debug/jsockd"
 
-$JSOCKD -e '(() => { return { foo: "bar" }; })()'
+#$JSOCKD -e '(() => { return { foo: "bar" }; })()'
 $JSOCKD -m /tmp/bundle.qjsb -e '(() => { return { foo: "bar" }; })()'
 #$JSOCKD -m /tmp/bundle.qjsb -e 'M.getAValue()';
 #$JSOCKD -m /tmp/bundle.qjsb -e '(() => { return { foo: "bar" }; })()' -sm tests/valgrind_server/bundle.mjs.map

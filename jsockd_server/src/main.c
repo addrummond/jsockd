@@ -1104,6 +1104,7 @@ static int eval(void) {
     goto cleanup;
   }
 
+  fprintf(stderr, "EVAL START\n");
   result =
       JS_Eval(g_thread_states[0].ctx, eval_input, strlen(g_cmd_args.eval_input),
               "<cmdline>", JS_EVAL_TYPE_GLOBAL);
