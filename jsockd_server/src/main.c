@@ -1125,10 +1125,6 @@ static int eval(void) {
   JS_PrintValue(ts->ctx, print_value_to_stdout, NULL, result, NULL);
 
 cleanup:
-  // Don't fully understand why this is needed, but leaving it set to the
-  // compiled module seems to confuse QuickJS's cleanup logic.
-  JS_SetPropertyStr(ts->ctx, glob, "M", JS_UNDEFINED);
-
   JS_FreeValue(ts->ctx, result);
   JS_FreeValue(ts->ctx, glob);
   if (eval_input && eval_input != g_cmd_args.eval_input)
