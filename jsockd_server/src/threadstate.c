@@ -37,7 +37,7 @@ static int new_custom_context(JSRuntime *rt, JSContext **out_ctx) {
     return -1;
   }
 
-  if (add_intrinsic_jsockd(ctx, global_obj) < 0) {
+  if (1 != add_intrinsic_jsockd(ctx, global_obj)) {
     JS_FreeValue(ctx, global_obj);
     return -1;
   }
@@ -113,6 +113,7 @@ int init_thread_state(ThreadState *ts, SocketState *socket_state,
   ts->my_replacement = NULL;
   ts->dangling_bytecode = NULL;
   ts->cached_function_in_use = NULL;
+  ts->sourcemap_str = JS_UNDEFINED;
   atomic_init(&ts->replacement_thread_state, REPLACEMENT_THREAD_STATE_NONE);
 
   if (0 != clock_gettime(MONOTONIC_CLOCK, &ts->last_active_time)) {
@@ -159,8 +160,6 @@ int init_thread_state(ThreadState *ts, SocketState *socket_state,
       ts->ctx, g_backtrace_module_bytecode, g_backtrace_module_bytecode_size);
   assert(!JS_IsException(ts->backtrace_module));
 
-  ts->sourcemap_str = JS_UNDEFINED;
-
   // Load the precompiled module.
   if (g_module_bytecode)
     ts->compiled_module =
@@ -185,11 +184,10 @@ int init_thread_state(ThreadState *ts, SocketState *socket_state,
       JS_FreeCString(ts->ctx, bt_str);
     }
 
-    JS_FreeValue(ts->ctx, ts->compiled_module);
     free(error_msg_buf);
 
     // This return value will eventually lead to stuff getting
-    // cleaned up by cleanup_js_runtime
+    // cleaned up by cleanup_thread_state
     return -1;
   }
 
@@ -259,8 +257,8 @@ void cleanup_thread_state(ThreadState *ts) {
   js_std_free_handlers(ts->rt);
 
   JS_FreeValue(ts->ctx, ts->backtrace_module);
-  JS_FreeValue(ts->ctx, ts->compiled_module);
   JS_FreeValue(ts->ctx, ts->sourcemap_str);
+  JS_FreeValue(ts->ctx, ts->compiled_module);
 
   // Valgrind seems to correctly have caught a memory leak in quickjs-libc.
   js_free(ts->ctx, JS_GetRuntimeOpaque(ts->rt));

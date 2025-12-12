@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["mod1.mjs", "mod2.mjs"],
+  "sourcesContent": ["export const getAValue = () => ({\n  foo: \"bar\",\n});\n\n", "export const getAValue = () => ({\n  foo: \"bar\",\n});\nexport const myIdentityFunction = (x) => x;\n\n"],
+  "mappings": ";AAAO,IAAM,YAAY,OAAO;AAAA,EAC9B,KAAK;AACP;;;ACCO,IAAM,qBAAqB,CAAC,MAAM;",
+  "names": []
+}

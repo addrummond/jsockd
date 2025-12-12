@@ -2,6 +2,7 @@
 #include "config.h"
 #include "globals.h"
 #include "utils.h"
+#include <assert.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -23,6 +24,8 @@ void lock_log_mutex(void) { mutex_lock(&log_mutex); }
 void unlock_log_mutex(void) { mutex_unlock(&log_mutex); }
 
 void print_log_prefix(LogLevel log_level, FILE *f, bool last_line) {
+  if (g_interactive_logging_mode)
+    return;
   struct timespec ts;
   char timebuf[ISO8601_MAX_LEN + 1];
 
@@ -46,6 +49,10 @@ void print_log_prefix(LogLevel log_level, FILE *f, bool last_line) {
   case LOG_ERROR:
     ll = "ERROR";
     break;
+  case LOG_INTERACTIVE:
+    // High bytes should have been cleared before this function is called.
+    assert(0);
+    break;
   }
   fprintf(stderr, "%s jsockd %s [%s] ", last_line ? "$" : "*", timebuf, ll);
 }
@@ -64,9 +71,13 @@ void jsockd_logf(LogLevel log_level, const char *fmt, ...) {
   // a bug?
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wconstant-logical-operand"
-  if (log_level == LOG_DEBUG && !CMAKE_BUILD_TYPE_IS_DEBUG)
+  if ((log_level & 0xFF) == LOG_DEBUG && !CMAKE_BUILD_TYPE_IS_DEBUG)
+    return;
+  if (g_interactive_logging_mode && 0 == (log_level & LOG_INTERACTIVE))
     return;
 #pragma clang diagnostic pop
+
+  log_level &= ~LOG_INTERACTIVE;
 
   va_list args, args2;
 

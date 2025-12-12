@@ -102,6 +102,8 @@ static void init_socket_state(SocketState *ss,
 }
 
 static void cleanup_socket_state(SocketState *socket_state) {
+  if (!socket_state)
+    return;
   // We're about to exit, so we don't need to check for errors.
   if (socket_state->streamfd != -1)
     close(socket_state->streamfd);
@@ -931,7 +933,8 @@ static const uint8_t *load_module_bytecode(const char *filename,
   if (!module_bytecode)
     return NULL;
   if (*out_size < VERSION_STRING_SIZE + ED25519_SIGNATURE_SIZE + 1) {
-    jsockd_logf(LOG_ERROR, "Module bytecode file is only %zu bytes. Too small!",
+    jsockd_logf(LOG_ERROR | LOG_INTERACTIVE,
+                "Module bytecode file is only %zu bytes. Too small!",
                 *out_size);
     munmap_or_warn((void *)module_bytecode, *out_size);
     return NULL;
@@ -961,7 +964,7 @@ static const uint8_t *load_module_bytecode(const char *filename,
         version_string[i] = '?';
     }
     jsockd_logf(
-        LOG_ERROR,
+        LOG_ERROR | LOG_INTERACTIVE,
         "Module bytecode version string '%s' does not match expected '%s'\n",
         version_string, STRINGIFY(VERSION));
     munmap_or_warn((void *)module_bytecode, *out_size);
@@ -978,7 +981,7 @@ static const uint8_t *load_module_bytecode(const char *filename,
   size_t decoded_size = hex_decode(
       pubkey_bytes, sizeof(pubkey_bytes) / sizeof(pubkey_bytes[0]), pubkey);
   if (decoded_size != ED25519_PUBLIC_KEY_SIZE) {
-    jsockd_logf(LOG_ERROR,
+    jsockd_logf(LOG_ERROR | LOG_INTERACTIVE,
                 "Error decoding public key hex from environment variable "
                 "JSOCKD_BYTECODE_MODULE_PUBLIC_KEY; decoded size=%zu\n",
                 decoded_size);
@@ -986,7 +989,7 @@ static const uint8_t *load_module_bytecode(const char *filename,
     return NULL;
   }
   if (!verify_bytecode(module_bytecode, *out_size, pubkey_bytes)) {
-    jsockd_logf(LOG_ERROR,
+    jsockd_logf(LOG_ERROR | LOG_INTERACTIVE,
                 "Error verifying bytecode module %s with public key %s\n",
                 filename, pubkey);
     munmap_or_warn((void *)module_bytecode, *out_size);
@@ -1050,6 +1053,92 @@ static void set_log_prefix(void) {
   }
 }
 
+static int eval(void) {
+  g_interactive_logging_mode = true;
+
+  if (g_cmd_args.es6_module_bytecode_file) {
+    g_module_bytecode = load_module_bytecode(
+        g_cmd_args.es6_module_bytecode_file, &g_module_bytecode_size);
+    // load_module_bytecode will log an error
+    if (g_module_bytecode == NULL)
+      return EXIT_FAILURE;
+  }
+  if (g_cmd_args.source_map_file) {
+    g_source_map = mmap_file(g_cmd_args.source_map_file, &g_source_map_size);
+    if (!g_source_map) {
+      if (g_module_bytecode && g_module_bytecode_size != 0)
+        munmap_or_warn((void *)g_module_bytecode,
+                       g_module_bytecode_size + ED25519_SIGNATURE_SIZE);
+      jsockd_logf(LOG_ERROR | LOG_INTERACTIVE,
+                  "Error loading source map file %s: %s\n", strerror(errno));
+      jsockd_log(LOG_INFO | LOG_INTERACTIVE, "Continuing without source map\n");
+    }
+  }
+
+  int exit_status = EXIT_SUCCESS;
+  JSValue glob = JS_UNDEFINED;
+  JSValue result = JS_UNDEFINED;
+  const char *eval_input = g_cmd_args.eval_input;
+
+  g_thread_states = malloc(sizeof(ThreadState));
+  memset(g_thread_states, 0, sizeof(ThreadState));
+  ThreadState *ts = &g_thread_states[0];
+  if (0 != init_thread_state(ts, NULL, 0)) {
+    jsockd_log(LOG_ERROR | LOG_INTERACTIVE,
+               "Internal error initializing QuickJS runtime");
+    exit_status = EXIT_FAILURE;
+    goto cleanup;
+  }
+  // Haven't really figured out exactly why we need this, to be honest ¯\_(ツ)_/
+  JS_DupValue(ts->ctx, ts->compiled_module);
+
+  size_t eval_input_size = 0;
+  if (eval_input == EVAL_INPUT_STDIN_SENTINEL) {
+    eval_input = read_all_stdin(&eval_input_size);
+    if (!eval_input) {
+      jsockd_logf(LOG_ERROR | LOG_INTERACTIVE,
+                  "Error reading stdin for eval input: %s\n", strerror(errno));
+      exit_status = EXIT_FAILURE;
+      goto cleanup;
+    }
+  } else {
+    eval_input_size = strlen(eval_input);
+  }
+
+  glob = JS_GetGlobalObject(ts->ctx);
+  if (1 != JS_SetPropertyStr(ts->ctx, glob, "M", ts->compiled_module)) {
+    jsockd_logf(LOG_ERROR | LOG_INTERACTIVE,
+                "Error setting M property for eval\n");
+    dump_error(ts->ctx);
+    exit_status = EXIT_FAILURE;
+    goto cleanup;
+  }
+
+  result = JS_Eval(g_thread_states[0].ctx, eval_input, eval_input_size,
+                   "<cmdline>", JS_EVAL_TYPE_GLOBAL);
+
+  if (JS_IsException(result)) {
+    dump_error(ts->ctx);
+    exit_status = EXIT_FAILURE;
+  }
+
+  JS_PrintValue(ts->ctx, print_value_to_stdout, NULL, result, NULL);
+
+cleanup:
+  JS_FreeValue(ts->ctx, result);
+  JS_FreeValue(ts->ctx, glob);
+  if (eval_input && eval_input != g_cmd_args.eval_input)
+    free((void *)eval_input);
+  cleanup_thread_state(&g_thread_states[0]);
+  if (g_module_bytecode && g_module_bytecode_size != 0)
+    munmap_or_warn((void *)g_module_bytecode,
+                   g_module_bytecode_size + ED25519_SIGNATURE_SIZE);
+  if (g_source_map_size != 0 && g_source_map)
+    munmap_or_warn((void *)g_source_map, g_source_map_size);
+
+  return exit_status;
+}
+
 int main(int argc, char **argv) {
   struct sigaction sa = {.sa_handler = SIGINT_and_SIGTERM_handler};
   sigaction(SIGINT, &sa, NULL);
@@ -1065,6 +1154,9 @@ int main(int argc, char **argv) {
     printf("jsockd %s", STRINGIFY(VERSION));
     return EXIT_SUCCESS;
   }
+
+  if (g_cmd_args.eval)
+    return eval();
 
   int strip_flags = 0;
   if (g_cmd_args.compile_opts == COMPILE_OPTS_STRIP_DEBUG)
@@ -1083,9 +1175,8 @@ int main(int argc, char **argv) {
   if (g_cmd_args.es6_module_bytecode_file) {
     g_module_bytecode = load_module_bytecode(
         g_cmd_args.es6_module_bytecode_file, &g_module_bytecode_size);
-    if (g_module_bytecode == NULL) {
+    if (g_module_bytecode == NULL)
       return EXIT_FAILURE;
-    }
   }
 
   if (g_cmd_args.source_map_file) {
@@ -1104,6 +1195,7 @@ int main(int argc, char **argv) {
                         memory_order_relaxed);
 
   g_thread_states = calloc(n_threads, sizeof(ThreadState));
+  memset(g_thread_states, 0, sizeof(ThreadState) * n_threads);
   g_threads = calloc(n_threads, sizeof(pthread_t));
   g_socket_states = calloc(n_threads, sizeof(SocketState));
 

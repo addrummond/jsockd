@@ -30,7 +30,11 @@ typedef struct {
   const char *mod_to_compile;
   const char *mod_output_file;
   CompileOpts compile_opts;
+  bool eval;
+  const char *eval_input;
 } CmdArgs;
+
+extern const char EVAL_INPUT_STDIN_SENTINEL[];
 
 int parse_cmd_args(int argc, char **argv, void (*errlog)(const char *fmt, ...),
                    CmdArgs *cmdargs);

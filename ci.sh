@@ -201,15 +201,19 @@ case $1 in
         ;;
 
     run_jsockd_server_valgrind_tests)
-        ./jsockd_server/tests/valgrind/run.sh
+        ./jsockd_server/tests/valgrind_server/run.sh
         ;;
 
     run_jsockd_server_valgrind_tests_with_non_newline_sep)
         (
             set -e
             export JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX="7C" # '|'
-            ./jsockd_server/tests/valgrind/run.sh
+            ./jsockd_server/tests/valgrind_server/run.sh
         )
+        ;;
+
+    run_jsockd_server_valgrind_eval_tests)
+        ./jsockd_server/tests/valgrind_eval/run.sh
         ;;
 
     run_jsockd_server_e2e_tests)

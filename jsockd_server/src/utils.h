@@ -24,6 +24,8 @@ int string_ends_with(const char *str, const char *suffix);
 int make_temp_dir(char out[], size_t out_size, const char *template);
 void timespec_to_iso8601(const struct timespec *ts, char *buf, size_t buflen);
 void dump_error(JSContext *ctx);
+void print_value_to_stdout(void *opaque, const char *buf, size_t size);
+char *read_all_stdin(size_t *out_size);
 
 #define mutex_lock(m) mutex_lock_((m), __FILE__, __LINE__)
 #define mutex_unlock(m) mutex_unlock_((m), __FILE__, __LINE__)

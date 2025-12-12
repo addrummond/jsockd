@@ -34,13 +34,13 @@ HashCacheBucket *add_to_hash_cache_(HashCacheBucket *buckets,
   if (uid == 0)
     return NULL;
 
-  char *buckets_ = (char *)buckets;
   size_t bucket_i = get_cache_bucket(uid, n_bits);
   size_t n_buckets = HASH_CACHE_BUCKET_ARRAY_SIZE_FROM_HASH_BITS(n_bits);
   const size_t bucket_look_forward = get_bucket_look_forward(n_bits);
   for (size_t i = bucket_i; i < bucket_i + bucket_look_forward; ++i) {
     size_t j = i % n_buckets; // wrap around if we reach the end
-    HashCacheBucket *bucket = (HashCacheBucket *)(buckets_ + j * bucket_size);
+    HashCacheBucket *bucket =
+        (HashCacheBucket *)((char *)buckets + j * bucket_size);
     int expected0int = 0;
 
     // Make odd
@@ -80,13 +80,13 @@ HashCacheBucket *get_hash_cache_entry_(HashCacheBucket *buckets,
   if (uid == 0)
     return NULL;
 
-  char *buckets_ = (char *)buckets;
   size_t bucket_i = get_cache_bucket(uid, n_bits);
   size_t n_buckets = HASH_CACHE_BUCKET_ARRAY_SIZE_FROM_HASH_BITS(n_bits);
   const size_t bucket_look_forward = get_bucket_look_forward(n_bits);
   for (size_t i = bucket_i; i < bucket_i + bucket_look_forward; ++i) {
     size_t j = i % n_buckets; // wrap around if we reach the end
-    HashCacheBucket *bucket = (HashCacheBucket *)(buckets_ + j * bucket_size);
+    HashCacheBucket *bucket =
+        (HashCacheBucket *)((char *)buckets + j * bucket_size);
 
     // In the unlikely event that we can't acquire the lock after a fair number
     // of tries, we just report that the item is not in the cache.

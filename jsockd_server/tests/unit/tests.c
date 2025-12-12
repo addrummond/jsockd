@@ -926,6 +926,55 @@ static void TEST_cmdargs_dash_ss_and_dash_sd_are_mutually_exclusive(void) {
   TEST_ASSERT(strstr(cmdargs_errlog_buf, "-ss "));
 }
 
+static void TEST_cmdargs_dash_e_stdin(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"jsockd", "-e", "-"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r == 0);
+  TEST_ASSERT(cmdargs.eval);
+  TEST_ASSERT(cmdargs.eval_input == EVAL_INPUT_STDIN_SENTINEL);
+}
+
+static void TEST_cmdargs_dash_e_string(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"jsockd", "-e", "console.log('hi')"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r == 0);
+  TEST_ASSERT(cmdargs.eval);
+  TEST_ASSERT(0 == strcmp(cmdargs.eval_input, "console.log('hi')"));
+}
+
+static void TEST_cmdargs_dash_e_error_on_missing_arg(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"jsockd", "-e"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r != 0);
+  TEST_ASSERT(strstr(cmdargs_errlog_buf, "-e requires an argument"));
+}
+
+static void TEST_cmdargs_dash_e_error_on_double_flag(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"jsockd", "-e", "1+1", "-e", "2+2"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r != 0);
+  TEST_ASSERT(strstr(cmdargs_errlog_buf, "-e "));
+  TEST_ASSERT(strstr(cmdargs_errlog_buf, "at most once"));
+}
+
+static void TEST_cmdargs_dash_e_error_if_dash_sm_without_dash_m(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"jsockd", "-e", "-", "-sm", "map.js.map"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r != 0);
+  TEST_ASSERT(
+      strstr(cmdargs_errlog_buf, "-e (eval) can only be used with -m and -sm"));
+}
+
 /******************************************************************************
     Tests for modcompiler
 ******************************************************************************/
@@ -1163,4 +1212,9 @@ TEST_LIST = {T(wait_group_inc_and_wait_basic_use_case),
              T(compile_module_file),
              T(compile_module_file_without_key),
              T(output_key_file),
+             T(cmdargs_dash_e_stdin),
+             T(cmdargs_dash_e_string),
+             T(cmdargs_dash_e_error_on_missing_arg),
+             T(cmdargs_dash_e_error_on_double_flag),
+             T(cmdargs_dash_e_error_if_dash_sm_without_dash_m),
              {NULL, NULL}};

@@ -200,3 +200,50 @@ PollFdResult ppoll_fd(int fd, const struct timespec *timeout) {
   return READY;
 #endif
 }
+
+void print_value_to_stdout(void *opaque, const char *buf, size_t size) {
+  (void)opaque;
+  fwrite(buf, 1, size, stdout);
+}
+
+char *read_all_stdin(size_t *out_size) {
+  const size_t CHUNK = 8192;
+  char *buf = NULL;
+  size_t size = 0;
+  size_t cap = 0;
+
+  for (;;) {
+    if (size + CHUNK > cap) {
+      size_t new_cap = cap ? cap * 2 : CHUNK;
+      if (new_cap < size + CHUNK)
+        new_cap = size + CHUNK;
+      char *new_buf = realloc(buf, new_cap);
+      if (!new_buf) {
+        free(buf);
+        return NULL;
+      }
+      buf = new_buf;
+      cap = new_cap;
+    }
+
+    size_t n = fread(buf + size, 1, CHUNK, stdin);
+    size += n;
+
+    if (n < CHUNK) {
+      if (feof(stdin))
+        break;
+      if (ferror(stdin)) {
+        free(buf);
+        return NULL;
+      }
+    }
+  }
+
+  // Shrink to fit and NUL-terminate for text use
+  char *final = realloc(buf, size + 1);
+  if (!final)
+    return NULL;
+  final[size] = '\0';
+  *out_size = size;
+  return final;
+}

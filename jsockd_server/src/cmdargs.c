@@ -6,6 +6,8 @@
 #include <stdbool.h>
 #include <string.h>
 
+const char EVAL_INPUT_STDIN_SENTINEL[1] = {'\0'};
+
 static int n_flags_set(const CmdArgs *cmdargs) {
   return (cmdargs->es6_module_bytecode_file != NULL) +
          (cmdargs->socket_path[0] != NULL) +
@@ -170,6 +172,24 @@ static int parse_cmd_args_helper(int argc, char **argv,
       cmdargs->compile_opts = (0 == strcmp(argv[i], "-ss"))
                                   ? COMPILE_OPTS_STRIP_SOURCE
                                   : COMPILE_OPTS_STRIP_DEBUG;
+    } else if (0 == strcmp(argv[i], "-e")) {
+      if (cmdargs->eval) {
+        errlog("Error: -e can be specified at most once\n");
+        return -1;
+      }
+      ++i;
+      if (i >= argc) {
+        errlog("Error: -e requires an argument (JavaScript code to evaluate, "
+               "or ')\n");
+        fprintf(stderr, "HERE!3\n");
+        return -1;
+      }
+      cmdargs->eval = true;
+      const char *arg = argv[i];
+      if (0 == strcmp(arg, "-"))
+        cmdargs->eval_input = EVAL_INPUT_STDIN_SENTINEL;
+      else
+        cmdargs->eval_input = argv[i];
     } else if (argv[i][0] == '-') {
       errlog("Error: unrecognized option: %s\n", argv[i]);
       return -1;
@@ -183,6 +203,16 @@ static int parse_cmd_args_helper(int argc, char **argv,
   if (cmdargs->version && n_flags > 1) {
     errlog("Error: -v (version) cannot be used with other flags.\n");
     return -1;
+  }
+  if (cmdargs->eval) {
+    int expected_count = 1 + (cmdargs->source_map_file != NULL) +
+                         (cmdargs->es6_module_bytecode_file != NULL);
+    if (n_flags != expected_count) {
+      if (cmdargs->source_map_file && !cmdargs->es6_module_bytecode_file) {
+        errlog("Error: -e (eval) can only be used with -m and -sm options\n");
+        return -1;
+      }
+    }
   }
 
   if (cmdargs->key_file_prefix && !(n_flags == 1 || cmdargs->mod_to_compile)) {
@@ -206,7 +236,8 @@ static int parse_cmd_args_helper(int argc, char **argv,
     }
   }
 
-  if (cmdargs->version || cmdargs->key_file_prefix || cmdargs->mod_to_compile)
+  if (cmdargs->version || cmdargs->key_file_prefix || cmdargs->mod_to_compile ||
+      cmdargs->eval)
     return 0;
 
   if (cmdargs->n_sockets == 0) {
@@ -231,11 +262,10 @@ int parse_cmd_args(int argc, char **argv, void (*errlog)(const char *fmt, ...),
   if (parse_cmd_args_helper(argc, argv, errlog, cmdargs) < 0) {
     const char *cmdname = argc > 0 ? basename(argv[0]) : "jsockd";
     errlog("Usage: %s [-m <module_bytecode_file>] [-sm <source_map_file>] [-b "
-           "XX] [-t <max_command_runtime_us>] [-i <max_idle_time_us>] -s "
-           "<socket1_path> "
-           "[<socket2_path> ...]\n       %s -c <module_to_compile> "
-           "<output_file> [-k "
-           "<private_key_file>]\n       %s -k <key_file_prefix>\n",
+           "XX] [-t <max_command_runtime_us>] [-i <max_idle_time_us>] [-e <JS "
+           "expression>] -s <socket1_path> [<socket2_path> ...]\n       %s -c "
+           "<module_to_compile> <output_file> [-k <private_key_file>]\n       "
+           "%s -k <key_file_prefix>\n",
            cmdname, cmdname, cmdname);
     return -1;
   }

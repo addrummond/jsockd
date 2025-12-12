@@ -70,6 +70,9 @@ jobs:
       - name: Run jsockd_server Valgrind tests with non-newline sep
         run: ./ci.sh run_jsockd_server_valgrind_tests_with_non_newline_sep
 
+      - name: Run jsockd_server Valgrind eval tests
+        run: ./ci.sh run_jsockd_server_valgrind_eval_tests
+
       - name: Run jsockd_server E2E tests
         run: ./ci.sh run_jsockd_server_e2e_tests
 

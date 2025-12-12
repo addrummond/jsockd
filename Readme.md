@@ -137,6 +137,19 @@ Compiles the specified ES6 module file to a QuickJS bytecode file. If the `-k` o
 
 The `-ss` and `-sd` options are mutually exclusive. Setting `-ss` strips all source code from the bytecode file, while `-sd` strips all debug info including source code.
 
+#### Evaluate a Javascript expression
+
+The `-e` option evaluates a JavaScript expression and prints the JSON-encoded result to standard output. If the argument ot `-e` is `-`, the expression is read from standard input.
+
+If the `-m` option is given, then the global variable `M` is initialized to the specified module before evaluating the expression.
+
+```sh
+jsockd [-m <module_bytecode_file>] [-sm <source_map_file>] -e <javascript_expression>
+jsockd [-m <module_bytecode_file>] [-sm <source_map_file>] -e -
+```
+
+Exit code is non-zero iff there is a parse error or an exception occurs during evaluation.
+
 #### Run the server
 
 ```sh
