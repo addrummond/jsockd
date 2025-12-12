@@ -1058,8 +1058,6 @@ static void set_log_prefix(void) {
 static int eval(void) {
   g_interactive_logging_mode = true;
 
-  fprintf(stderr, "YYYYYY\n");
-
   if (g_cmd_args.es6_module_bytecode_file) {
     g_module_bytecode = load_module_bytecode(
         g_cmd_args.es6_module_bytecode_file, &g_module_bytecode_size);
@@ -1078,8 +1076,6 @@ static int eval(void) {
       jsockd_log(LOG_INFO | LOG_INTERACTIVE, "Continuing without source map\n");
     }
   }
-
-  fprintf(stderr, "ZZZZZZ\n");
 
   g_thread_states = malloc(sizeof(ThreadState));
   memset(g_thread_states, 0, sizeof(ThreadState));
@@ -1100,7 +1096,6 @@ static int eval(void) {
       goto cleanup;
     }
   }
-  fprintf(stderr, "XXXXXX\n");
 
   glob = JS_GetGlobalObject(ctx);
   if (JS_SetPropertyStr(ctx, glob, "M", ts->compiled_module) < 0) {
@@ -1111,7 +1106,6 @@ static int eval(void) {
     goto cleanup;
   }
 
-  fprintf(stderr, "EVAL START\n");
   result =
       JS_Eval(g_thread_states[0].ctx, eval_input, strlen(g_cmd_args.eval_input),
               "<cmdline>", JS_EVAL_TYPE_GLOBAL);
