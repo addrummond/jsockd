@@ -144,7 +144,7 @@ The `-e` option evaluates a JavaScript expression and prints the JSON-encoded re
 If the `-m` option is given, then the global variable `M` is initialized to the specified module before evaluating the expression.
 
 ```sh
-jsockd [-m <module_bytecode_file>] [-sm <source_map_file>] -e '<javascript_expression>'
+jsockd [-m <module_bytecode_file>] [-sm <source_map_file>] -e <javascript_expression>
 jsockd [-m <module_bytecode_file>] [-sm <source_map_file>] -e -
 ```
 
