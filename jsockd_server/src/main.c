@@ -1058,13 +1058,13 @@ static void set_log_prefix(void) {
 static int eval(void) {
   g_interactive_logging_mode = true;
 
-  /*if (g_cmd_args.es6_module_bytecode_file) {
+  if (g_cmd_args.es6_module_bytecode_file) {
     g_module_bytecode = load_module_bytecode(
         g_cmd_args.es6_module_bytecode_file, &g_module_bytecode_size);
     // load_module_bytecode will log an error
     if (g_module_bytecode == NULL)
       return EXIT_FAILURE;
-  }*/
+  }
   if (g_cmd_args.source_map_file) {
     g_source_map = mmap_file(g_cmd_args.source_map_file, &g_source_map_size);
     if (!g_source_map) {
@@ -1097,7 +1097,7 @@ static int eval(void) {
     }
   }
 
-  glob = JS_GetGlobalObject(ctx);
+  // glob = JS_GetGlobalObject(ctx);
   /*if (JS_SetPropertyStr(ctx, glob, "M", ts->compiled_module) < 0) {
     jsockd_logf(LOG_ERROR | LOG_INTERACTIVE,
                 "Error setting M property for eval\n");
