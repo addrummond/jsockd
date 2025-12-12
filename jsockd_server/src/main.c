@@ -1115,12 +1115,17 @@ static int eval(void) {
 
   JS_PrintValue(ts->ctx, print_value_to_stdout, NULL, result, NULL);
 
+  fprintf(stderr, "CLEANUP START\n");
 cleanup:
   JS_FreeValue(ts->ctx, result);
+  fprintf(stderr, "CLEANUP START 1\n");
   JS_FreeValue(ts->ctx, glob);
+  fprintf(stderr, "CLEANUP START 2\n");
   if (eval_input && eval_input != g_cmd_args.eval_input)
     free((void *)eval_input);
+  fprintf(stderr, "CLEANUP START 3\n");
   cleanup_thread_state(&g_thread_states[0]);
+  fprintf(stderr, "CLEANUP START 4\n");
   if (g_module_bytecode && g_module_bytecode_size != 0)
     munmap_or_warn((void *)g_module_bytecode,
                    g_module_bytecode_size + ED25519_SIGNATURE_SIZE);
