@@ -1120,7 +1120,7 @@ static int eval(void) {
 
 cleanup:
   JS_FreeValue(ts->ctx, result);
-  JS_FreeValue(ts->ctx, glob);
+  // JS_FreeValue(ts->ctx, glob);
   if (eval_input && eval_input != g_cmd_args.eval_input)
     free((void *)eval_input);
   cleanup_thread_state(&g_thread_states[0]);
