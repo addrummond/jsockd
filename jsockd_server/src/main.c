@@ -1057,6 +1057,8 @@ static void set_log_prefix(void) {
 static int eval(void) {
   g_interactive_logging_mode = true;
 
+  fprintf(stderr, "YYYYYY\n");
+
   if (g_cmd_args.es6_module_bytecode_file) {
     g_module_bytecode = load_module_bytecode(
         g_cmd_args.es6_module_bytecode_file, &g_module_bytecode_size);
