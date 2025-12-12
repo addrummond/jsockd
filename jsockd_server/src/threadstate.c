@@ -161,11 +161,13 @@ int init_thread_state(ThreadState *ts, SocketState *socket_state,
   assert(!JS_IsException(ts->backtrace_module));
 
   // Load the precompiled module.
-  if (g_module_bytecode)
+  if (g_module_bytecode) {
     ts->compiled_module =
         load_binary_module(ts->ctx, g_module_bytecode, g_module_bytecode_size);
-  else
+    JS_DupValue(ts->ctx, ts->compiled_module);
+  } else {
     ts->compiled_module = JS_UNDEFINED;
+  }
   if (JS_IsException(ts->compiled_module)) {
     jsockd_log(LOG_ERROR, "Failed to load precompiled module\n");
     char *error_msg_buf = calloc(ERROR_MSG_MAX_BYTES, sizeof(char));
@@ -205,8 +207,8 @@ int init_thread_state(ThreadState *ts, SocketState *socket_state,
 
 static JSRuntime *ts_rt_mapping[MAX_THREADS];
 
-// We assume the functions below are called only from the thread associated with
-// each runtime, so no need for locking/atomics.
+// We assume the functions below are called only from the thread associated
+// with each runtime, so no need for locking/atomics.
 
 #define BOUNDS_ASSERTION                                                       \
   (ts->thread_index < g_n_threads && ts >= g_thread_states &&                  \
@@ -258,7 +260,7 @@ void cleanup_thread_state(ThreadState *ts) {
 
   JS_FreeValue(ts->ctx, ts->backtrace_module);
   JS_FreeValue(ts->ctx, ts->sourcemap_str);
-  // JS_FreeValue(ts->ctx, ts->compiled_module);
+  JS_FreeValue(ts->ctx, ts->compiled_module);
 
   // Valgrind seems to correctly have caught a memory leak in quickjs-libc.
   js_free(ts->ctx, JS_GetRuntimeOpaque(ts->rt));
