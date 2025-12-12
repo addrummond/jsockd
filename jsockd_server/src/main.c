@@ -1081,7 +1081,7 @@ static int eval(void) {
   memset(g_thread_states, 0, sizeof(ThreadState));
   ThreadState *ts = &g_thread_states[0];
   init_thread_state(ts, NULL, 0);
-  JSContext *ctx = g_thread_states[0].ctx;
+  // JSContext *ctx = g_thread_states[0].ctx;
   int exit_status = EXIT_SUCCESS;
   JSValue glob = JS_UNDEFINED;
   JSValue result = JS_UNDEFINED;
