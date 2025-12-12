@@ -1081,7 +1081,7 @@ static int eval(void) {
   memset(g_thread_states, 0, sizeof(ThreadState));
   ThreadState *ts = &g_thread_states[0];
   init_thread_state(ts, NULL, 0);
-  // JSContext *ctx = g_thread_states[0].ctx;
+  JSContext *ctx = g_thread_states[0].ctx;
   int exit_status = EXIT_SUCCESS;
   JSValue glob = JS_UNDEFINED;
   JSValue result = JS_UNDEFINED;
@@ -1097,14 +1097,14 @@ static int eval(void) {
     }
   }
 
-  // glob = JS_GetGlobalObject(ctx);
-  /*if (JS_SetPropertyStr(ctx, glob, "M", ts->compiled_module) < 0) {
+  glob = JS_GetGlobalObject(ctx);
+  if (JS_SetPropertyStr(ctx, glob, "M", ts->compiled_module) < 0) {
     jsockd_logf(LOG_ERROR | LOG_INTERACTIVE,
                 "Error setting M property for eval\n");
     dump_error(ctx);
     exit_status = EXIT_FAILURE;
     goto cleanup;
-  }*/
+  }
 
   result =
       JS_Eval(g_thread_states[0].ctx, eval_input, strlen(g_cmd_args.eval_input),
