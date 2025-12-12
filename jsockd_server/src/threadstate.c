@@ -113,6 +113,7 @@ int init_thread_state(ThreadState *ts, SocketState *socket_state,
   ts->my_replacement = NULL;
   ts->dangling_bytecode = NULL;
   ts->cached_function_in_use = NULL;
+  ts->sourcemap_str = JS_UNDEFINED;
   atomic_init(&ts->replacement_thread_state, REPLACEMENT_THREAD_STATE_NONE);
 
   if (0 != clock_gettime(MONOTONIC_CLOCK, &ts->last_active_time)) {
@@ -158,8 +159,6 @@ int init_thread_state(ThreadState *ts, SocketState *socket_state,
   ts->backtrace_module = load_binary_module(
       ts->ctx, g_backtrace_module_bytecode, g_backtrace_module_bytecode_size);
   assert(!JS_IsException(ts->backtrace_module));
-
-  ts->sourcemap_str = JS_UNDEFINED;
 
   // Load the precompiled module.
   if (g_module_bytecode)
@@ -262,12 +261,12 @@ void cleanup_thread_state(ThreadState *ts) {
 
   fprintf(stderr, "CLEANUP START 6\n");
 
-  /*JS_FreeValue(ts->ctx, ts->backtrace_module);
+  JS_FreeValue(ts->ctx, ts->backtrace_module);
   fprintf(stderr, "CLEANUP START 7\n");
   JS_FreeValue(ts->ctx, ts->compiled_module);
   fprintf(stderr, "CLEANUP START 8\n");
   JS_FreeValue(ts->ctx, ts->sourcemap_str);
-  fprintf(stderr, "CLEANUP START 9\n");*/
+  fprintf(stderr, "CLEANUP START 9\n");
 
   // Valgrind seems to correctly have caught a memory leak in quickjs-libc.
   js_free(ts->ctx, JS_GetRuntimeOpaque(ts->rt));
