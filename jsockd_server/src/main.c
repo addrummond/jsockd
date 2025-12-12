@@ -1097,13 +1097,13 @@ static int eval(void) {
   }
 
   glob = JS_GetGlobalObject(ts->ctx);
-  // if (JS_SetPropertyStr(ts->ctx, glob, "M", ts->compiled_module) < 0) {
-  //   jsockd_logf(LOG_ERROR | LOG_INTERACTIVE,
-  //               "Error setting M property for eval\n");
-  //   dump_error(ts->ctx);
-  //   exit_status = EXIT_FAILURE;
-  //   goto cleanup;
-  // }
+  if (1 != JS_SetPropertyStr(ts->ctx, glob, "M", ts->compiled_module)) {
+    jsockd_logf(LOG_ERROR | LOG_INTERACTIVE,
+                "Error setting M property for eval\n");
+    dump_error(ts->ctx);
+    exit_status = EXIT_FAILURE;
+    goto cleanup;
+  }
 
   result =
       JS_Eval(g_thread_states[0].ctx, eval_input, strlen(g_cmd_args.eval_input),
@@ -1117,6 +1117,10 @@ static int eval(void) {
   JS_PrintValue(ts->ctx, print_value_to_stdout, NULL, result, NULL);
 
 cleanup:
+  // Don't fully understand why this is needed, but leaving it set to the
+  // compiled module seems to confuse QuickJS's cleanup logic.
+  JS_SetPropertyStr(ts->ctx, glob, "M", JS_UNDEFINED);
+
   JS_FreeValue(ts->ctx, result);
   JS_FreeValue(ts->ctx, glob);
   if (eval_input && eval_input != g_cmd_args.eval_input)
