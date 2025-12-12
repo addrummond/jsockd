@@ -11,12 +11,6 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
-#ifdef CMAKE_BUILD_TYPE_DEBUG
-#define CMAKE_BUILD_TYPE_IS_DEBUG 1
-#else
-#define CMAKE_BUILD_TYPE_IS_DEBUG 0
-#endif
-
 static pthread_mutex_t log_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 void lock_log_mutex(void) { mutex_lock(&log_mutex); }
