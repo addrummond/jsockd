@@ -2,8 +2,8 @@
 
 set -e
 
-MAKE=make
 if [ -z "$MAKE" ]; then
+    MAKE=make
     if [ "GNU Make" = "$( ( gmake --version 2>/dev/null || true ) | head -n 1 | awk '{print $1,$2}' )" ]; then
         MAKE=gmake
     else
