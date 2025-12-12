@@ -1080,6 +1080,7 @@ static int eval(void) {
   int exit_status = EXIT_SUCCESS;
   JSValue glob = JS_UNDEFINED;
   JSValue result = JS_UNDEFINED;
+  const char *eval_input = g_cmd_args.eval_input;
 
   g_thread_states = malloc(sizeof(ThreadState));
   memset(g_thread_states, 0, sizeof(ThreadState));
@@ -1091,7 +1092,6 @@ static int eval(void) {
     goto cleanup;
   }
 
-  const char *eval_input = g_cmd_args.eval_input;
   if (eval_input == EVAL_INPUT_STDIN_SENTINEL) {
     eval_input = read_all_stdin();
     if (!eval_input) {
