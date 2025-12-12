@@ -1091,6 +1091,8 @@ static int eval(void) {
     exit_status = EXIT_FAILURE;
     goto cleanup;
   }
+  // Haven't really figured out exactly why we need this, to be honest ¯\_(ツ)_/
+  JS_DupValue(ts->ctx, ts->compiled_module);
 
   if (eval_input == EVAL_INPUT_STDIN_SENTINEL) {
     eval_input = read_all_stdin();
