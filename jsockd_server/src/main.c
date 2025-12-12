@@ -1094,14 +1094,17 @@ static int eval(void) {
   // Haven't really figured out exactly why we need this, to be honest ¯\_(ツ)_/
   JS_DupValue(ts->ctx, ts->compiled_module);
 
+  size_t eval_input_size = 0;
   if (eval_input == EVAL_INPUT_STDIN_SENTINEL) {
-    eval_input = read_all_stdin();
+    eval_input = read_all_stdin(&eval_input_size);
     if (!eval_input) {
       jsockd_logf(LOG_ERROR | LOG_INTERACTIVE,
                   "Error reading stdin for eval input: %s\n", strerror(errno));
       exit_status = EXIT_FAILURE;
       goto cleanup;
     }
+  } else {
+    eval_input_size = strlen(eval_input);
   }
 
   glob = JS_GetGlobalObject(ts->ctx);
@@ -1113,9 +1116,8 @@ static int eval(void) {
     goto cleanup;
   }
 
-  result =
-      JS_Eval(g_thread_states[0].ctx, eval_input, strlen(g_cmd_args.eval_input),
-              "<cmdline>", JS_EVAL_TYPE_GLOBAL);
+  result = JS_Eval(g_thread_states[0].ctx, eval_input, eval_input_size,
+                   "<cmdline>", JS_EVAL_TYPE_GLOBAL);
 
   if (JS_IsException(result)) {
     dump_error(ts->ctx);

@@ -206,7 +206,7 @@ void print_value_to_stdout(void *opaque, const char *buf, size_t size) {
   fwrite(buf, 1, size, stdout);
 }
 
-char *read_all_stdin() {
+char *read_all_stdin(size_t *out_size) {
   const size_t CHUNK = 8192;
   char *buf = NULL;
   size_t size = 0;
@@ -244,5 +244,6 @@ char *read_all_stdin() {
   if (!final)
     return NULL;
   final[size] = '\0';
+  *out_size = size;
   return final;
 }
