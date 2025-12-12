@@ -1077,6 +1077,8 @@ static int eval(void) {
     }
   }
 
+  fprintf(stderr, "ZZZZZZ\n");
+
   g_thread_states = malloc(sizeof(ThreadState));
   memset(g_thread_states, 0, sizeof(ThreadState));
   ThreadState *ts = &g_thread_states[0];
