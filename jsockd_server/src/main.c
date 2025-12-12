@@ -5,8 +5,6 @@
 #include "backtrace.h"
 #include "cmdargs.h"
 #include "config.h"
-#include "console.h"
-#include "custom_module_loader.h"
 #include "fchmod.h"
 #include "globals.h"
 #include "hash_cache.h"
