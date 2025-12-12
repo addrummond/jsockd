@@ -935,7 +935,8 @@ static const uint8_t *load_module_bytecode(const char *filename,
   if (!module_bytecode)
     return NULL;
   if (*out_size < VERSION_STRING_SIZE + ED25519_SIGNATURE_SIZE + 1) {
-    jsockd_logf(LOG_ERROR, "Module bytecode file is only %zu bytes. Too small!",
+    jsockd_logf(LOG_ERROR | LOG_INTERACTIVE,
+                "Module bytecode file is only %zu bytes. Too small!",
                 *out_size);
     munmap_or_warn((void *)module_bytecode, *out_size);
     return NULL;
@@ -965,7 +966,7 @@ static const uint8_t *load_module_bytecode(const char *filename,
         version_string[i] = '?';
     }
     jsockd_logf(
-        LOG_ERROR,
+        LOG_ERROR | LOG_INTERACTIVE,
         "Module bytecode version string '%s' does not match expected '%s'\n",
         version_string, STRINGIFY(VERSION));
     munmap_or_warn((void *)module_bytecode, *out_size);
@@ -982,7 +983,7 @@ static const uint8_t *load_module_bytecode(const char *filename,
   size_t decoded_size = hex_decode(
       pubkey_bytes, sizeof(pubkey_bytes) / sizeof(pubkey_bytes[0]), pubkey);
   if (decoded_size != ED25519_PUBLIC_KEY_SIZE) {
-    jsockd_logf(LOG_ERROR,
+    jsockd_logf(LOG_ERROR | LOG_INTERACTIVE,
                 "Error decoding public key hex from environment variable "
                 "JSOCKD_BYTECODE_MODULE_PUBLIC_KEY; decoded size=%zu\n",
                 decoded_size);
@@ -990,7 +991,7 @@ static const uint8_t *load_module_bytecode(const char *filename,
     return NULL;
   }
   if (!verify_bytecode(module_bytecode, *out_size, pubkey_bytes)) {
-    jsockd_logf(LOG_ERROR,
+    jsockd_logf(LOG_ERROR | LOG_INTERACTIVE,
                 "Error verifying bytecode module %s with public key %s\n",
                 filename, pubkey);
     munmap_or_warn((void *)module_bytecode, *out_size);
@@ -1062,12 +1063,9 @@ static int eval(void) {
   if (g_cmd_args.es6_module_bytecode_file) {
     g_module_bytecode = load_module_bytecode(
         g_cmd_args.es6_module_bytecode_file, &g_module_bytecode_size);
-    if (g_module_bytecode == NULL) {
-      jsockd_logf(LOG_ERROR | LOG_INTERACTIVE,
-                  "Error loading module bytecode file %s: %s\n",
-                  g_cmd_args.es6_module_bytecode_file, strerror(errno));
+    // load_module_bytecode will log an error
+    if (g_module_bytecode == NULL)
       return EXIT_FAILURE;
-    }
   }
   if (g_cmd_args.source_map_file) {
     g_source_map = mmap_file(g_cmd_args.source_map_file, &g_source_map_size);
