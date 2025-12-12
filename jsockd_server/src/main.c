@@ -1098,13 +1098,13 @@ static int eval(void) {
   }
 
   glob = JS_GetGlobalObject(ctx);
-  if (JS_SetPropertyStr(ctx, glob, "M", ts->compiled_module) < 0) {
+  /*if (JS_SetPropertyStr(ctx, glob, "M", ts->compiled_module) < 0) {
     jsockd_logf(LOG_ERROR | LOG_INTERACTIVE,
                 "Error setting M property for eval\n");
     dump_error(ctx);
     exit_status = EXIT_FAILURE;
     goto cleanup;
-  }
+  }*/
 
   result =
       JS_Eval(g_thread_states[0].ctx, eval_input, strlen(g_cmd_args.eval_input),
@@ -1120,7 +1120,7 @@ static int eval(void) {
 cleanup:
   JS_FreeValue(ts->ctx, result);
   JS_FreeValue(ts->ctx, glob);
-  JS_FreeValue(ts->ctx, ts->compiled_module);
+  // JS_FreeValue(ts->ctx, ts->compiled_module);
   if (eval_input && eval_input != g_cmd_args.eval_input)
     free((void *)eval_input);
   cleanup_thread_state(&g_thread_states[0]);
