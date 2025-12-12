@@ -252,13 +252,13 @@ void cleanup_thread_state(ThreadState *ts) {
   if (ts->rt == NULL) // It's already been cleaned up;
     return;
 
-  JS_FreeValue(ts->ctx, ts->backtrace_module);
-  JS_FreeValue(ts->ctx, ts->sourcemap_str);
-  JS_FreeValue(ts->ctx, ts->compiled_module);
-
   cleanup_command_state(ts);
 
   js_std_free_handlers(ts->rt);
+
+  JS_FreeValue(ts->ctx, ts->backtrace_module);
+  JS_FreeValue(ts->ctx, ts->sourcemap_str);
+  // JS_FreeValue(ts->ctx, ts->compiled_module);
 
   // Valgrind seems to correctly have caught a memory leak in quickjs-libc.
   js_free(ts->ctx, JS_GetRuntimeOpaque(ts->rt));
