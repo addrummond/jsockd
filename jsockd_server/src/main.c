@@ -1077,13 +1077,19 @@ static int eval(void) {
     }
   }
 
-  g_thread_states = malloc(sizeof(ThreadState));
-  memset(g_thread_states, 0, sizeof(ThreadState));
-  ThreadState *ts = &g_thread_states[0];
-  init_thread_state(ts, NULL, 0);
   int exit_status = EXIT_SUCCESS;
   JSValue glob = JS_UNDEFINED;
   JSValue result = JS_UNDEFINED;
+
+  g_thread_states = malloc(sizeof(ThreadState));
+  memset(g_thread_states, 0, sizeof(ThreadState));
+  ThreadState *ts = &g_thread_states[0];
+  if (0 != init_thread_state(ts, NULL, 0)) {
+    jsockd_log(LOG_ERROR | LOG_INTERACTIVE,
+               "Internal error initializing QuickJS runtime");
+    exit_status = EXIT_FAILURE;
+    goto cleanup;
+  }
 
   const char *eval_input = g_cmd_args.eval_input;
   if (eval_input == EVAL_INPUT_STDIN_SENTINEL) {
