@@ -307,6 +307,20 @@ An example of a multi-line log message:
 $ jsockd 2025-09-24T21:15:45.644776Z [INFO] Line 3
 ```
 
+### 3.9 Memory leak protection
+
+JSockD tracks memory usage by each QuickJS runtime. If the memory used by a runtime continues to grow over multiple command executions then the runtime is reset to free up memory. (This is one reason why your JSockD commands should not depend on the persistence of global state, even if you route all commands to the same socket/runtime.)
+
+The current logic for detecting memory leaks is as follows:
+
+* For each QuickJS runtime:
+  * Let U be the initial memory usage of the runtime.
+  * Let C, the memory increase counter, be zero.
+  * After each 100 command executions:
+    * if current usage is higher than U, increment C and update U to the current usage;
+    * otherwise reset C to zero.
+  * If C = 3, reset the runtime and reset U and C.
+
 ## 4. Bundling your JavaScript code
 
 ### 4.1 Using a bundler
