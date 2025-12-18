@@ -1,6 +1,7 @@
 #include "hash_cache.h"
 #include "config.h"
 #include <memory.h>
+#include <sched.h>
 #include <stdatomic.h>
 #include <stdio.h>
 
@@ -108,6 +109,7 @@ HashCacheBucket *get_hash_cache_entry_(HashCacheBucket *buckets,
 
       if (updated) {
         atomic_fetch_add_explicit(&bucket->refcount, -1, memory_order_release);
+        sched_yield();
         continue;
       }
 
