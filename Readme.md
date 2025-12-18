@@ -319,7 +319,7 @@ The current logic for detecting memory leaks is as follows:
   * After each 100 command executions:
     * if current usage is higher than U, increment C and update U to the current usage;
     * otherwise reset C to zero.
-  * If C = 3, reset the runtime and go to the first step; othwerwise, check again after another 100 command executions.
+    * If C = 3, reset the runtime and go to the first step; othwerwise, check again after another 100 command executions.
   
 
 ## 4. Bundling your JavaScript code
