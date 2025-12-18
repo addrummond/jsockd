@@ -95,8 +95,10 @@ HashCacheBucket *get_hash_cache_entry_(HashCacheBucket *buckets,
       int update_count_before =
           atomic_load_explicit(&bucket->update_count, memory_order_acquire);
 
-      if (update_count_before % 2 != 0)
+      if (update_count_before % 2 != 0) {
+        sched_yield();
         continue;
+      }
 
       if (uid != atomic_load_explicit(&bucket->uid, memory_order_relaxed))
         break;
