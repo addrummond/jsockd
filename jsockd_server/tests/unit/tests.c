@@ -980,13 +980,13 @@ static void TEST_cmdargs_dash_e_error_if_dash_sm_without_dash_m(void) {
 ******************************************************************************/
 
 static void TEST_compile_module_file(void) {
+  const char pubkey[] =
+      "6FC575BE3557E26A42B1A09BEEF0F4BFC9C6BBFBDAABB1E2098387A03599CE2B";
   const char privkey[] =
-      "6FC575BE3557E26A42B1A09BEEF0F4BFC9C6BBFBDAABB1E2098387A03599CE2B780EA777"
-      "5430EE1083077387B652921E9D1C5CCB5DA3634BFC7B6B46C84E8578920D6160618D2961"
-      "537E4B1DF6F3215F1AD186A1B45FED9869AFA636F5E10910";
+      "780EA7775430EE1083077387B652921E9D1C5CCB5DA3634BFC7B6B46C84E8578920D6160"
+      "618D2961537E4B1DF6F3215F1AD186A1B45FED9869AFA636F5E10910";
 
-  TEST_ASSERT(sizeof(privkey) - 1 ==
-              2 * (ED25519_PUBLIC_KEY_SIZE + ED25519_PRIVATE_KEY_SIZE));
+  TEST_ASSERT(sizeof(privkey) - 1 == 2 * ED25519_PRIVATE_KEY_SIZE);
 
   char tmpdir[1024];
   TEST_ASSERT(0 == make_temp_dir(tmpdir, sizeof(tmpdir),
@@ -1040,9 +1040,8 @@ static void TEST_compile_module_file(void) {
   TEST_ASSERT(1 == fread(bytecode, bytecode_size, 1, outf));
 
   uint8_t pubkey_raw[ED25519_PUBLIC_KEY_SIZE];
-  // we store public key as first 32 bytes of private key file
   TEST_ASSERT(ED25519_PUBLIC_KEY_SIZE ==
-              hex_decode(pubkey_raw, sizeof(pubkey_raw), privkey));
+              hex_decode(pubkey_raw, sizeof(pubkey_raw), pubkey));
 
   TEST_ASSERT(ed25519_verify(signature, bytecode, bytecode_size, pubkey_raw));
 
@@ -1124,8 +1123,8 @@ static void TEST_output_key_file(void) {
   FILE *privhexf = fopen(privkeypath, "r");
   TEST_ASSERT(pubhexf && privhexf);
 
-  char pubhex[ED25519_PUBLIC_KEY_SIZE * 2];
-  char privhex[2 * (ED25519_PRIVATE_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE)];
+  char pubhex[2 * ED25519_PUBLIC_KEY_SIZE];
+  char privhex[2 * ED25519_PRIVATE_KEY_SIZE];
 
   TEST_ASSERT(1 == fread(pubhex, sizeof(pubhex) / sizeof(char), 1, pubhexf));
   TEST_ASSERT(1 == fread(privhex, sizeof(privhex) / sizeof(char), 1, privhexf));
@@ -1133,17 +1132,13 @@ static void TEST_output_key_file(void) {
   fseek(pubhexf, 0, SEEK_END);
   fseek(privhexf, 0, SEEK_END);
   TEST_ASSERT(ED25519_PUBLIC_KEY_SIZE * 2 == ftell(pubhexf));
-  TEST_ASSERT(2 * (ED25519_PRIVATE_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE) ==
-              ftell(privhexf));
+  TEST_ASSERT(2 * ED25519_PRIVATE_KEY_SIZE == ftell(privhexf));
 
   fclose(pubhexf);
   fclose(privhexf);
   remove(privkeypath);
   remove(pubkeypath);
   rmdir(tmpdir);
-
-  // First 32 bytes of privkey file should match pubkey file
-  TEST_ASSERT(0 == memcmp(pubhex, privhex, ED25519_PUBLIC_KEY_SIZE * 2));
 }
 
 /******************************************************************************
