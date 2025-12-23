@@ -12,7 +12,7 @@
 
 // The module file format:
 //     raw QuickJS bytecode
-//     128 byte version string, null-terminated
+//     128 byte version string, null-terminated, right padded with zeros
 //     64 byte ed25519 signature of bytecode + version string
 
 static void extract_public_key(const unsigned char *private_key,
