@@ -3,7 +3,6 @@
 #include "log.h"
 #include "quickjs-libc.h"
 #include <errno.h>
-#include <limits.h>
 #ifdef LINUX
 #define _GNU_SOURCE // make ppoll available
 #endif
