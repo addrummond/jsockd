@@ -5,6 +5,7 @@
 #include "quickjs.h"
 #include "verify_bytecode.h"
 #include <ed25519/ed25519.h>
+#include <ed25519/ge.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,6 +14,15 @@
 //     raw QuickJS bytecode
 //     128 byte version string, null-terminated
 //     64 byte ed25519 signature of bytecode + version string
+
+static void extract_public_key(const unsigned char *private_key,
+                               unsigned char *public_key) {
+  ge_p3 A;
+
+  // The first 32 bytes of the private key contain the scalar
+  ge_scalarmult_base(&A, private_key);
+  ge_p3_tobytes(public_key, &A);
+}
 
 int compile_module_file(const char *module_filename,
                         const char *privkey_filename,
@@ -72,7 +82,6 @@ int compile_module_file(const char *module_filename,
   strcpy((char *)(out_buf + out_buf_len), version);
   out_buf_len += VERSION_STRING_SIZE;
 
-  char public_key_hex[ED25519_PUBLIC_KEY_SIZE * 2] = {0};
   char private_key_hex[ED25519_PRIVATE_KEY_SIZE * 2] = {0};
   if (!privkey_filename) {
     fprintf(stderr,
@@ -82,13 +91,6 @@ int compile_module_file(const char *module_filename,
     if (!kf) {
       fprintf(stderr, "Error opening key file %s: %s\n", privkey_filename,
               strerror(errno));
-      ret = EXIT_FAILURE;
-      goto end;
-    }
-    if (fread(public_key_hex, sizeof(public_key_hex) / sizeof(char), 1, kf) <
-        1) {
-      fprintf(stderr, "Error reading public key from key file %s: %s\n",
-              privkey_filename, strerror(errno));
       ret = EXIT_FAILURE;
       goto end;
     }
@@ -102,8 +104,8 @@ int compile_module_file(const char *module_filename,
   }
   uint8_t public_key[ED25519_PUBLIC_KEY_SIZE] = {0};
   uint8_t private_key[ED25519_PRIVATE_KEY_SIZE] = {0};
-  hex_decode(public_key, ED25519_PUBLIC_KEY_SIZE, public_key_hex);
   hex_decode(private_key, ED25519_PRIVATE_KEY_SIZE, private_key_hex);
+  extract_public_key(private_key, public_key);
 
   unsigned char signature[ED25519_SIGNATURE_SIZE] = {0};
 
@@ -203,15 +205,6 @@ int output_key_file(const char *key_file_prefix) {
     goto end;
   }
 
-  // As the format used by the ed25519 library we're using doesn't make it
-  // trivial to extract public keys from private keys, prepend the public key to
-  // the private key.
-  if (0 != hex_encode(pubkey, ED25519_PUBLIC_KEY_SIZE, privkey_file)) {
-    fprintf(stderr, "Error writing to private key file %s: %s",
-            privkey_filename, strerror(errno));
-    ret = EXIT_FAILURE;
-    goto end;
-  }
   if (0 != hex_encode(privkey, ED25519_PRIVATE_KEY_SIZE, privkey_file)) {
     fprintf(stderr, "Error writing to private key file %s: %s",
             privkey_filename, strerror(errno));
