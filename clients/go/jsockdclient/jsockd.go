@@ -84,7 +84,8 @@ type Response[T any] struct {
 type JSockDClient struct {
 	// We go indirectly via an atomic pointer to the real client state so that
 	// we can swap out the pointer in the case where jsockd is restarted.
-	iclient atomic.Pointer[jSockDInternalClient]
+	iclient      atomic.Pointer[jSockDInternalClient]
+	execTempfile string
 }
 
 type jSockDInternalClient struct {
@@ -126,6 +127,21 @@ func InitJSockDClient(config Config, jsockdExec string) (*JSockDClient, error) {
 		os.RemoveAll(c.socketTmpdir)
 	}
 	return client, err
+}
+
+// Like InitJSockDClient, but downloads the jsockd executable automatically
+// from GitHub releases and verifies its signature. This is not recommended
+// for production use. If the error returned satisfies
+// errors.Is(err, jsockdclient.ErrDownload) then it is reasonable to retry
+// the call.
+func InitJsockDClientViaAutoDownload(config Config) (*JSockDClient, error) {
+	jsockdPath, err := downloadAndVerifyJSockD()
+	if err != nil {
+		return nil, fmt.Errorf("download and verify jsockd: %w", err)
+	}
+	client, err := InitJSockDClient(config, jsockdPath)
+	client.execTempfile = jsockdPath
+	return client, nil
 }
 
 func initJSockDClient(config Config, jsockdExec string) (*JSockDClient, error) {
@@ -392,10 +408,13 @@ func (client *JSockDClient) Close() error {
 		return nil
 	}
 
-	// Ignore error as it's just nice to have cleanup
+	// Ignore errors as it's just nice to have cleanup
 	if iclient.socketTmpdir != "" {
 		defer func() {
 			_ = os.RemoveAll(iclient.socketTmpdir)
+			if client.execTempfile != "" {
+				_ = os.Remove(client.execTempfile)
+			}
 		}()
 	}
 

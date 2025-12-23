@@ -1,14 +1,8 @@
 package jsockdclient
 
 import (
-	"archive/tar"
-	"compress/gzip"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
-	"path"
-	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -165,77 +159,12 @@ func getJSockDPath(t *testing.T) string {
 		return jsockdPath
 	}
 
-	osName := runtime.GOOS
-	if osName == "darwin" {
-		osName = "macos"
-	}
-	arch := runtime.GOARCH
-	if arch == "amd64" {
-		arch = "x86_64"
-	}
+	t.Logf("Downloading and verifying jsockd: %s", jsockdPath)
 
-	url := jsockdReleaseTempl
-	url = strings.ReplaceAll(url, "VERSION", JSockDVersion)
-	url = strings.ReplaceAll(url, "OS", osName)
-	url = strings.ReplaceAll(url, "ARCH", arch)
-
-	// Download the release tar.gz
-	t.Logf("Downloading jsockd release from %s", url)
-	resp, err := http.Get(url)
+	var err error
+	jsockdPath, err = downloadAndVerifyJSockD()
 	if err != nil {
-		panic(fmt.Errorf("download %s: %w", url, err))
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		panic(fmt.Errorf("unexpected HTTP status %s for %s", resp.Status, url))
-	}
-
-	// Create a temp dir to extract the binary
-	jsockdDirPath, err = os.MkdirTemp("", "jsockd-*")
-	if err != nil {
-		panic(fmt.Errorf("mktemp: %w", err))
-	}
-
-	// Unpack gzip -> tar, extract jsockd binary
-	gr, err := gzip.NewReader(resp.Body)
-	if err != nil {
-		panic(fmt.Errorf("gzip open: %w", err))
-	}
-	defer gr.Close()
-	tr := tar.NewReader(gr)
-
-	for {
-		hdr, err := tr.Next()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			panic(fmt.Errorf("tar read: %w", err))
-		}
-		if hdr.Typeflag != tar.TypeReg {
-			continue
-		}
-		name := path.Base(hdr.Name)
-		if name == "jsockd" {
-			out := path.Join(jsockdDirPath, "jsockd")
-			f, err := os.OpenFile(out, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o755)
-			if err != nil {
-				panic(fmt.Errorf("create %s: %w", out, err))
-			}
-			if _, err := io.Copy(f, tr); err != nil {
-				_ = f.Close()
-				panic(fmt.Errorf("extract %s: %w", out, err))
-			}
-			if err := f.Close(); err != nil {
-				panic(fmt.Errorf("close %s: %w", out, err))
-			}
-			jsockdPath = out
-			break
-		}
-	}
-
-	if jsockdPath == "" {
-		panic("jsockd binary not found in archive")
+		t.Fatalf("Failed to get jsockd: %v", err)
 	}
 
 	return jsockdPath
