@@ -158,7 +158,7 @@ case $1 in
         (
             set -e
             cd $GITHUB_WORKSPACE/jsockd_server/tests/go
-            go run main.go "$GITHUB_WORKSPACE/jsockd_server/build_Debug/jsockd"
+            go run main.go normalStressTest "$GITHUB_WORKSPACE/jsockd_server/build_Debug/jsockd"
         )
         ;;
 
@@ -166,7 +166,23 @@ case $1 in
         (
             set -e
             cd $GITHUB_WORKSPACE/jsockd_server/tests/go
-            go run main.go "$GITHUB_WORKSPACE/jsockd_server/build_Release/jsockd"
+            go run main.go normalStressTest "$GITHUB_WORKSPACE/jsockd_server/build_Release/jsockd"
+        )
+        ;;
+
+    run_jsockd_go_idle_timeout_stress_tests_with_debug_build)
+        (
+            set -e
+            cd $GITHUB_WORKSPACE/jsockd_server/tests/go
+            go run main.go idleTimeoutStressTest "$GITHUB_WORKSPACE/jsockd_server/build_Debug/jsockd"
+        )
+        ;;
+
+    run_jsockd_go_idle_timeout_stress_tests_with_release_build)
+        (
+            set -e
+            cd $GITHUB_WORKSPACE/jsockd_server/tests/go
+            go run main.go idleTimeoutStressTest "$GITHUB_WORKSPACE/jsockd_server/build_Release/jsockd"
         )
         ;;
 
