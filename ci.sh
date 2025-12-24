@@ -2,7 +2,7 @@
 
 set -e
 
-FILC_VERSION=0.676
+FILC_VERSION=0.677
 FILC_CHECKSUM=19fdf16b34cca6c7d8e470f1129413213dbed2607f2e00ca50e5776588507a6b
 
 if ! [ -z "$GITHUB_WORKSPACE" ] && [ "$1" != "setup" ] && [ "$1" != "github_actions_create_release" ]; then
@@ -50,6 +50,10 @@ case $1 in
             exit 1
         fi
         ( cd ~ && tar -xf ~/filc-${FILC_VERSION}-linux-x86_64.tar.xz && cd filc-${FILC_VERSION}-linux-x86_64 && ./setup.sh )
+        # TODO temp remove
+        echo "LS 1" && ls -l ~/filc-${FILC_VERSION}-linux-x86_64/
+        echo "LS 2" && ls -l ~/filc-${FILC_VERSION}-linux-x86_64/build
+        echo "LS 3" && ls -l ~/filc-${FILC_VERSION}-linux-x86_64/build/bin
         ;;
 
     log_versions)
