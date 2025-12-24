@@ -103,7 +103,7 @@ jobs:
           path: |
             ${{ github.workspace }}/jsockd_server/jsockd-*.tar.gz
             ${{ github.workspace }}/jsockd_server/checksums.txt
-            ${{ github.workspace }}/jsockd_server/ed25519_signatures.txt
+            ${{ github.workspace }}/jsockd_server/signatures.txt
   release:
     runs-on: ubuntu-24.04
     needs: CI

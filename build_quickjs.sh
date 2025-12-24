@@ -14,9 +14,9 @@ if [ -z "$MAKE" ]; then
     fi
 fi
 
-QUICKJS_COMMIT=c73a435f365e5250dd529cde00675528d7609edf
+QUICKJS_COMMIT=f1139494d18a2053630c5ed3384a42bb70db3c53
 
-FILC_VERSION=0.676
+FILC_VERSION=0.677
 FILC_CLANG="${FILC_CLANG:-$HOME/filc-${FILC_VERSION}-linux-x86_64/build/bin/clang}"
 
 rm -rf .scratch
