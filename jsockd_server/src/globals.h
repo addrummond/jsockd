@@ -23,7 +23,6 @@ extern const uint8_t *g_module_bytecode;
 extern size_t g_module_bytecode_size;
 
 extern atomic_int g_n_threads;
-extern atomic_int g_n_ready_threads;
 
 extern const uint8_t *g_source_map;
 extern size_t g_source_map_size;

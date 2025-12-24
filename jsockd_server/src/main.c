@@ -308,7 +308,6 @@ static void command_loop(ThreadState *ts,
              atomic_load_explicit(&ts->replacement_thread_state,
                                   memory_order_acquire));
       init_thread_state(ts, ts->socket_state, ts->thread_index);
-      atomic_fetch_add_explicit(&g_n_ready_threads, 1, memory_order_relaxed);
       register_thread_state_runtime(ts->rt, ts);
     }
 
@@ -608,8 +607,6 @@ static int handle_line_3_parameter_helper(ThreadState *ts, const char *line,
                                                       .max_string_length = 0,
                                                       .max_item_count = 0};
 
-  ts->line_n = 0;
-
   if (JS_IsException(ts->compiled_query)) {
     if (CMAKE_BUILD_TYPE_IS_DEBUG) {
       LogLevel l = LOG_ERROR;
@@ -791,6 +788,7 @@ static int handle_line_3_parameter_helper(ThreadState *ts, const char *line,
 
 static int handle_line_3_parameter(ThreadState *ts, const char *line, int len) {
   int r = handle_line_3_parameter_helper(ts, line, len);
+  ts->line_n = 0;
   cleanup_command_state(ts);
   return r;
 }
@@ -894,11 +892,9 @@ static int line_handler(const char *line, size_t len, ThreadState *ts,
 }
 
 static void tick_handler(ThreadState *ts) {
-  if (g_cmd_args.max_idle_time_us == 0 || ts->line_n != 0 || ts->rt == NULL)
-    return;
-  int n_ready_threads =
-      atomic_load_explicit(&g_n_ready_threads, memory_order_acquire);
-  if (n_ready_threads <= 1 || n_ready_threads != ts->thread_index + 1)
+  return;
+  if (ts->thread_index == 0 || g_cmd_args.max_idle_time_us == 0 ||
+      ts->line_n != 0 || ts->rt == NULL)
     return;
   struct timespec now;
   if (0 != clock_gettime(MONOTONIC_CLOCK, &now)) {
@@ -911,7 +907,6 @@ static void tick_handler(ThreadState *ts) {
       REPLACEMENT_THREAD_STATE_NONE ==
           atomic_load_explicit(&ts->replacement_thread_state,
                                memory_order_acquire)) {
-    atomic_fetch_add_explicit(&g_n_ready_threads, -1, memory_order_relaxed);
     jsockd_logf(LOG_DEBUG, "Shutting down QuickJS on thread %s\n",
                 ts->socket_state->unix_socket_filename);
     cleanup_thread_state(ts);
@@ -1191,8 +1186,6 @@ int main(int argc, char **argv) {
 
   int n_threads = MIN(g_cmd_args.n_sockets, MAX_THREADS);
   atomic_store_explicit(&g_n_threads, g_cmd_args.n_sockets,
-                        memory_order_relaxed);
-  atomic_store_explicit(&g_n_ready_threads, g_cmd_args.n_sockets,
                         memory_order_relaxed);
 
   g_thread_states = calloc(n_threads, sizeof(ThreadState));

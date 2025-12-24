@@ -15,7 +15,6 @@ const uint8_t *g_module_bytecode = NULL;
 size_t g_module_bytecode_size = 0;
 
 atomic_int g_n_threads = 0;
-atomic_int g_n_ready_threads = 0;
 
 const uint8_t *g_source_map = NULL;
 size_t g_source_map_size = 0;
