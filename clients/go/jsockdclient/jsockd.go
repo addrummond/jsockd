@@ -121,10 +121,12 @@ func InitJSockDClient(config Config, jsockdExec string) (*JSockDClient, error) {
 		return nil, errors.New("NThreads must be greater than zero. Did you forget to call jsockdclient.DefaultConfig() to initialize the Config struct?")
 	}
 	client, err := initJSockDClient(config, jsockdExec)
-	c := client.iclient.Load()
-	if err != nil && client != nil && c.socketTmpdir != "" {
-		// Ignore error as it's just nice to have cleanup
-		os.RemoveAll(c.socketTmpdir)
+	if err != nil && client != nil {
+		c := client.iclient.Load()
+		if c.socketTmpdir == "" {
+			// Ignore error as it's just nice to have cleanup
+			_ = os.RemoveAll(c.socketTmpdir)
+		}
 	}
 	return client, err
 }
