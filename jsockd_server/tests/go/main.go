@@ -53,8 +53,6 @@ func main() {
 
 	var exitCode atomic.Int32
 
-
-
 	for i := 0; i < nClientThreads; i++ {
 		wg.Add(1)
 		go func() {
