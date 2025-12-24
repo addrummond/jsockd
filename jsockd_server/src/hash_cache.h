@@ -23,7 +23,7 @@
 #ifdef HASH_CACHE_USE_128_BIT_UIDS
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
-typedef __int128 HashCacheUid;
+typedef unsigned __int128 HashCacheUid;
 #pragma GCC diagnostic pop
 #define HASH_CACHE_UID_FORMAT_SPECIFIER "%016" PRIx64 "%016" PRIx64
 #define HASH_CACHE_UID_FORMAT_ARGS(uid) (uint64_t)((uid) >> 64), (uint64_t)(uid)

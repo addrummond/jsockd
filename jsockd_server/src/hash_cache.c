@@ -10,7 +10,7 @@
 // for an example implementation of the general concept.
 
 size_t get_cache_bucket(HashCacheUid uid, int n_bits) {
-  return uid % (HashCacheUid)(1 << n_bits);
+  return (size_t)(uid % ((HashCacheUid)1 << n_bits));
 }
 
 static size_t get_bucket_look_forward(int n_bits) { return n_bits * 3 / 2; }
