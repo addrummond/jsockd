@@ -287,6 +287,8 @@ static void command_loop(ThreadState *ts,
 
   JS_UpdateStackTop(ts->rt);
 
+  LineBuf line_buf = {.buf = ts->input_buf, .size = INPUT_BUF_BYTES};
+
   for (;;) {
   read_loop:
     tick_handler(ts);
@@ -310,7 +312,6 @@ static void command_loop(ThreadState *ts,
       register_thread_state_runtime(ts->rt, ts);
     }
 
-    LineBuf line_buf = {.buf = ts->input_buf, .size = INPUT_BUF_BYTES};
     int exit_value =
         line_buf_read(&line_buf, g_cmd_args.socket_sep_char, lb_read,
                       &ts->socket_state->streamfd,
