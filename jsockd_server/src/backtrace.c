@@ -41,8 +41,12 @@ const char *get_backtrace(ThreadState *ts, const char *backtrace,
 
   const char *bt_str;
   if (JS_IsException(parsed_backtrace_js)) {
-    jsockd_log(LOG_ERROR, "Error parsing backtrace:\n");
-    dump_error(ts->ctx);
+    if (CMAKE_BUILD_TYPE_IS_DEBUG)
+      log_error_with_prefix("Error parsing backtrace:\n", ts->ctx,
+                            parsed_backtrace_js);
+    else
+      jsockd_log(LOG_ERROR, "Error parsing backtrace:\n");
+
     jsockd_logf(LOG_ERROR, "The backtrace that could not be parsed:\n%.*s",
                 (int)backtrace_length, backtrace);
     bt_str = NULL;

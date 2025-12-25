@@ -164,11 +164,21 @@ void write_to_wbuf(WBuf *buf, const char *inp, size_t size) {
   buf->index += to_write;
 }
 
-void dump_error(JSContext *ctx) {
-  if (CMAKE_BUILD_TYPE_IS_DEBUG)
-    js_std_dump_error(ctx);
-  else
-    JS_FreeValue(ctx, JS_GetException(ctx));
+static void write_to_wbuf_wrapper(void *opaque, const char *inp, size_t size) {
+  write_to_wbuf((WBuf *)opaque, inp, size);
+}
+
+void dump_error_to_wbuf(JSContext *ctx, JSValueConst exception_val,
+                        WBuf *wbuf) {
+  JS_PrintValue(ctx, write_to_wbuf_wrapper, (void *)wbuf, exception_val, NULL);
+}
+
+void log_error_with_prefix(const char *prefix, JSContext *ctx,
+                           JSValueConst exception_val) {
+  char errbuf[1024 * 8];
+  WBuf wbuf = {.buf = errbuf, .length = sizeof(errbuf) / sizeof(char)};
+  dump_error_to_wbuf(ctx, exception_val, &wbuf);
+  jsockd_logf(LOG_ERROR, "%s%.*s\n", prefix, (int)wbuf.index, wbuf.buf);
 }
 
 PollFdResult poll_fd(int fd, int timeout_ms) {

@@ -3,6 +3,7 @@
 #include "hex.h"
 #include "quickjs-libc.h"
 #include "quickjs.h"
+#include "utils.h"
 #include "verify_bytecode.h"
 #include <ed25519/ed25519.h>
 #include <ed25519/ge.h>
@@ -69,7 +70,7 @@ int compile_module_file(const char *module_filename,
   obj = JS_Eval(ctx, (const char *)buf, buf_len, module_filename,
                 JS_EVAL_FLAG_COMPILE_ONLY | JS_EVAL_TYPE_MODULE);
   if (JS_IsException(obj)) {
-    fprintf(stderr, "Error compiling module '%s'\n", module_filename);
+    fprintf(stderr, "Error compiling module '%s':\n", module_filename);
     js_std_dump_error(ctx);
     ret = EXIT_FAILURE;
     goto end;

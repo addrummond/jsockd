@@ -356,7 +356,7 @@ static const uint8_t *compile_buf(JSContext *ctx, const char *buf, int buf_len,
   JSValue val = JS_Eval(ctx, (const char *)buf, buf_len, "<buffer>",
                         JS_EVAL_FLAG_ASYNC | JS_EVAL_FLAG_COMPILE_ONLY);
   if (JS_IsException(val)) {
-    dump_error(ctx);
+    log_error_with_prefix("Exception compiling buffer:\n", ctx, val);
     JS_FreeValue(ctx, val);
     return NULL;
   }
@@ -384,7 +384,8 @@ static JSValue func_from_bytecode(JSContext *ctx, const uint8_t *bytecode,
   if (JS_IsException(val)) {
     jsockd_log(LOG_DEBUG,
                "Exception returned when reading bytecode via JS_ReadObject\n");
-    dump_error(ctx);
+    if (CMAKE_BUILD_TYPE_IS_DEBUG)
+      log_error_with_prefix("Error reading bytecode:\n", ctx, val);
     return val;
   }
   JSValue evald = JS_EvalFunction(ctx, val); // this call frees val
@@ -392,7 +393,8 @@ static JSValue func_from_bytecode(JSContext *ctx, const uint8_t *bytecode,
   if (JS_VALUE_GET_TAG(evald) != JS_TAG_OBJECT) {
     jsockd_log(LOG_DEBUG, "JS_EvalFunction did not return an object\n");
     if (CMAKE_BUILD_TYPE_IS_DEBUG && JS_IsException(evald))
-      dump_error(ctx);
+      log_error_with_prefix("Error evaluating bytecode function:\n", ctx,
+                            evald);
     JS_FreeValue(ctx, evald);
     return JS_EXCEPTION;
   }
@@ -628,9 +630,9 @@ static int handle_line_3_parameter_helper(ThreadState *ts, const char *line,
 
   JSValue parsed_arg = JS_ParseJSON(ts->ctx, line, len, "<input>");
   if (JS_IsException(parsed_arg)) {
-    jsockd_logf(LOG_DEBUG, "Error parsing JSON argument: <<END\n%.*s\nEND\n",
+    jsockd_logf(LOG_DEBUG, "Error parsing JSON argument <<END\n%.*s\nEND\n",
                 len, line);
-    dump_error(ts->ctx);
+    log_error_with_prefix("JSON parse exception:\n", ts->ctx, parsed_arg);
     JS_FreeValue(ts->ctx, parsed_arg);
     writev_to_stream(
         ts,
@@ -681,7 +683,8 @@ static int handle_line_3_parameter_helper(ThreadState *ts, const char *line,
     JS_FreeValue(ts->ctx, parsed_arg);
     JS_FreeValue(ts->ctx, ret);
     JS_FreeValue(ts->ctx, stringified);
-    dump_error(ts->ctx);
+    log_error_with_prefix("Error attempting to JSON serialize return value:\n",
+                          ts->ctx, stringified);
     writev_to_stream(
         ts,
         {.iov_base = (void *)ts->current_uuid, .iov_len = ts->current_uuid_len},
@@ -1105,7 +1108,8 @@ static int eval(void) {
   if (1 != JS_SetPropertyStr(ts->ctx, glob, "M", ts->compiled_module)) {
     jsockd_logf(LOG_ERROR | LOG_INTERACTIVE,
                 "Error setting M property for eval\n");
-    dump_error(ts->ctx);
+    if (CMAKE_BUILD_TYPE_IS_DEBUG)
+      log_error_with_prefix("Error details:\n", ts->ctx, glob);
     exit_status = EXIT_FAILURE;
     goto cleanup;
   }
@@ -1114,7 +1118,7 @@ static int eval(void) {
                    "<cmdline>", JS_EVAL_TYPE_GLOBAL);
 
   if (JS_IsException(result)) {
-    dump_error(ts->ctx);
+    log_error_with_prefix("Error during eval:\n", ts->ctx, result);
     exit_status = EXIT_FAILURE;
   }
 

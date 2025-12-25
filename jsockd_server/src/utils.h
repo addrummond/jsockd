@@ -23,7 +23,6 @@ void memswap_small(void *m1, void *m2, size_t size);
 int string_ends_with(const char *str, const char *suffix);
 int make_temp_dir(char out[], size_t out_size, const char *template);
 void timespec_to_iso8601(const struct timespec *ts, char *buf, size_t buflen);
-void dump_error(JSContext *ctx);
 void print_value_to_stdout(void *opaque, const char *buf, size_t size);
 char *read_all_stdin(size_t *out_size);
 
@@ -44,6 +43,10 @@ typedef struct {
   size_t length;
 } WBuf;
 void write_to_wbuf(WBuf *buf, const char *inp, size_t size);
+
+void dump_error_to_wbuf(JSContext *ctx, JSValueConst exception_val, WBuf *wbuf);
+void log_error_with_prefix(const char *prefix, JSContext *ctx,
+                           JSValueConst exception_val);
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) < (b) ? (b) : (a))
