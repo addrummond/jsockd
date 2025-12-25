@@ -1,4 +1,3 @@
-- Turn jsockd_server/tests/e2e/sourcemaps/todo_not_yet_a_test.sh into a proper test
 - CMakeLists.txts isn't completely "modern CMake". It still uses non-target-specific directives like 'add_compile_options'.
 - Format check for Elixir client code in CI
 - Full documentation for Elixir client
