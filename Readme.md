@@ -128,10 +128,6 @@ Output:
 mycommand ok "<div class=\"counter\"><p>You clicked <!-- -->99<!-- --> times</p><button>Click me</button></div>"
 ```
 
-**TODO: rough notes**
-
-- Import `react-dom/server.edge` rather than `react-dom/server`.
-
 ## 2. The module compiler
 
 ### 2.1 Signing and compiling modules
