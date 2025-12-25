@@ -49,7 +49,83 @@ The following is a typical example of a command in the context of React SSR. The
 }
 ````
 
-### 1.3 Tips for SSR with React 19
+### 1.3 SSR with React 19
+
+*This section demonstrates how to use JSockD to perform server-side rendering of a simple React 19 component.*
+
+Create project dir and install dependencies:
+
+```sh
+mkdir react-ssr-example && cd react-ssr-example
+npm init -y
+npm install react@19 react-dom@19 esbuild
+```
+
+Create the application source files:
+
+```sh
+cat > counter.jsx <<END
+import React from "react";
+
+export function Counter({ initialValue }) {
+  const [count, setCount] = React.useState(initialValue)
+
+  return (
+    <div className="counter">
+      <p>You clicked {count} times</p>
+      <button onClick={() => setCount(count + 1)}>
+        Click me
+      </button>
+    </div>
+  )
+}
+END
+
+cat > app.jsx <<END
+import React from "react";
+import { renderToString } from "react-dom/server.edge";
+import { Counter } from "./counter.jsx";
+
+export function renderCounter(params) {
+  return renderToString(<Counter {...params} />);
+}
+END
+```
+
+Create a signing key for the module bytecode:
+
+```sh
+jsockd -k mykey.privkey
+```
+
+Bundle the application using esbuild and then compile and sign the bytecode:
+
+```sh
+npx esbuild ./app.jsx --bundle --outfile=bundle.mjs --sourcemap --format=esm jsockd -k mykey.privkey -c bundle.mjs bundle.quickjs_bytecode
+```
+
+Set the public key environment variable and run the jsockd server:
+
+```sh
+export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=$(cat mykey.pubkey)
+jsockd -m bundle.quickjs_bytecode -sm bundle.mjs.map -s /tmp/sock
+```
+
+In a separate terminal, use netcat (`nc`) to send a command to the server that renders the `Counter` component with an initial value of 99:
+
+```sh
+nc -U /tmp/sock <<END
+mycommand
+(m, params) => m.renderCounter(params)
+{"initialValue": 99}
+END
+```
+
+Output:
+
+```
+mycommand ok "<div class=\"counter\"><p>You clicked <!-- -->99<!-- --> times</p><button>Click me</button></div>"
+```
 
 **TODO: rough notes**
 
