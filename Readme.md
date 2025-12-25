@@ -158,13 +158,12 @@ jsockd -s <socket1> [<socket2> ...] [-m <module_bytecode_file>] [-sm <source_map
 
 | Option      | Argument(s)                 | Description                                                                  | Default       | Repeatable | Required |
 |-------------|-----------------------------|------------------------------------------------------------------------------|---------------|------------|----------|
-| `-s`        | `<socket1> [<socket2> ...]` | One or more socket file paths.                                               |               | Yes        | Yes      |
+| `-s`        | `<socket1> [<socket2> ...]` | One or more socket file paths. Use `-s -- <socket> ...` to permit file names beginning with `-`.                                              |               | Yes        | Yes      |
 | `-m`        | `<module_bytecode_file>`    | Path to ES6 module bytecode file.                                            |               | No         | No       |
 | `-sm`       | `<source_map_file>`         | Path to source map file (e.g. `foo.js.map`). Can only be used with `-m`.     |               | No         | No       |
 | `-t`        | `<microseconds>`            | Maximum command runtime in microseconds (must be integer > 0).               | 250000        | No         | No       |
 | `-i`        | `<microseconds>`            | Maximum time in microseconds that thread can remain idle before QuickJS runtime is shut down, or 0 for no idle timeout (must be integer ≥ 0). | 0             | No         | No       |
 | `-b`        | `<XX>`                      | Separator byte as two hex digits (e.g. `0A`).                                | `0A` (= `\n`) | No         | No       |
-| `--`        |                             | Indicates end of options for `-s` (allows socket paths starting with `-`).   |               | N/A        | No       |
 
 ### 3.3 Environment variables
 
