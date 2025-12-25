@@ -101,7 +101,8 @@ jsockd -k mykey.privkey
 Bundle the application using esbuild and then compile and sign the bytecode:
 
 ```sh
-npx esbuild ./app.jsx --bundle --outfile=bundle.mjs --sourcemap --format=esm jsockd -k mykey.privkey -c bundle.mjs bundle.quickjs_bytecode
+npx esbuild ./app.jsx --bundle --outfile=bundle.mjs --sourcemap --format=esm
+jsockd -k mykey.privkey -c bundle.mjs bundle.quickjs_bytecode
 ```
 
 Set the public key environment variable and run the jsockd server:
