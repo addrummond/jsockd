@@ -75,33 +75,7 @@ int wait_group_timed_wait(WaitGroup *wg, uint64_t timeout_ns) {
                                    .tv_sec = timeout_ns / 1000000000};
   r = pthread_cond_timedwait_relative_np(&wg->cond, &wg->mutex, &relative_time);
 #else
-  // If we can't do a timed wait then use a simple loop, as we don't want the
-  // program to hang indefinitely if there's a bug (which is what will happen if
-  // we use pthread_cond_wait).
-  useconds_t w = 50;
-  struct timespec start_time;
-  if (0 != clock_gettime(CLOCK_MONOTONIC, &start_time)) {
-    pthread_mutex_unlock(&wg->mutex);
-    return -1;
-  }
-  while (atomic_load_explicit(&wg->n_remaining, memory_order_relaxed) > 0) {
-    usleep(w);
-    if (w < 100000)
-      w = w * 5 / 4;
-    struct timespec current_time;
-    if (0 != clock_gettime(CLOCK_MONOTONIC, &current_time)) {
-      pthread_mutex_unlock(&wg->mutex);
-      return -1;
-    }
-    if ((uint64_t)(current_time.tv_sec - start_time.tv_sec) >
-            timeout_ns / 1000000000 ||
-        ((uint64_t)(current_time.tv_sec - start_time.tv_sec) ==
-             timeout_ns / 1000000000 &&
-         (uint64_t)(current_time.tv_nsec - start_time.tv_nsec) >=
-             timeout_ns % 1000000000)) {
-      return -1;
-    }
-  }
+#error "Unknown platform for wait_group_timed_wait"
 #endif
 
   if (r != 0) {
