@@ -80,15 +80,19 @@ int wait_group_timed_wait(WaitGroup *wg, uint64_t timeout_ns) {
   // we use pthread_cond_wait).
   useconds_t w = 50;
   struct timespec start_time;
-  if (0 != clock_gettime(CLOCK_MONOTONIC, &start_time))
+  if (0 != clock_gettime(CLOCK_MONOTONIC, &start_time)) {
+    pthread_mutex_unlock(&wg->mutex);
     return -1;
+  }
   while (atomic_load_explicit(&wg->n_remaining, memory_order_relaxed) > 0) {
     usleep(w);
     if (w < 100000)
       w = w * 5 / 4;
     struct timespec current_time;
-    if (0 != clock_gettime(CLOCK_MONOTONIC, &current_time))
+    if (0 != clock_gettime(CLOCK_MONOTONIC, &current_time)) {
+      pthread_mutex_unlock(&wg->mutex);
       return -1;
+    }
     if ((uint64_t)(current_time.tv_sec - start_time.tv_sec) >
             timeout_ns / 1000000000 ||
         ((uint64_t)(current_time.tv_sec - start_time.tv_sec) ==
@@ -100,8 +104,10 @@ int wait_group_timed_wait(WaitGroup *wg, uint64_t timeout_ns) {
   }
 #endif
 
-  if (r != 0)
+  if (r != 0) {
+    pthread_mutex_unlock(&wg->mutex);
     return r;
+  }
 
   r = pthread_mutex_unlock(&wg->mutex);
 
