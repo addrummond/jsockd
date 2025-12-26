@@ -27,7 +27,7 @@ int wait_group_init(WaitGroup *wg, int n_waiting_for) {
 int wait_group_inc(WaitGroup *wg, int n) {
   int r;
   int previous_value =
-      atomic_fetch_add_explicit(&wg->n_remaining, -n, memory_order_relaxed);
+      atomic_fetch_add_explicit(&wg->n_remaining, -n, memory_order_release);
   if (previous_value > 0 && previous_value <= n) {
     // We have just decremented the wait group to zero. If
     // wait_group_timed_wait has been called already then we need to call
@@ -49,7 +49,7 @@ int wait_group_inc(WaitGroup *wg, int n) {
 }
 
 int wait_group_n_remaining(WaitGroup *wg) {
-  return atomic_load_explicit(&wg->n_remaining, memory_order_relaxed);
+  return atomic_load_explicit(&wg->n_remaining, memory_order_acquire);
 }
 
 int wait_group_timed_wait(WaitGroup *wg, uint64_t timeout_ns) {
@@ -57,10 +57,10 @@ int wait_group_timed_wait(WaitGroup *wg, uint64_t timeout_ns) {
   if (r != 0)
     return r;
 
-  if (atomic_load_explicit(&wg->n_remaining, memory_order_relaxed) == 0)
-    return pthread_mutex_unlock(&wg->mutex);
-
   wg->wait_called = true;
+
+  if (atomic_load_explicit(&wg->n_remaining, memory_order_acquire) == 0)
+    return pthread_mutex_unlock(&wg->mutex);
 
 #if defined LINUX && !defined FORCE_BUSY_LOOP_FOR_WG
   struct timespec abstime;
@@ -113,7 +113,7 @@ int wait_group_timed_wait(WaitGroup *wg, uint64_t timeout_ns) {
 
   if (r != 0)
     return r;
-  assert(atomic_load_explicit(&wg->n_remaining, memory_order_relaxed) <= 0);
+  assert(atomic_load_explicit(&wg->n_remaining, memory_order_acquire) <= 0);
   return 0;
 }
 
