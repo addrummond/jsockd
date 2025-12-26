@@ -153,7 +153,7 @@ void timespec_to_iso8601(const struct timespec *ts, char *buf, size_t buflen) {
   }
   // Append fractional seconds and 'Z'
   // Ensure enough space for .nnnnnnnnnZ and null terminator
-  if (len + 8 < buflen)
+  if (len + 9 < buflen)
     snprintf(buf + len, buflen - len, ".%06ldZ", ns_to_us(ts->tv_nsec));
 }
 
