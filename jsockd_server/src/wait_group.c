@@ -27,7 +27,7 @@ int wait_group_init(WaitGroup *wg, int n_waiting_for) {
 int wait_group_inc(WaitGroup *wg, int n) {
   int r;
   int previous_value =
-      atomic_fetch_add_explicit(&wg->n_remaining, -n, memory_order_release);
+      atomic_fetch_add_explicit(&wg->n_remaining, -n, memory_order_acq_rel);
   if (previous_value > 0 && previous_value <= n) {
     // We have just decremented the wait group to zero. If
     // wait_group_timed_wait has been called already then we need to call
@@ -62,31 +62,47 @@ int wait_group_timed_wait(WaitGroup *wg, uint64_t timeout_ns) {
   if (atomic_load_explicit(&wg->n_remaining, memory_order_acquire) == 0)
     return pthread_mutex_unlock(&wg->mutex);
 
-#if defined LINUX && !defined FORCE_BUSY_LOOP_FOR_WG
+#if defined LINUX
   struct timespec abstime;
-  if (0 != clock_gettime(CLOCK_MONOTONIC, &abstime))
+  if (0 != clock_gettime(CLOCK_MONOTONIC, &abstime)) {
+    pthread_mutex_unlock(&wg->mutex);
     return -1;
+  }
   abstime.tv_nsec += timeout_ns;
   abstime.tv_sec += abstime.tv_nsec / 1000000000;
   abstime.tv_nsec %= 1000000000;
-  r = pthread_cond_timedwait(&wg->cond, &wg->mutex, &abstime);
-#elif defined MACOS && !defined FORCE_BUSY_LOOP_FOR_WG
+
+  // pthread_cond_timedwait can return 0 on spurious wakeups, so we need this
+  // loop
+  while (atomic_load_explicit(&wg->n_remaining, memory_order_acquire) > 0) {
+    r = pthread_cond_timedwait(&wg->cond, &wg->mutex, &abstime);
+    if (r != 0) {
+      pthread_mutex_unlock(&wg->mutex);
+      return r;
+    }
+  }
+#elif defined MACOS
   struct timespec relative_time = {.tv_nsec = timeout_ns % 1000000000,
                                    .tv_sec = timeout_ns / 1000000000};
-  r = pthread_cond_timedwait_relative_np(&wg->cond, &wg->mutex, &relative_time);
+
+  // pthread_cond_timedwait_relative_np can return 0 on spurious wakeups, so we
+  // need this loop
+  while (atomic_load_explicit(&wg->n_remaining, memory_order_acquire) > 0) {
+    r = pthread_cond_timedwait_relative_np(&wg->cond, &wg->mutex,
+                                           &relative_time);
+    if (r != 0) {
+      pthread_mutex_unlock(&wg->mutex);
+      return r;
+    }
+  }
 #else
 #error "Unknown platform for wait_group_timed_wait"
 #endif
 
-  if (r != 0) {
-    pthread_mutex_unlock(&wg->mutex);
-    return r;
-  }
-
   r = pthread_mutex_unlock(&wg->mutex);
-
   if (r != 0)
     return r;
+
   assert(atomic_load_explicit(&wg->n_remaining, memory_order_acquire) <= 0);
   return 0;
 }
