@@ -183,11 +183,13 @@ void log_error_with_prefix(const char *prefix, JSContext *ctx,
 
 PollFdResult poll_fd(int fd, int timeout_ms) {
   struct pollfd pfd = {.fd = fd, .events = POLLIN | POLLPRI};
-  if (!poll(&pfd, 1, timeout_ms)) {
+  if (0 == poll(&pfd, 1, timeout_ms)) {
     if (atomic_load_explicit(&g_interrupted_or_error, memory_order_acquire))
       return SIG_INTERRUPT_OR_ERROR;
     return GO_AROUND;
   }
+  // We get here on error too, in which case we may as well just try reading
+  // from the fd and handle the error there.
   return READY;
 }
 
@@ -200,12 +202,14 @@ PollFdResult ppoll_fd(int fd, const struct timespec *timeout) {
   struct pollfd pfd = {.fd = fd, .events = POLLIN | POLLPRI};
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wimplicit-function-declaration"
-  if (!ppoll(&pfd, 1, timeout, NULL)) {
+  if (0 == ppoll(&pfd, 1, timeout, NULL)) {
 #pragma GCC diagnostic pop
     if (atomic_load_explicit(&g_interrupted_or_error, memory_order_acquire))
       return SIG_INTERRUPT_OR_ERROR;
     return GO_AROUND;
   }
+  // We get here on error too, in which case we may as well just try reading
+  // from the fd and handle the error there.
   return READY;
 #endif
 }
