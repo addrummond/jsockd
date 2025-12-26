@@ -243,7 +243,7 @@ void cleanup_command_state(ThreadState *ts) {
   ts->compiled_query = JS_UNDEFINED;
   if (ts->cached_function_in_use) {
     atomic_fetch_add_explicit(&ts->cached_function_in_use->bucket.refcount, -1,
-                              memory_order_release);
+                              memory_order_acq_rel);
     ts->cached_function_in_use = NULL;
   }
 }
