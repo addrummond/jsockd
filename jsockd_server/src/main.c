@@ -1023,17 +1023,6 @@ static void SIGINT_and_SIGTERM_handler(int sig) {
 
   atomic_store_explicit(&g_sig_triggered, sig, memory_order_relaxed);
   atomic_store_explicit(&g_interrupted_or_error, true, memory_order_release);
-
-  // Using stdio inside an interrupt handler is not safe, but calls to write
-  // are explicilty allowed.
-  const char int_msg[] = "$ jsockd 0000-00-00T00:00:00.000000Z [INFO] SIGINT "
-                         "received, cleaning up...\n";
-  const char term_msg[] = "$ jsockd 0000-00-00T00:00:00.000000Z [INFO] "
-                          "SIGTERM received, cleaning up...\n";
-  if (sig == SIGINT)
-    write_all(2, int_msg, sizeof(int_msg) - 1);
-  else
-    write_all(2, term_msg, sizeof(term_msg) - 1);
 }
 
 static void log_to_stderr(const char *fmt, ...) {
@@ -1305,9 +1294,14 @@ int main(int argc, char **argv) {
       return EXIT_FAILURE;
   }
 
-  if (SIGINT == atomic_load_explicit(&g_sig_triggered, memory_order_relaxed))
-    return EXIT_FAILURE;
+  int sig = atomic_load_explicit(&g_sig_triggered, memory_order_relaxed);
+  if (!g_interactive_logging_mode && (sig == SIGINT || sig == SIGTERM)) {
+    jsockd_logf(LOG_INFO, "Exiting after %s received\n",
+                sig == SIGINT ? "SIGINT" : "SIGTERM");
+  }
 
+  if (sig != 0 && sig != SIGTERM)
+    return EXIT_FAILURE;
   return EXIT_SUCCESS;
 
 thread_init_error:

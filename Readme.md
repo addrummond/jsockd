@@ -359,7 +359,7 @@ When executed as a server (i.e. with the `-s` option), JSockD logs messages to s
 
 The `<PREFIX>` is `$` for the last line of a log message and `*` for all other lines.
 
-The `<DATETIME>` is in ISO 8601 format (or is the string `0000-00-00T00:00:00.000000Z` when a message is logged from a signal handler or in the unlikely event of a failed call to `clock_gettime`).
+The `<DATETIME>` is in ISO 8601 format (or is the string `0000-00-00T00:00:00.000000Z` in the unlikely event of a failed call to `clock_gettime`).
 
 The `<LOG_LEVEL>` is one of `INFO`, `WARN`, or `ERROR` in release builds, or also `DEBUG` in debug builds.
 
