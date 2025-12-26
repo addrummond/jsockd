@@ -1017,7 +1017,7 @@ static void global_cleanup(void) {
 
 static void SIGINT_and_SIGTERM_handler(int sig) {
   static atomic_int already_called = 0;
-  int n = atomic_fetch_add_explicit(&already_called, 1, memory_order_relaxed);
+  int n = atomic_fetch_add_explicit(&already_called, 1, memory_order_acq_rel);
   if (n > 0)
     return;
 
