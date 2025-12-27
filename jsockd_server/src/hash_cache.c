@@ -99,9 +99,17 @@ HashCacheBucket *get_hash_cache_entry_(HashCacheBucket *buckets,
         continue;
       }
 
+      // Use of memory_order_relaxed here means we could read an out of date or
+      // partially written UID value, but this has (with a very high
+      // probability) the benign failure mode of concluding that something is
+      // not in the cache which in fact is.
       if (uid != atomic_load_explicit(&bucket->uid, memory_order_relaxed))
         break;
 
+      // This could lead to us temporarily incrementing the refcount of a
+      // different cache entry if it's changed underneath us, but that's
+      // acceptable (we remove the spurious refcount increment after checking
+      // 'updated' below).
       atomic_fetch_add_explicit(&bucket->refcount, 1, memory_order_release);
 
       bool updated =
