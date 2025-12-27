@@ -1304,8 +1304,10 @@ int main(int argc, char **argv) {
   return EXIT_SUCCESS;
 
 thread_init_error:
-  for (int i = 0; i <= thread_init_n; ++i)
+  for (int i = 0; i <= thread_init_n; ++i) {
+    free(g_thread_state_input_buffers[i]);
     destroy_thread_state(&g_thread_states[i]);
+  }
 cleanup_on_error:
   global_cleanup();
   free(g_thread_states);
