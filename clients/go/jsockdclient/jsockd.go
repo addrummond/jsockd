@@ -68,6 +68,8 @@ type command struct {
 // RawResponse represents the raw response to a command sent to the JSockD
 // server. The ResultJson field contains the JSON string returned by the server.
 type RawResponse struct {
+	// True iff the command raised an exception. When true, ResultJson is the
+	// JSON blob sent by the server containing information about the error.
 	Exception  bool
 	ResultJson string
 }
@@ -75,8 +77,11 @@ type RawResponse struct {
 // Response represents the response to a command sent to the JSockD server. The
 // Result field is of the type specified by the caller when sending the command.
 type Response[T any] struct {
-	Exception bool
-	Result    T
+	// True iff the command raised an exception. When true, Result has its default
+	// value; check RawResponse for further information about the error.
+	Exception   bool
+	Result      T
+	RawResponse RawResponse
 }
 
 // JSockDClient represents a client connection to a JSockD server. It should
@@ -334,17 +339,18 @@ func sendCommand[ResponseT any](iclient *jSockDInternalClient, query string, jso
 	}
 	rawResp, err := sendRawCommand(iclient, query, string(j), messageHandler)
 	if err != nil {
-		return Response[ResponseT]{}, err
+		return Response[ResponseT]{RawResponse: rawResp}, err
 	}
 	var resp Response[ResponseT]
 	resp.Exception = rawResp.Exception
 	if !rawResp.Exception {
 		err = json.Unmarshal([]byte(rawResp.ResultJson), &resp.Result)
 		if err != nil {
-			return Response[ResponseT]{}, fmt.Errorf("json unmarshal: %w", err)
+			return Response[ResponseT]{RawResponse: rawResp}, fmt.Errorf("json unmarshal: %w", err)
 		}
 	} else {
 		resp.Result = *new(ResponseT)
+		resp.RawResponse = rawResp
 	}
 	return resp, nil
 }
