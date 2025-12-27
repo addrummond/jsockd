@@ -84,8 +84,8 @@ case $1 in
         (
             set +e
             cd $GITHUB_WORKSPACE
-            tag=$(git describe --tags --exact-match --match 'v[0-9]*' 2>/dev/null)
-            if [ -z $? ]; then
+            tag=$(git describe --tags --exact-match --match 'v[0-9.]*' 2>/dev/null)
+            if [ $? -eq 0 ]; then
                 case "$tag" in
                     "v"*)
                         echo "Checking that all in-code JSockD version constants match the tag ${tag}..."
