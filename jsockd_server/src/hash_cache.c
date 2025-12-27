@@ -91,7 +91,7 @@ HashCacheBucket *get_hash_cache_entry_(HashCacheBucket *buckets,
 
     // In the unlikely event that we can't acquire the lock after a fair number
     // of tries, we just report that the item is not in the cache.
-    for (int i = 0; i < LOW_CONTENTION_SPIN_LOCK_MAX_TRIES; ++i) {
+    for (int n = 0; n < LOW_CONTENTION_SPIN_LOCK_MAX_TRIES; ++n) {
       int update_count_before =
           atomic_load_explicit(&bucket->update_count, memory_order_acquire);
 
