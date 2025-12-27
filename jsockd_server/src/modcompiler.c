@@ -199,14 +199,14 @@ int output_key_file(const char *key_file_prefix) {
   ed25519_create_keypair(pubkey, privkey, seed);
 
   if (0 != hex_encode(pubkey, ED25519_PUBLIC_KEY_SIZE, pubkey_file)) {
-    fprintf(stderr, "Error writing to public key file %s: %s", pubkey_filename,
-            strerror(errno));
+    fprintf(stderr, "Error writing to public key file %s: %s\n",
+            pubkey_filename, strerror(errno));
     ret = EXIT_FAILURE;
     goto end;
   }
 
   if (0 != hex_encode(privkey, ED25519_PRIVATE_KEY_SIZE, privkey_file)) {
-    fprintf(stderr, "Error writing to private key file %s: %s",
+    fprintf(stderr, "Error writing to private key file %s: %s\n",
             privkey_filename, strerror(errno));
     ret = EXIT_FAILURE;
     goto end;
