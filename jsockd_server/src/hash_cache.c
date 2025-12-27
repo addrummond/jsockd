@@ -47,7 +47,7 @@ HashCacheBucket *add_to_hash_cache_(HashCacheBucket *buckets,
     // The bucket has a refcount of zero, so we can clean it up and then reuse
     // it.
     // Note that (according to AI anyway :D) this compare/exchange acts as
-    // barrier ensuring that any other thread that observes the updated
+    // barrier ensuring that any other thread observes the updated
     // update_count before the following writes commence.
     if (atomic_compare_exchange_strong_explicit(
             &bucket->refcount, &expected0int, 1, memory_order_acq_rel,
