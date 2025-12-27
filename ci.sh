@@ -300,6 +300,11 @@ case $1 in
                 cd jsockd_server
                 gh release create $2 --title $2
                 gh release upload $2 jsockd-*.tar.gz checksums.txt ed25519_signatures.txt
+
+                # Create Go client module tag
+                GO_CLIENT_TAG="clients/go/jsockdclient/$2"
+                git tag "$GO_CLIENT_TAG"
+                git push origin "$GO_CLIENT_TAG"
             )
         fi
         ;;
