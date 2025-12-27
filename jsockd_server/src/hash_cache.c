@@ -44,9 +44,6 @@ HashCacheBucket *add_to_hash_cache_(HashCacheBucket *buckets,
         (HashCacheBucket *)((char *)buckets + j * bucket_size);
     int expected0int = 0;
 
-    // Make odd
-    atomic_fetch_add_explicit(&bucket->update_count, 1, memory_order_relaxed);
-
     // The bucket has a refcount of zero, so we can clean it up and then reuse
     // it.
     // Note that (according to AI anyway :D) this compare/exchange acts as
@@ -55,6 +52,9 @@ HashCacheBucket *add_to_hash_cache_(HashCacheBucket *buckets,
     if (atomic_compare_exchange_strong_explicit(
             &bucket->refcount, &expected0int, 1, memory_order_acq_rel,
             memory_order_acquire)) {
+      // Make odd
+      atomic_fetch_add_explicit(&bucket->update_count, 1, memory_order_relaxed);
+
       // This is the only code path that updates a bucket, so because of the
       // atomic compare/exchange, we know that no other thread is currently
       // doing so.
@@ -64,13 +64,12 @@ HashCacheBucket *add_to_hash_cache_(HashCacheBucket *buckets,
         cleanup(bucket);
       memcpy((void *)((char *)bucket + object_offset), object, object_size);
       atomic_store_explicit(&bucket->uid, uid, memory_order_release);
+
       // Make even
       atomic_fetch_add_explicit(&bucket->update_count, 1, memory_order_release);
+
       return bucket;
     }
-
-    // We didn't actually update the bucket, so decrement the update count.
-    atomic_fetch_add_explicit(&bucket->update_count, -1, memory_order_relaxed);
   }
   return NULL;
 }
