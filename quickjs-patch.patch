@@ -1,8 +1,8 @@
 diff --git a/quickjs-libc.c b/quickjs-libc.c
-index 54a7a15..e0dd552 100644
+index c24b6d5..b17ee41 100644
 --- a/quickjs-libc.c
 +++ b/quickjs-libc.c
-@@ -4277,8 +4277,14 @@ JSValue js_std_await(JSContext *ctx, JSValue obj)
+@@ -4297,8 +4297,14 @@ JSValue js_std_await(JSContext *ctx, JSValue obj)
              if (err == 0) {
                  js_std_promise_rejection_check(ctx);
  
@@ -20,10 +20,36 @@ index 54a7a15..e0dd552 100644
          } else {
              /* not a promise */
 diff --git a/quickjs.c b/quickjs.c
-index 92a7297..755e864 100644
+index f86379f..5f88229 100644
 --- a/quickjs.c
 +++ b/quickjs.c
-@@ -2006,9 +2006,11 @@ void JS_FreeRuntime(JSRuntime *rt)
+@@ -308,6 +308,8 @@ struct JSRuntime {
+     int shape_hash_count; /* number of hashed shapes */
+     JSShape **shape_hash;
+     void *user_opaque;
++    // Alex D: quickjs-libc makes use of user_opaque, but we need an opaque for our own purposes
++    void *user_opaque2;
+ };
+ 
+ struct JSClass {
+@@ -1714,6 +1716,16 @@ void JS_SetRuntimeOpaque(JSRuntime *rt, void *opaque)
+     rt->user_opaque = opaque;
+ }
+ 
++void *JS_GetRuntimeOpaque2(JSRuntime *rt)
++{
++    return rt->user_opaque2;
++}
++
++void JS_SetRuntimeOpaque2(JSRuntime *rt, void *opaque)
++{
++    rt->user_opaque2 = opaque;
++}
++
+ /* default memory allocation functions with memory limitation */
+ static size_t js_def_malloc_usable_size(const void *ptr)
+ {
+@@ -2032,9 +2044,11 @@ void JS_FreeRuntime(JSRuntime *rt)
          if (count != 0)
              printf("Secondary object leaks: %d\n", count);
      }
@@ -36,3 +62,16 @@ index 92a7297..755e864 100644
  
      /* free the classes */
      for(i = 0; i < rt->class_count; i++) {
+diff --git a/quickjs.h b/quickjs.h
+index 92cc000..d13a2ff 100644
+--- a/quickjs.h
++++ b/quickjs.h
+@@ -377,6 +377,8 @@ JSRuntime *JS_NewRuntime2(const JSMallocFunctions *mf, void *opaque);
+ void JS_FreeRuntime(JSRuntime *rt);
+ void *JS_GetRuntimeOpaque(JSRuntime *rt);
+ void JS_SetRuntimeOpaque(JSRuntime *rt, void *opaque);
++void *JS_GetRuntimeOpaque2(JSRuntime *rt);
++void JS_SetRuntimeOpaque2(JSRuntime *rt, void *opaque);
+ typedef void JS_MarkFunc(JSRuntime *rt, JSGCObjectHeader *gp);
+ void JS_MarkValue(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func);
+ void JS_RunGC(JSRuntime *rt);

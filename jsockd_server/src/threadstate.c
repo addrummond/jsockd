@@ -203,40 +203,12 @@ int init_thread_state(ThreadState *ts, SocketState *socket_state,
   return 0;
 }
 
-// QuickJS LibC makes its own use of JS_Get/SetRuntimeOpaque, so we implement
-// our own simple mapping from JSRuntime pointers to ThreadState pointers.
-static _Atomic(JSRuntime *) ts_rt_mapping[MAX_THREADS];
-
-// We assume the functions below are called only from the thread associated with
-// each runtime, so no need for locking/atomics.
-
-#define BOUNDS_ASSERTION                                                       \
-  (ts->thread_index < g_n_threads && ts >= g_thread_states &&                  \
-   ts < g_thread_states + MAX_THREADS && ts >= g_thread_states &&              \
-   ts < g_thread_states + g_n_threads)
 void register_thread_state_runtime(JSRuntime *rt, ThreadState *ts) {
-  if (CMAKE_BUILD_TYPE_IS_DEBUG && !BOUNDS_ASSERTION) {
-    jsockd_logf(LOG_ERROR,
-                "register_thread_state_runtime: bounds assertion failed: "
-                "thread_index=%i, g_n_threads=%i, ts=%p, left=%p, right=%p\n",
-                ts->thread_index, g_n_threads, (void *)ts,
-                (void *)g_thread_states,
-                (void *)(g_thread_states + g_n_threads));
-  }
-  assert(BOUNDS_ASSERTION);
-  atomic_store_explicit(ts_rt_mapping + ts->thread_index, rt,
-                        memory_order_release);
+  JS_SetRuntimeOpaque2(rt, (void *)ts);
 }
-#undef BOUNDS_ASSERTION
 
 ThreadState *get_runtime_thread_state(JSRuntime *rt) {
-  for (int i = 0; i < atomic_load_explicit(&g_n_threads, memory_order_relaxed);
-       i++) {
-    if (rt == atomic_load_explicit(ts_rt_mapping + i, memory_order_acquire))
-      return &g_thread_states[i];
-  }
-  assert(0 && "ThreadState not found for given JSRuntime");
-  return NULL;
+  return (ThreadState *)JS_GetRuntimeOpaque2(rt);
 }
 
 void cleanup_command_state(ThreadState *ts) {
