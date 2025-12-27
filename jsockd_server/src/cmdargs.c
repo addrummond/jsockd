@@ -181,7 +181,6 @@ static int parse_cmd_args_helper(int argc, char **argv,
       if (i >= argc) {
         errlog("Error: -e requires an argument (JavaScript code to evaluate, "
                "or ')\n");
-        fprintf(stderr, "HERE!3\n");
         return -1;
       }
       cmdargs->eval = true;
