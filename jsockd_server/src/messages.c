@@ -147,7 +147,8 @@ read_done:
     return SEND_MESSAGE_ERR_BAD_MESSAGE;
   }
 
-  if (0 != strncmp(ts->input_buf, ts->current_uuid, ts->current_uuid_len)) {
+  if (uuid_len != ts->current_uuid_len ||
+      0 != strncmp(ts->input_buf, ts->current_uuid, ts->current_uuid_len)) {
     jsockd_logf(
         LOG_DEBUG,
         "Error parsing message response, UUID mismatch (expected %.*s, got "
