@@ -90,7 +90,7 @@ void jsockd_logf(LogLevel log_level, const char *fmt, ...) {
     n = ABSOLUTE_MAX_LOG_BUF_SIZE - 1;
 
   if ((size_t)n > sizeof(log_buf_) / sizeof(log_buf_[0]))
-    log_buf = (char *)calloc((size_t)n, sizeof(char));
+    log_buf = (char *)calloc((size_t)n + 1, sizeof(char));
 
   int m = vsnprintf(log_buf, n + 1, fmt, args2);
   va_end(args2);
