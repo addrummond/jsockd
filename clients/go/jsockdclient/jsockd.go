@@ -548,7 +548,7 @@ func readReadyFromStdout(stdout io.Reader, readyCh chan<- int, errCh chan<- erro
 	if scanErr := scanner.Err(); scanErr != nil {
 		errCh <- scanErr
 	} else {
-		errCh <- errors.New("stdout closed before READY line")
+		errCh <- errors.New("stdout closed before READY line; check jsockd logs for error")
 	}
 }
 
