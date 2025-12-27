@@ -1059,7 +1059,8 @@ static int eval(void) {
         munmap_or_warn((void *)g_module_bytecode,
                        g_module_bytecode_size + ED25519_SIGNATURE_SIZE);
       jsockd_logf(LOG_ERROR | LOG_INTERACTIVE,
-                  "Error loading source map file %s: %s\n", strerror(errno));
+                  "Error loading source map file %s: %s\n",
+                  g_cmd_args.source_map_file, strerror(errno));
       jsockd_log(LOG_INFO | LOG_INTERACTIVE, "Continuing without source map\n");
     }
   }
