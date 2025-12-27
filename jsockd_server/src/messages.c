@@ -189,7 +189,7 @@ static void jsockd_finalizer(JSRuntime *rt, JSValue val) {
 }
 
 static JSClassDef jsockd_class = {
-    "TextDecoder",
+    "JSockD",
     .finalizer = jsockd_finalizer,
 };
 
@@ -259,8 +259,8 @@ int add_intrinsic_jsockd(JSContext *ctx, JSValueConst global) {
 
   JS_SetClassProto(ctx, jsockd_class_id, proto);
 
-  ctor = JS_NewCFunction2(ctx, jsockd_ctor, "TextDecoder", 2,
-                          JS_CFUNC_constructor, 0);
+  ctor =
+      JS_NewCFunction2(ctx, jsockd_ctor, "JSockD", 2, JS_CFUNC_constructor, 0);
   if (JS_IsException(ctor)) {
     JS_FreeValue(ctx, proto);
     JS_FreeValue(ctx, ctor);
