@@ -80,7 +80,7 @@ static int send_message(JSRuntime *rt, const char *message, size_t message_len,
       MAX(1, g_cmd_args.max_command_runtime_us * 1000ULL / 100ULL);
   struct timespec polling_interval = {
       .tv_sec = polling_interval_ns / (1000000ULL * 1000ULL),
-      .tv_nsec = MAX(1, polling_interval_ns % 1000000ULL)};
+      .tv_nsec = MAX(1, polling_interval_ns % (1000000ULL * 1000ULL))};
 
   for (;;) {
   read_loop:
