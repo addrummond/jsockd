@@ -1020,7 +1020,7 @@ static void SIGINT_and_SIGTERM_handler(int sig) {
   if (n > 0)
     return;
 
-  atomic_store_explicit(&g_sig_triggered, sig, memory_order_relaxed);
+  atomic_store_explicit(&g_sig_triggered, sig, memory_order_release);
   atomic_store_explicit(&g_interrupted_or_error, true, memory_order_release);
 }
 
@@ -1294,7 +1294,7 @@ int main(int argc, char **argv) {
       return EXIT_FAILURE;
   }
 
-  int sig = atomic_load_explicit(&g_sig_triggered, memory_order_relaxed);
+  int sig = atomic_load_explicit(&g_sig_triggered, memory_order_acquire);
   if (!g_interactive_logging_mode && (sig == SIGINT || sig == SIGTERM)) {
     jsockd_logf(LOG_INFO, "Exiting after %s received\n",
                 sig == SIGINT ? "SIGINT" : "SIGTERM");
