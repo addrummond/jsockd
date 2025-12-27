@@ -1108,11 +1108,11 @@ static int eval(void) {
                    "<cmdline>", JS_EVAL_TYPE_GLOBAL);
 
   if (JS_IsException(result)) {
-    log_error_with_prefix("Error during eval:\n", ts->ctx, result);
+    js_std_dump_error(ts->ctx);
     exit_status = EXIT_FAILURE;
+  } else {
+    JS_PrintValue(ts->ctx, print_value_to_stdout, NULL, result, NULL);
   }
-
-  JS_PrintValue(ts->ctx, print_value_to_stdout, NULL, result, NULL);
 
 cleanup:
   JS_FreeValue(ts->ctx, result);
