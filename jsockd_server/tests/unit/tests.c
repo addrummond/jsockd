@@ -300,7 +300,7 @@ static int line_handler_1(const char *line, size_t line_len, void *data,
 static int read_6_from_string(char *buf, size_t n, void *data) {
   int nn = n < 6 ? n : 6;
   strncpy(buf, (char *)data, nn);
-  return nn;
+  return MIN(nn, (int)n);
 }
 
 static void TEST_line_buf_simple_case(void) {
@@ -332,7 +332,7 @@ static void TEST_line_buf_simple_case(void) {
 static int read_4_from_string(char *buf, size_t n, void *data) {
   int nn = n < 4 ? n : 4;
   strncpy(buf, (char *)data, nn);
-  return nn;
+  return MIN(nn, (int)n);
 }
 
 static void TEST_line_buf_awkward_chunking(void) {
@@ -449,7 +449,7 @@ static int line_handler_inc_count(const char *line, size_t line_len, void *data,
 
 static int read_all_from_string(char *buf, size_t n, void *data) {
   strcpy(buf, (const char *)data);
-  return strlen((const char *)data);
+  return (int)MIN(n, strlen((const char *)data));
 }
 
 static void TEST_line_buf_one_shot(void) {
@@ -1145,7 +1145,8 @@ static void TEST_output_key_file(void) {
     Add all tests to the list below.
 ******************************************************************************/
 
-#define T(name) {#name, TEST_##name}
+#define T(name)                                                                \
+  { #name, TEST_##name }
 
 TEST_LIST = {T(wait_group_inc_and_wait_basic_use_case),
              T(hash_cache_add_and_retrieve),

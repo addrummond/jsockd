@@ -38,6 +38,7 @@ int line_buf_replay(LineBuf *b, char sep_char,
       b->truncated = false;
       if (lh_r < 0) {
         b->buf[i] = sep_char;
+        b->n -= b->afsep - b->start;
         b->start = b->afsep;
         return lh_r;
       }
