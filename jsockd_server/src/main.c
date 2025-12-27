@@ -497,6 +497,8 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
   }
 
   strncpy(ts->current_uuid, line, len);
+  ts->current_uuid[len] =
+      '\0'; // strncpy does not zeroterm if line is longer than 'len'
   ts->current_uuid_len = len;
   ts->line_n++;
   return 0;
