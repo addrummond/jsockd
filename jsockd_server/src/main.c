@@ -823,7 +823,7 @@ static int line_handler(const char *line, size_t len, ThreadState *ts,
           ts,
           {.iov_base = (void *)ts->current_uuid,
            .iov_len = ts->current_uuid_len},
-          STRCONST_IOVEC(" exception \"jsockd command was too long\n"));
+          STRCONST_IOVEC(" exception \"jsockd command was too long\"\n"));
     } else {
       // we'll signal an error once the client has sent the third line
       ts->line_n++;
