@@ -8,6 +8,7 @@
 #include "log.h"
 #include "messages.h"
 #include "quickjs-libc.h"
+#include "quickjs.h"
 #include "textencodedecode.h"
 #include "utils.h"
 #include <assert.h>
@@ -28,16 +29,19 @@ static int new_custom_context(JSRuntime *rt, JSContext **out_ctx) {
 
   if (qjs_add_intrinsic_text_decoder(ctx, global_obj) < 0) {
     JS_FreeValue(ctx, global_obj);
+    JS_FreeContext(ctx);
     return -1;
   }
 
   if (qjs_add_intrinsic_text_encoder(ctx, global_obj) < 0) {
     JS_FreeValue(ctx, global_obj);
+    JS_FreeContext(ctx);
     return -1;
   }
 
   if (1 != add_intrinsic_jsockd(ctx, global_obj)) {
     JS_FreeValue(ctx, global_obj);
+    JS_FreeContext(ctx);
     return -1;
   }
 
@@ -201,8 +205,7 @@ int init_thread_state(ThreadState *ts, SocketState *socket_state,
 
 // QuickJS LibC makes its own use of JS_Get/SetRuntimeOpaque, so we implement
 // our own simple mapping from JSRuntime pointers to ThreadState pointers.
-
-static JSRuntime *ts_rt_mapping[MAX_THREADS];
+static _Atomic(JSRuntime *) ts_rt_mapping[MAX_THREADS];
 
 // We assume the functions below are called only from the thread associated with
 // each runtime, so no need for locking/atomics.
@@ -221,14 +224,15 @@ void register_thread_state_runtime(JSRuntime *rt, ThreadState *ts) {
                 (void *)(g_thread_states + g_n_threads));
   }
   assert(BOUNDS_ASSERTION);
-  ts_rt_mapping[ts->thread_index] = rt;
+  atomic_store_explicit(ts_rt_mapping + ts->thread_index, rt,
+                        memory_order_release);
 }
 #undef BOUNDS_ASSERTION
 
 ThreadState *get_runtime_thread_state(JSRuntime *rt) {
   for (int i = 0; i < atomic_load_explicit(&g_n_threads, memory_order_relaxed);
        i++) {
-    if (ts_rt_mapping[i] == rt)
+    if (rt == atomic_load_explicit(ts_rt_mapping + i, memory_order_acquire))
       return &g_thread_states[i];
   }
   assert(0 && "ThreadState not found for given JSRuntime");
