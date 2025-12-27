@@ -39,7 +39,7 @@ jobs:
             tools-bin
           # This key is based on the hash of the build script to ensure cache
           # is updated when the script changes.
-          key: ${{ runner.os }}-quickjs-${{ hashFiles('build_quickjs.sh') }}-${{ hashFiles('quickjs.patch')-${{ hashFiles('fil-c-quickjs.patch') }}
+          key: ${{ runner.os }}-quickjs-${{ hashFiles('build_quickjs.sh') }}-${{ hashFiles('quickjs.patch') }}-${{ hashFiles('fil-c-quickjs.patch') }}
 
       - name: Build QuickJS
         if: steps.cache-quickjs-build-output.outputs.cache-hit != 'true'
