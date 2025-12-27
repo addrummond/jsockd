@@ -142,6 +142,9 @@ func InitJsockDClientViaAutoDownload(config Config) (*JSockDClient, error) {
 		return nil, fmt.Errorf("download and verify jsockd: %w", err)
 	}
 	client, err := InitJSockDClient(config, jsockdPath)
+	if err != nil {
+		return nil, err
+	}
 	client.execTempfile = jsockdPath
 	return client, nil
 }
