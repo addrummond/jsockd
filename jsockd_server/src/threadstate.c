@@ -9,7 +9,6 @@
 #include "messages.h"
 #include "quickjs-libc.h"
 #include "textencodedecode.h"
-#include "threadstate.h"
 #include "utils.h"
 #include <assert.h>
 #include <errno.h>
