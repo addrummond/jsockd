@@ -895,7 +895,6 @@ static int line_handler(const char *line, size_t len, ThreadState *ts,
 }
 
 static void tick_handler(ThreadState *ts) {
-  return;
   if (ts->thread_index == 0 || g_cmd_args.max_idle_time_us == 0 ||
       ts->line_n != 0 || ts->rt == NULL)
     return;
