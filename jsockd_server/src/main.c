@@ -1207,7 +1207,8 @@ int main(int argc, char **argv) {
                                thread_init_n)) {
       jsockd_logf(LOG_ERROR, "Error initializing thread %i\n", thread_init_n);
       if (g_module_bytecode_size != 0 && g_module_bytecode)
-        munmap_or_warn((void *)g_module_bytecode, g_module_bytecode_size);
+        munmap_or_warn((void *)g_module_bytecode,
+                       g_module_bytecode_size + ED25519_SIGNATURE_SIZE);
       goto thread_init_error;
     }
     register_thread_state_runtime(g_thread_states[thread_init_n].rt,
