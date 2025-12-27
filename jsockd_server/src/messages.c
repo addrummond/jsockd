@@ -169,10 +169,10 @@ read_done:
   JSValue parsed =
       JS_ParseJSON(ts->ctx, json_input, json_input_len, "<message>");
   if (JS_IsException(parsed)) {
-    JS_FreeValue(ts->ctx, parsed);
     if (CMAKE_BUILD_TYPE_IS_DEBUG)
       log_error_with_prefix("Error parsing JSON message response:\n", ts->ctx,
                             parsed);
+    JS_FreeValue(ts->ctx, parsed);
     jsockd_logf(
         LOG_DEBUG,
         "Error parsing JSON message response len %zu: <<END\n%.*s\nEND%s\n",
