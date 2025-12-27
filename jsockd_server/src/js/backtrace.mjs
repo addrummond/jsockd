@@ -27,7 +27,6 @@ function parseBacktraceHelper(sourcemap, backtrace) {
       foundMatch = true;
     } else if (!foundMatch) {
       errorMessage += line;
-      foundMatch = true;
     }
   }
 
