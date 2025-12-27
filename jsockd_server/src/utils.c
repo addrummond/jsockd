@@ -254,8 +254,10 @@ char *read_all_stdin(size_t *out_size) {
 
   // Shrink to fit and NUL-terminate for text use
   char *final = realloc(buf, size + 1);
-  if (!final)
+  if (!final) {
+    free(final);
     return NULL;
+  }
   final[size] = '\0';
   *out_size = size;
   return final;
