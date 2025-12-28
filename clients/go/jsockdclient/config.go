@@ -1,6 +1,7 @@
 package jsockdclient
 
 import (
+	"log"
 	"runtime"
 	"time"
 )
@@ -43,5 +44,8 @@ func DefaultConfig() Config {
 		MaxCommandRuntimeUs:     0,
 		TimeoutUs:               15000000, // 15 seconds
 		MaxRestartsPerMinute:    1,
+		Logger: func(_ time.Time, _ string, message string) {
+			log.Printf("[jsockd] %s\n", message)
+		},
 	}
 }

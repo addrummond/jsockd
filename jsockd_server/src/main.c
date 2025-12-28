@@ -929,9 +929,14 @@ static SocketState *g_socket_states;
 
 static const uint8_t *load_module_bytecode(const char *filename,
                                            size_t *out_size) {
-  const uint8_t *module_bytecode = mmap_file(filename, out_size);
-  if (!module_bytecode)
+  int mmap_errno;
+  const uint8_t *module_bytecode = mmap_file(filename, out_size, &mmap_errno);
+  if (!module_bytecode) {
+    jsockd_logf(LOG_ERROR | LOG_INTERACTIVE,
+                "Error opening module bytecode file: %s\n",
+                strerror(mmap_errno));
     return NULL;
+  }
   if (*out_size < VERSION_STRING_SIZE + ED25519_SIGNATURE_SIZE + 1) {
     jsockd_logf(LOG_ERROR | LOG_INTERACTIVE,
                 "Module bytecode file is only %zu bytes. Too small!",
@@ -1053,15 +1058,17 @@ static int eval(void) {
       return EXIT_FAILURE;
   }
   if (g_cmd_args.source_map_file) {
-    g_source_map = mmap_file(g_cmd_args.source_map_file, &g_source_map_size);
+    int mmap_errno;
+    g_source_map =
+        mmap_file(g_cmd_args.source_map_file, &g_source_map_size, &mmap_errno);
     if (!g_source_map) {
+      jsockd_logf(LOG_ERROR | LOG_INTERACTIVE,
+                  "Error loading source map file %s: %s\n",
+                  g_cmd_args.source_map_file, strerror(mmap_errno));
+      jsockd_log(LOG_INFO | LOG_INTERACTIVE, "Continuing without source map\n");
       if (g_module_bytecode && g_module_bytecode_size != 0)
         munmap_or_warn((void *)g_module_bytecode,
                        g_module_bytecode_size + ED25519_SIGNATURE_SIZE);
-      jsockd_logf(LOG_ERROR | LOG_INTERACTIVE,
-                  "Error loading source map file %s: %s\n",
-                  g_cmd_args.source_map_file, strerror(errno));
-      jsockd_log(LOG_INFO | LOG_INTERACTIVE, "Continuing without source map\n");
     }
   }
 
@@ -1171,10 +1178,12 @@ int main(int argc, char **argv) {
   }
 
   if (g_cmd_args.source_map_file) {
-    g_source_map = mmap_file(g_cmd_args.source_map_file, &g_source_map_size);
+    int mmap_errno;
+    g_source_map =
+        mmap_file(g_cmd_args.source_map_file, &g_source_map_size, &mmap_errno);
     if (!g_source_map) {
       jsockd_logf(LOG_ERROR, "Error loading source map file %s: %s\n",
-                  strerror(errno));
+                  g_cmd_args.source_map_file, strerror(mmap_errno));
       jsockd_log(LOG_INFO, "Continuing without source map\n");
     }
   }
