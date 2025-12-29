@@ -139,28 +139,38 @@ int init_thread_state(ThreadState *ts, SocketState *socket_state,
     return -1;
   }
 
+  // Override console.log
+  JSValue global_obj = JS_GetGlobalObject(ts->ctx);
+  assert(JS_IsObject(global_obj));
+  JSValue console = JS_NewObject(ts->ctx);
+  int r =
+      JS_SetPropertyStr(ts->ctx, console, "log",
+                        JS_NewCFunction(ts->ctx, my_js_console_log, "log", 1));
+  assert(1 == r);
+  r = JS_SetPropertyStr(ts->ctx, global_obj, "console", console);
+  assert(1 == r);
+  JS_FreeValue(ts->ctx, global_obj);
+
   JS_SetModuleLoaderFunc2(ts->rt, NULL, jsockd_js_module_loader,
                           js_module_check_attributes, NULL);
 
   JSValue shims_module = load_binary_module(ts->ctx, g_shims_module_bytecode,
                                             g_shims_module_bytecode_size);
+  if (CMAKE_BUILD_TYPE_IS_DEBUG && JS_IsException(shims_module)) {
+    JSValue exception = JS_GetException(ts->ctx);
+    log_error_with_prefix("Failed to load shims module:\n", ts->ctx, exception);
+    JS_FreeValue(ts->ctx, exception);
+  }
   assert(!JS_IsException(shims_module));
   JS_FreeValue(ts->ctx, shims_module); // imported just for side effects
 
-  // Override console.log
-  JSValue global_obj = JS_GetGlobalObject(ts->ctx);
-  assert(JS_IsObject(global_obj));
-  JSValue console = JS_GetPropertyStr(ts->ctx, global_obj, "console");
-  assert(JS_IsObject(console));
-  JS_FreeValue(ts->ctx, JS_GetPropertyStr(ts->ctx, console, "log"));
-  assert(1 == JS_SetPropertyStr(
-                  ts->ctx, console, "log",
-                  JS_NewCFunction(ts->ctx, my_js_console_log, "log", 1)));
-  JS_FreeValue(ts->ctx, console);
-  JS_FreeValue(ts->ctx, global_obj);
-
   ts->backtrace_module = load_binary_module(
       ts->ctx, g_backtrace_module_bytecode, g_backtrace_module_bytecode_size);
+  if (CMAKE_BUILD_TYPE_IS_DEBUG && JS_IsException(ts->backtrace_module)) {
+    JSValue exception = JS_GetException(ts->ctx);
+    log_error_with_prefix("Failed to load shims module:\n", ts->ctx, exception);
+    JS_FreeValue(ts->ctx, exception);
+  }
   assert(!JS_IsException(ts->backtrace_module));
 
   // Load the precompiled module.

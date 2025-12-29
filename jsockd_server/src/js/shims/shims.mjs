@@ -1,12 +1,8 @@
 import "web-streams-polyfill/polyfill";
 
-export const console = {};
-
 // console.log will be filled in in main.c
-console.warn =
-  console.error =
-  console.info =
-  console.debug =
-  console.log;
-
-globalThis.console = console;
+globalThis.console.warn =
+  globalThis.console.error =
+  globalThis.console.info =
+  globalThis.console.debug =
+    globalThis.console.log;
