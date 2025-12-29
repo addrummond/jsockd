@@ -168,7 +168,8 @@ int init_thread_state(ThreadState *ts, SocketState *socket_state,
       ts->ctx, g_backtrace_module_bytecode, g_backtrace_module_bytecode_size);
   if (CMAKE_BUILD_TYPE_IS_DEBUG && JS_IsException(ts->backtrace_module)) {
     JSValue exception = JS_GetException(ts->ctx);
-    log_error_with_prefix("Failed to load shims module:\n", ts->ctx, exception);
+    log_error_with_prefix("Failed to load backtrace module:\n", ts->ctx,
+                          exception);
     JS_FreeValue(ts->ctx, exception);
   }
   assert(!JS_IsException(ts->backtrace_module));
