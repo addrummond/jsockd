@@ -16,7 +16,7 @@ npm install react@19 react-dom@19 esbuild
 Create the React component and the code to render it on the server:
 
 ```sh
-cat > counter.jsx <<END
+cat > counter.jsx <<"END"
 import React from "react";
 
 export function Counter({ initialValue }) {
@@ -32,7 +32,7 @@ export function Counter({ initialValue }) {
 END
 
 ```sh
-cat > server.jsx <<END
+cat > server.jsx <<"END"
 import React from "react";
 import { renderToString } from "react-dom/server.edge";
 import { Counter } from "./counter.jsx";
