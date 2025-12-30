@@ -1,0 +1,6 @@
+client-bundle*
+go.sum
+mykey.privkey
+mykey.pubkey
+node_modules
+server-bundle*

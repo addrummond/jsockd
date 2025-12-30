@@ -1,0 +1,17 @@
+{
+  "name": "ssr_with_react_19_example_code",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "esbuild": "^0.27.2",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3"
+  }
+}
