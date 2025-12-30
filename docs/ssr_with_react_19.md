@@ -2,6 +2,9 @@
 
 This example demonstrates using the Go JSockD client for server-side rendering (SSR) of a simple React 19 component  The example includes setting up a basic HTTP server in Go that serves the rendered HTML and a client-side bundle to hydrate the React component on the client.
 
+The example code is presented here via `cat <<END` commands for easy copy-pasting into a terminal, but you can also find the complete code in the
+[`ssr_with_react_19_example_code`](https://github.com/addrummond/jsockd/tree/main/docs/ssr_with_react_19_example_code) directory.
+
 ## Creating the React project
 
 Install the latest version of `jsockd` in your `PATH`.
