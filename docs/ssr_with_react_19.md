@@ -76,6 +76,8 @@ go mod init react-ssr-example
 go get github.com/addrummond/jsockd/clients/go/jsockdclient
 ```
 
+The code for the server is as follows. **_Note that this code uses `InitJsockDClientViaAutoDownload`, which is not recommended for production use (use `InitJsockDClient` instead)._**
+
 ```sh
 cat >main.go <<"END"
 package main
