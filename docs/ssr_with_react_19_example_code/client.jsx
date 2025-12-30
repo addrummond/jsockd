@@ -5,7 +5,7 @@ import { Counter } from "./counter.jsx";
 function hydrate() {
   const counterElement = document.getElementById("counter-container");
   if (counterElement) {
-    hydrateRoot(counterElement, <Counter initialValue={99} />);
+    hydrateRoot(counterElement, <Counter {...JSON.parse(counterElement.dataset.props)} />);
     console.log("Counter hydrated");
   } else {
     console.error("Counter container not found");

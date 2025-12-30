@@ -1,11 +1,12 @@
 # SSR with React 19
 
-This example demonstrates server-side rendering (SSR) of a simple React 19 component using `jsockd` to run the server-side JavaScript code. The example includes setting up a basic HTTP server in Go that serves the rendered HTML and a client-side bundle to hydrate the React component on the client.
+This example demonstrates using the Go JSockD client for server-side rendering (SSR) of a simple React 19 component  The example includes setting up a basic HTTP server in Go that serves the rendered HTML and a client-side bundle to hydrate the React component on the client.
 
 ## Creating the React project
 
-* Install the latest version of `jsockd` in your PATH.
-* Create project dir and install dependencies:
+Install the latest version of `jsockd` in your `PATH`.
+
+Create project dir and install dependencies:
 
 ```sh
 mkdir react-ssr-example && cd react-ssr-example
@@ -30,6 +31,7 @@ export function Counter({ initialValue }) {
   );
 }
 END
+```
 
 ```sh
 cat > server.jsx <<"END"
@@ -159,7 +161,7 @@ import { Counter } from "./counter.jsx";
 function hydrate() {
   const counterElement = document.getElementById("counter-container");
   if (counterElement) {
-    hydrateRoot(counterElement, <Counter initialValue={99} />);
+    hydrateRoot(counterElement, <Counter {...JSON.parse(counterElement.dataset.props)} />);
     console.log("Counter hydrated");
   } else {
     console.error("Counter container not found");
@@ -182,4 +184,4 @@ npx esbuild ./client.jsx --bundle --outfile=client-bundle.mjs --sourcemap --form
 go run main.go
 ```
 
-Connect to `http://localhost:8080` in your web browser. You should see the server-side rendered counter with an initial value of 99. Clicking the button will increment the counter, demonstrating that the React component has been successfully hydrated on the client side (see also the JS console logs).
+Connect to `http://localhost:8080` in your web browser. You should see the server-side rendered counter with an initial value of 99. Clicking the button will increment the counter, demonstrating that the React component has been successfully hydrated on the client side.
