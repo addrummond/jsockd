@@ -168,73 +168,7 @@ jsockd -s <socket1> [<socket2> ...] [-m <module_bytecode_file>] [-sm <source_map
 * `JSOCKD_BYTECODE_MODULE_PUBLIC_KEY`: The hex-encoded ED25519 public key used to verify the signature of the module bytecode file specified with the `-m` option.
 * `JSOCKD_LOG_PREFIX`: This string is prepended to all logged messages (unless it contains a carriage return or line feed, in which case it is ignored).
 
-### 3.4 The socket protocol
-
-The server listens for commands on the specified UNIX domain sockets. Each command consists of three fields separated
-by a separator byte:
-
-```
-<unique command ID>
------ separator byte -----
-(module, param) => { ... }
------ separator byte -----
-<JSON-encoded parameter>
------ separator byte -----
-```
-
-The separator byte is `\n` by default. It can be changed using the `-b XX` command line option, where `XX` is a two-digit hexadecimal value.
-A useful value is `00`, as the null byte cannot be present in valid UTF-8-encoded JSON or JavaScript.
-
-A unique command ID is any non-empty sequence of 32 or fewer bytes that does not contain a space character or a separator byte.
-
-The second field, the command, is a JavaScript expression evaluating to a function. The function is called with two arguments.
-The first is the module that was loaded from the bytecode file (or `undefined` if none was given); the second is the parameter passed as the third field.
-
-The third field is the JSON-encoded parameter value.
-
-The server responds with a single line:
-
-```
-<command id> <response type> <response data><newline=0xA>
-```
-
-The response type is either `ok`, `message` or `exception`. If it is `ok`, the response data is the JSON-encoded result of the command. If it is `message`, the response data is a JSON-encoded message sent by the command via `JSockD.sendMessage`. If it is `exception`, the response data is a JSON-encoded error message and backtrace (see next subsection).
-
-In the `message` case, the client should respond as follows:
-
-```
-<command id>
------ separator byte -----
-<response>
------ separator byte -----
-```
-
-The response is either the special string `internal_error` (if an error occured when the client tried to process the message) or a JSON-encoded response value. The server then responds either with another `message` (in which case the client should respond as before) or with an `ok` or `exception` response.
-
-As the protocol is synchronous, command IDs are not strictly necessary. However, it is recommended to check that responses have the expected
-command ID as a means of ensuring that the client code is working correctly.
-
-The client may send either of the following commands at any point, terminated by the separator byte:
-
-```
-?reset
-?quit
-```
-
-The `?reset` command resets the server's command parser to its initial state (so that it expects the next field to be a unique command ID).
-
-The `?quit` command causes the server to exit immediately (closing all sockets, not just the socket on which the command was sent).
-
-Clients may shut down the server gracefully by doing exactly one of the
-following:
-
-* Sending the `?quit` command and waiting for the server to respond with `quit`.
-* Closing any one of the server's UNIX domain sockets.
-* Sending a SIGTERM signal to the server process.
-
-JSockD will attempt to remove socket files when it exits, so it is not necessary for clients to clean these up.
-
-### 3.5 Error message and backtrace formats
+### 3.4 Error message and backtrace formats
 
 ```javascript
 {
@@ -256,7 +190,7 @@ JSockD will attempt to remove socket files when it exits, so it is not necessary
 }
 ```
 
-### 3.6 Source maps
+### 3.5 Source maps
 
 JSockD supports source maps for error backtrace reporting. Use the `-sm <source_map.js.map>`
 command line option to specify the path to a source map file for the bundle.
@@ -265,7 +199,7 @@ When a source map is provided, each entry in the `"trace"` array (see previous s
 
 It is recommended to specify a source map only for development and testing purposes, as the code for computing source mapped back traces is not optimized for performance. As long as you have a source map for your bundle, you always have the option of manually resolving the backtrace entries when looking at errors in production.
 
-### 3.7 Load balancing
+### 3.6 Load balancing
 
 The client should request a number of sockets roughly in line with the number of avaiable CPU cores (or fewer if a light load is anticipated).
 
@@ -274,7 +208,7 @@ if any socket except the first is unused for a significant period of time, the Q
 
 When an idle thread is woken, the typical time to initialize a new QuickJS runtime is on the order of a few milliseconds.
 
-### 3.8 Server log format
+### 3.7 Server log format
 
 When executed as a server (i.e. with the `-s` option), JSockD logs messages to standard error in the following format (all characters literal except `<VAR>` variables):
 
@@ -304,7 +238,7 @@ An example of a multi-line log message:
 $ jsockd 2025-09-24T21:15:45.644776Z [INFO] Line 3
 ```
 
-### 3.9 Memory leak protection
+### 3.8 Memory leak protection
 
 JSockD tracks memory usage by each QuickJS runtime. If the memory used by a runtime continues to grow over multiple command executions then the runtime is reset to free up memory. (This is one reason why your JSockD commands should not depend on the persistence of global state, even if you route all commands to the same socket/runtime.)
 
@@ -395,3 +329,71 @@ The `format.sh` script in `jsockd_server` formats C source files using `clang-fo
 
 * `FILC_CLANG=/path/to/fil-c/clang ./build_quickjs.sh linux_x86_64_filc`
 * [In `jsockd_server`] `TOOLCHAIN_FILE=TC-fil-c.cmake ./mk.sh Debug`
+
+## 6. The socket protocol
+
+**_The details of the socket protocol are relevant only if you are implementing a JSockD client library._**
+
+The server listens for commands on the specified UNIX domain sockets. Each command consists of three fields separated
+by a separator byte:
+
+```
+<unique command ID>
+----- separator byte -----
+(module, param) => { ... }
+----- separator byte -----
+<JSON-encoded parameter>
+----- separator byte -----
+```
+
+The separator byte is `\n` by default. It can be changed using the `-b XX` command line option, where `XX` is a two-digit hexadecimal value.
+A useful value is `00`, as the null byte cannot be present in valid UTF-8-encoded JSON or JavaScript.
+
+A unique command ID is any non-empty sequence of 32 or fewer bytes that does not contain a space character or a separator byte.
+
+The second field, the command, is a JavaScript expression evaluating to a function. The function is called with two arguments.
+The first is the module that was loaded from the bytecode file (or `undefined` if none was given); the second is the parameter passed as the third field.
+
+The third field is the JSON-encoded parameter value.
+
+The server responds with a single line:
+
+```
+<command id> <response type> <response data><newline=0xA>
+```
+
+The response type is either `ok`, `message` or `exception`. If it is `ok`, the response data is the JSON-encoded result of the command. If it is `message`, the response data is a JSON-encoded message sent by the command via `JSockD.sendMessage`. If it is `exception`, the response data is a JSON-encoded error message and backtrace (see next subsection).
+
+In the `message` case, the client should respond as follows:
+
+```
+<command id>
+----- separator byte -----
+<response>
+----- separator byte -----
+```
+
+The response is either the special string `internal_error` (if an error occured when the client tried to process the message) or a JSON-encoded response value. The server then responds either with another `message` (in which case the client should respond as before) or with an `ok` or `exception` response.
+
+As the protocol is synchronous, command IDs are not strictly necessary. However, it is recommended to check that responses have the expected
+command ID as a means of ensuring that the client code is working correctly.
+
+The client may send either of the following commands at any point, terminated by the separator byte:
+
+```
+?reset
+?quit
+```
+
+The `?reset` command resets the server's command parser to its initial state (so that it expects the next field to be a unique command ID).
+
+The `?quit` command causes the server to exit immediately (closing all sockets, not just the socket on which the command was sent).
+
+Clients may shut down the server gracefully by doing exactly one of the
+following:
+
+* Sending the `?quit` command and waiting for the server to respond with `quit`.
+* Closing any one of the server's UNIX domain sockets.
+* Sending a SIGTERM signal to the server process.
+
+JSockD will attempt to remove socket files when it exits, so it is not necessary for clients to clean these up.
