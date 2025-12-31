@@ -146,9 +146,23 @@ int init_thread_state(ThreadState *ts, SocketState *socket_state,
   int r =
       JS_SetPropertyStr(ts->ctx, console, "log",
                         JS_NewCFunction(ts->ctx, my_js_console_log, "log", 1));
-  assert(1 == r);
-  r = JS_SetPropertyStr(ts->ctx, global_obj, "console", console);
-  assert(1 == r);
+  r += JS_SetPropertyStr(
+      ts->ctx, console, "warn",
+      JS_NewCFunction(ts->ctx, my_js_console_warn, "warn", 1));
+  r += JS_SetPropertyStr(
+      ts->ctx, console, "info",
+      JS_NewCFunction(ts->ctx, my_js_console_info, "info", 1));
+  r += JS_SetPropertyStr(
+      ts->ctx, console, "error",
+      JS_NewCFunction(ts->ctx, my_js_console_error, "error", 1));
+  r += JS_SetPropertyStr(
+      ts->ctx, console, "debug",
+      JS_NewCFunction(ts->ctx, my_js_console_debug, "debug", 1));
+  r += JS_SetPropertyStr(
+      ts->ctx, console, "trace",
+      JS_NewCFunction(ts->ctx, my_js_console_trace, "trace", 1));
+  r += JS_SetPropertyStr(ts->ctx, global_obj, "console", console);
+  assert(7 == r);
   JS_FreeValue(ts->ctx, global_obj);
 
   JS_SetModuleLoaderFunc2(ts->rt, NULL, jsockd_js_module_loader,

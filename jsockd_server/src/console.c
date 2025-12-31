@@ -8,13 +8,13 @@ static void js_print_value_write(void *opaque, const char *buf, size_t len) {
   log_with_prefix_for_subsequent_lines(LOG_INFO, (FILE *)opaque, buf, len);
 }
 
-static JSValue js_print(JSContext *ctx, JSValueConst this_val, int argc,
-                        JSValueConst *argv) {
+static JSValue js_print(const char *prefix, JSContext *ctx,
+                        JSValueConst this_val, int argc, JSValueConst *argv) {
   int i;
   JSValueConst v;
 
   print_log_prefix(LOG_INFO, stderr, 1);
-  fputs("<console.*>: ", stderr);
+  fputs(prefix, stderr);
   for (i = 0; i < argc; i++) {
     if (i != 0)
       fputc(' ', stderr);
@@ -35,11 +35,16 @@ static JSValue js_print(JSContext *ctx, JSValueConst this_val, int argc,
   return JS_UNDEFINED;
 }
 
-JSValue my_js_console_log(JSContext *ctx, JSValueConst this_val, int argc,
-                          JSValueConst *argv) {
-  lock_log_mutex();
-  JSValue ret = js_print(ctx, this_val, argc, argv);
-  fflush(stderr);
-  unlock_log_mutex();
-  return ret;
-}
+#define log_func(name)                                                         \
+  JSValue my_js_console_##name(JSContext *ctx, JSValueConst this_val,          \
+                               int argc, JSValueConst *argv) {                 \
+    lock_log_mutex();                                                          \
+    JSValue ret =                                                              \
+        js_print("<console." #name ">: ", ctx, this_val, argc, argv);          \
+    fflush(stderr);                                                            \
+    unlock_log_mutex();                                                        \
+    return ret;                                                                \
+  }
+
+log_func(log) log_func(warn) log_func(error) log_func(info) log_func(debug)
+    log_func(trace)
