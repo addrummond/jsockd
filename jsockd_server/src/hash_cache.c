@@ -106,14 +106,11 @@ HashCacheBucket *get_hash_cache_entry_(HashCacheBucket *buckets,
       // This could lead to us temporarily incrementing the refcount of a
       // different cache entry if it's changed underneath us, but that's
       // acceptable (we remove the spurious refcount increment after checking
-      // 'updated' below).
+      // the update count below).
       atomic_fetch_add_explicit(&bucket->refcount, 1, memory_order_release);
 
-      bool updated =
-          update_count_before !=
-          atomic_load_explicit(&bucket->update_count, memory_order_acquire);
-
-      if (updated) {
+      if (update_count_before !=
+          atomic_load_explicit(&bucket->update_count, memory_order_acquire)) {
         atomic_fetch_add_explicit(&bucket->refcount, -1, memory_order_acq_rel);
         continue;
       }
