@@ -77,9 +77,9 @@ int wait_group_timed_wait(WaitGroup *wg, uint64_t timeout_ns) {
       return r;
     }
   }
-#elif defined LINUX
+#elif defined LINUX || defined FREEBSD
   struct timespec abstime;
-  if (0 != clock_gettime(CLOCK_MONOTONIC, &abstime)) {
+  if (0 != clock_gettime(MONOTONIC_CLOCK, &abstime)) {
     pthread_mutex_unlock(&wg->mutex);
     return -1;
   }
