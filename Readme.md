@@ -27,7 +27,9 @@ Steps to add JSockD to your application:
 * Use the client library to send commands to the JSockD server.
 
 ---
+
 **💡 There is an example of using JSockD to perform server-side rendering of a simple React 19 component in the [`docs/ssr_with_react_19.md`](https://github.com/addrummond/jsockd/blob/main/docs/ssr_with_react_19.md) file. The example uses the Go client, but the essential steps are similar for other languages.**
+
 ---
 
 ### 1.2 What is a JSockD command?
