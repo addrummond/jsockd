@@ -109,14 +109,15 @@ int wait_group_timed_wait(WaitGroup *wg, uint64_t timeout_ns) {
     return -1;
   }
   while (atomic_load_explicit(&wg->n_remaining, memory_order_acquire) > 0) {
-    useconds_t to_wait = MAX(1, waited / 5);
-    usleep(to_wait);
+    useconds_t to_wait = waited;
+    if (to_wait > 0)
+      usleep(to_wait);
     struct timespec current_time;
     if (0 != clock_gettime(MONOTONIC_CLOCK, &current_time)) {
       pthread_mutex_unlock(&wg->mutex);
       return -1;
     }
-    waited += to_wait;
+    waited += MAX(1, to_wait);
     if ((uint64_t)(current_time.tv_sec - start_time.tv_sec) >
             timeout_ns / 1000000000 ||
         ((uint64_t)(current_time.tv_sec - start_time.tv_sec) ==
