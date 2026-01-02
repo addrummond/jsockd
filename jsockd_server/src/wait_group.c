@@ -106,7 +106,7 @@ int wait_group_timed_wait(WaitGroup *wg, uint64_t timeout_ns) {
     pthread_mutex_unlock(&wg->mutex);
     return -1;
   }
-  while (atomic_load_explicit(&wg->n_remaining, memory_order_relaxed) > 0) {
+  while (atomic_load_explicit(&wg->n_remaining, memory_order_acquire) > 0) {
     useconds_t to_wait = waited * 5 / 4;
     usleep(to_wait);
     struct timespec current_time;
