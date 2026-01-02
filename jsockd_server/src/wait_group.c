@@ -64,6 +64,8 @@ int wait_group_timed_wait(WaitGroup *wg, uint64_t timeout_ns) {
     return pthread_mutex_unlock(&wg->mutex);
 
 #if defined MACOS
+  // MacOS supports pthread_cond_timedwait but not with a monotonic clock, so we
+  // use pthread_cond_timedwait_relative_np instead.
   struct timespec relative_time = {.tv_nsec = timeout_ns % 1000000000,
                                    .tv_sec = timeout_ns / 1000000000};
 
