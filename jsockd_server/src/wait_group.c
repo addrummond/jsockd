@@ -10,7 +10,7 @@
 int wait_group_init(WaitGroup *wg, int n_waiting_for) {
   // Don't need a monotonic clock on Mac because we can use
   // pthread_cond_timedwait_relative_np to set a relative timeout.
-#if defined LINUX || defined FREEBSD
+#if defined LINUX || defined FREEBSD || defined OPENBSD
   pthread_condattr_t attr;
   pthread_condattr_init(&attr);
   pthread_condattr_setclock(&attr, MONOTONIC_CLOCK);
@@ -77,7 +77,7 @@ int wait_group_timed_wait(WaitGroup *wg, uint64_t timeout_ns) {
       return r;
     }
   }
-#elif defined LINUX || defined FREEBSD
+#elif defined LINUX || defined FREEBSD || defined OPENBSD
   struct timespec abstime;
   if (0 != clock_gettime(MONOTONIC_CLOCK, &abstime)) {
     pthread_mutex_unlock(&wg->mutex);
