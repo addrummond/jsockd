@@ -5,7 +5,7 @@ The server receives commands over one or more UNIX domain sockets. The motivatin
 
 - Uses the lightweight [QuickJS](https://bellard.org/quickjs/) JavaScript engine
 - Elixir and Go client libraries included
-- Runs on Linux, MacOS, FreeBSD
+- Runs on Linux, MacOS, FreeBSD, OpenBSD
 - Multithreaded (one QuickJS engine per thread)
 - Loads precompiled bytecode for fast startup and execution
 - Caches command bytecode
