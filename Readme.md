@@ -83,7 +83,7 @@ The public key is passed to the `jsockd` server process via the `JSOCKD_BYTECODE
 export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=$(cat my_key_file.pubkey)
 ```
 
-**_If you don't trust JSockD to generate keys and signatures, you can use openssl to sign your module bytecode.
+**_❗If you don't trust JSockD to generate keys and signatures, you can use openssl to sign your module bytecode.
 See `docs/signing_with_openssl.md` for details._**
 
 ### 2.3 Reducing the size of compiled modules
@@ -98,7 +98,7 @@ For general use, I recommend minifiying your bundle but **not** using `-ss` or `
 
 ### 3.1 Starting the server
 
-**_JSockD is not intended to run as a standalone server. It is designed to run as a subprocess of an application that needs to execute JavaScript commands. This section is intended as a reference for developers implementing JSockD client libraries._**
+**_❗JSockD is not intended to run as a standalone server. It is designed to run as a subprocess of an application that needs to execute JavaScript commands. This section is intended as a reference for developers implementing JSockD client libraries._**
 
 The server is started as follows:
 
@@ -334,7 +334,7 @@ The `format.sh` script in `jsockd_server` formats C source files using `clang-fo
 
 ## 6. The socket protocol
 
-**_The details of the socket protocol are relevant only if you are implementing a JSockD client library._**
+**_❗The details of the socket protocol are relevant only if you are implementing a JSockD client library._**
 
 The server listens for commands on the specified UNIX domain sockets. Each command consists of three fields separated
 by a separator byte:
