@@ -13,7 +13,7 @@ int wait_group_init(WaitGroup *wg, int n_waiting_for) {
 #if defined LINUX || defined FREEBSD || defined OPENBSD
   pthread_condattr_t attr;
   pthread_condattr_init(&attr);
-  pthread_condattr_setclock(&attr, MONOTONIC_CLOCK);
+  pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);
   pthread_cond_init(&wg->cond, &attr);
   pthread_condattr_destroy(&attr);
 #else

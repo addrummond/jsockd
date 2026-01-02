@@ -80,14 +80,17 @@ for platform in $platforms; do
     $MAKE clean
     case "$platform" in
         native)
+            if [ "$(uname)" == OpenBSD ]; then
+                MAKE_OPTS='CC=clang'
+            fi
             # Debug build for quickjs library
-            CFLAGS="$DEBUG_CFLAGS" $MAKE CONFIG_LTO=n
+            CFLAGS="$DEBUG_CFLAGS" $MAKE CONFIG_LTO=n $MAKE_OPTS
             cp qjs ../../tools-bin
             cp qjsc ../../tools-bin
             mv libquickjs.a /tmp/libquickjs_${OS}_${ARCH}_Debug.a
             # Release build for quickjs library
             $MAKE clean
-            CFLAGS="$RELEASE_CFLAGS" $MAKE CONFIG_LTO=y
+            CFLAGS="$RELEASE_CFLAGS" $MAKE CONFIG_LTO=y $MAKE_OPTS
             mv libquickjs.a /tmp/libquickjs_${OS}_${ARCH}_Release.a
             ;;
         mac_arm64)
