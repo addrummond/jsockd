@@ -1,1 +1,1 @@
-import "web-streams-polyfill/polyfill";
+import "./web-streams-polyfill.js";
