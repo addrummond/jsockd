@@ -1,5 +1,6 @@
 
 #include "wait_group.h"
+#include "utils.h"
 #include <assert.h>
 #include <stdatomic.h>
 #include <stdio.h>
@@ -76,7 +77,7 @@ int wait_group_timed_wait(WaitGroup *wg, uint64_t timeout_ns) {
       return r;
     }
   }
-#else
+#elif defined LINUX
   struct timespec abstime;
   if (0 != clock_gettime(CLOCK_MONOTONIC, &abstime)) {
     pthread_mutex_unlock(&wg->mutex);
@@ -93,6 +94,34 @@ int wait_group_timed_wait(WaitGroup *wg, uint64_t timeout_ns) {
     if (r != 0) {
       pthread_mutex_unlock(&wg->mutex);
       return r;
+    }
+  }
+#else
+  // If we can't do a timed wait then use a simple loop, as we don't want the
+  // program to hang indefinitely if there's a bug (which is what will happen if
+  // we use pthread_cond_wait).
+  useconds_t waited = 1;
+  struct timespec start_time;
+  if (0 != clock_gettime(MONOTONIC_CLOCK, &start_time)) {
+    pthread_mutex_unlock(&wg->mutex);
+    return -1;
+  }
+  while (atomic_load_explicit(&wg->n_remaining, memory_order_relaxed) > 0) {
+    useconds_t to_wait = waited * 5 / 4;
+    usleep(to_wait);
+    struct timespec current_time;
+    if (0 != clock_gettime(MONOTONIC_CLOCK, &current_time)) {
+      pthread_mutex_unlock(&wg->mutex);
+      return -1;
+    }
+    waited += to_wait;
+    if ((uint64_t)(current_time.tv_sec - start_time.tv_sec) >
+            timeout_ns / 1000000000 ||
+        ((uint64_t)(current_time.tv_sec - start_time.tv_sec) ==
+             timeout_ns / 1000000000 &&
+         (uint64_t)(current_time.tv_nsec - start_time.tv_nsec) >=
+             timeout_ns % 1000000000)) {
+      return -1;
     }
   }
 #endif
