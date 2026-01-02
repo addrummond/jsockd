@@ -28,7 +28,7 @@ Steps to add JSockD to your application:
 
 ---
 
-**💡 There is an example of using JSockD to perform server-side rendering of a simple React 19 component in [`docs/ssr_with_react_19.md`](https://github.com/addrummond/jsockd/blob/main/docs/ssr_with_react_19.md). The example uses the Go client, but the essential steps are similar for other languages.**
+**🚀 There's an example of using JSockD with React 19 in [`docs/ssr_with_react_19.md`](https://github.com/addrummond/jsockd/blob/main/docs/ssr_with_react_19.md). The example uses the Go client, but the essential steps are similar for other languages.🚀**
 
 ---
 
