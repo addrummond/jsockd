@@ -1,0 +1,12 @@
+diff --git a/qjsc.c b/qjsc.c
+index e55ca61..8fded65 100644
+--- a/qjsc.c
++++ b/qjsc.c
+@@ -502,7 +502,6 @@ static int output_executable(const char *out_filename, const char *cfilename,
+              lib_dir, bn_suffix, lto_suffix);
+     *arg++ = libjsname;
+     *arg++ = "-lm";
+-    *arg++ = "-ldl";
+     *arg++ = "-lpthread";
+     *arg = NULL;
+ 

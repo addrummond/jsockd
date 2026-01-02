@@ -81,16 +81,18 @@ for platform in $platforms; do
     case "$platform" in
         native)
             if [ "$(uname)" == OpenBSD ]; then
-                MAKE_OPTS='CC=clang'
+                MAKE_OPTS='CONFIG_FREEBSD=y LIBS=-lm LIBS+=-lpthread HOST_LIBS=-lm HOST_LIBS+=-lpthread'
+                EXTRA_CFLAGS="-Denviron=NULL -Dsighandler_t=sig_t -Dmalloc_usable_size='0&&'"
+                git apply ../../openbsd-quickjs.patch
             fi
             # Debug build for quickjs library
-            CFLAGS="$DEBUG_CFLAGS" $MAKE CONFIG_LTO=n $MAKE_OPTS
+            CFLAGS="$DEBUG_CFLAGS $EXTRA_CFLAGS" $MAKE CONFIG_LTO=n $MAKE_OPTS
             cp qjs ../../tools-bin
             cp qjsc ../../tools-bin
             mv libquickjs.a /tmp/libquickjs_${OS}_${ARCH}_Debug.a
             # Release build for quickjs library
             $MAKE clean
-            CFLAGS="$RELEASE_CFLAGS" $MAKE CONFIG_LTO=y $MAKE_OPTS
+            CFLAGS="$RELEASE_CFLAGS $EXTRA_CFLAGS" $MAKE CONFIG_LTO=y $MAKE_OPTS
             mv libquickjs.a /tmp/libquickjs_${OS}_${ARCH}_Release.a
             ;;
         mac_arm64)
