@@ -26,6 +26,10 @@ Steps to add JSockD to your application:
 * Configure your client library with the path to the bytecode file and the public key used to sign it.
 * Use the client library to send commands to the JSockD server.
 
+---
+**💡 There is an example of using JSockD to perform server-side rendering of a simple React 19 component in the [`docs/ssr_with_react_19.md`](https://github.com/addrummond/jsockd/blob/main/docs/ssr_with_react_19.md) file. The example uses the Go client, but the essential steps are similar for other languages.**
+---
+
 ### 1.2 What is a JSockD command?
 
 A JSockD command is a JavaScript function that takes two arguments:
@@ -48,10 +52,6 @@ The following is a typical example of a command in the context of React SSR. The
   )
 }
 ````
-
-### 1.3 SSR with React 19
-
-There is an example of using JSockD to perform server-side rendering of a simple React 19 component in the [`docs/ssr_with_react_19.md`](https://github.com/addrummond/jsockd/blob/main/docs/ssr_with_react_19.md) file. The example uses the Go client, but the essential steps are similar for other languages. 
 
 ## 2. The module compiler
 
