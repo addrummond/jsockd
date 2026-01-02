@@ -16,9 +16,15 @@
     "npm": "^11.5.2",
     "radix-ui": "1.4.2",
     "react": "19.1.1",
-    "react-dom": "19.1.1",
-    "web-streams-polyfill": "github:MattiasBuelens/web-streams-polyfill#46d22cc"
+    "react-dom": "19.1.1"
   },
   "type": "module",
-  "dependencies": {}
+  "dependencies": {
+    "web-streams-polyfill": "github:MattiasBuelens/web-streams-polyfill#46d22cc"
+  },
+  "overrides": {
+    "web-streams-polyfill": {
+      "rollup": "$rollup"
+    }
+  }
 }
