@@ -29,7 +29,6 @@ if(UNIX)
         add_compile_definitions(MACOS)
     endif()
     if (BSD STREQUAL "FreeBSD")
-        message(STATUS "Building for FreeBSD") # TODO temporary
         add_compile_definitions(FREEBSD)
     endif()
     if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
