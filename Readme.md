@@ -85,16 +85,7 @@ export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=$(cat my_key_file.pubkey)
 **_❗If you don't trust JSockD to generate keys and signatures, you can use openssl to sign your module bytecode.
 See [`docs/signing_with_openssl.md`](https://github.com/addrummond/jsockd/blob/main/docs/signing_with_openssl.md) for details.❗_**
 
-### 2.3 Reducing the size of compiled modules
-
-Minifying the module before compiling it will reduce the size of the compiled bytecode because the bytecode includes source information.
-
-To further reduce bytecode size, you can use the `-ss` flag to strip source code from the bytecode file or the `-sd` flag to strip all debug info including source code. Note that stripping source code means that error backtraces will not include line numbers or source code snippets. It may also break some JavaScript code which relies on inspecting function source code.
-
-For general use, I recommend minifiying your bundle but **not** using `-ss` or `-sd`. This way you can substantially reduce the size of the bytecode while still allowing useful error backtraces via source maps (see [section 4.3](#43source-maps)).
-
-
-### 2.4 Bundling your JavaScript code
+### 2.2 Bundling your JavaScript code
 
 JSockD can be used with any bundler that can output an ES6 module (or with no bundler at all if your JS code is contained in a single file). The following is an example of how to bundle your code using [esbuild](https://esbuild.github.io/). The `root_module.mjs` module should contain all the code that you want to execute in the JSockD server. It can import other modules as needed.
 
@@ -111,7 +102,7 @@ import { blagFoo } from "./library2"
 export { flubBar, blagFoo }
 ````
 
-### 2.5 The JSockD runtime environment
+### 2.3 The JSockD runtime environment
 
 * The [QuickJS standard library](https://bellard.org/quickjs/quickjs.html#Standard-library) is available.
 * `TextEncoder` and `TextDecoder` are implemented.
@@ -121,6 +112,14 @@ export { flubBar, blagFoo }
 * The global object is `globalThis`.
 * The global `JSockD` is available with the following method:
   * `JSockD.sendMessage(message: any, replacer?: any, space?: any): any`: sends a JSON-serializable message to the client and synchronously waits for a response. The optional `replacer` and `space` arguments are passed to `JSON.stringify` when serializing the message. The return value is the response received from the client.
+
+### 2.4 Reducing the size of compiled modules
+
+Minifying the module before compiling it will reduce the size of the compiled bytecode because the bytecode includes source information.
+
+To further reduce bytecode size, you can use the `-ss` flag to strip source code from the bytecode file or the `-sd` flag to strip all debug info including source code. Note that stripping source code means that error backtraces will not include line numbers or source code snippets. It may also break some JavaScript code which relies on inspecting function source code.
+
+For general use, I recommend minifiying your bundle but **not** using `-ss` or `-sd`. This way you can substantially reduce the size of the bytecode while still allowing useful error backtraces via source maps (see [section 4.3](#43source-maps)).
 
 ## 3. `jsockd` command usage
 
