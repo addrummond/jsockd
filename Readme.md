@@ -374,7 +374,7 @@ following:
 
 JSockD will attempt to remove socket files when it exits, so it is not necessary for clients to clean these up. However, if the client has created a temporary dir to hold the socket files, it is the client's responsibility to remove this dir after the server has exited.
 
-### 8.3 JSockD server usage
+### 8.3 `jsockd` server usage
 
 ```sh
 jsockd -s <socket1> [<socket2> ...] [-m <module_bytecode_file>] [-sm <source_map_file>] [-t <microseconds>] [-i <microseconds>] [-b <XX>]
