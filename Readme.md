@@ -302,6 +302,8 @@ The `format.sh` script in `jsockd_server` formats C source files using `clang-fo
 
 ## 9. The server and socket protocol
 
+**_❗This section is relevant only if you are implementing a JSockD client library.❗_**
+
 ### 9.1 Starting the server
 
 The server is started as follows:
@@ -316,8 +318,6 @@ The `-m` argument is the path to a precompiled ES6 module bytecode file. This mo
 When the server is ready to start accepting commands on the specified UNIX domain sockets, it prints `READY <n> <jsockd_version>` to the standard output followed by `\n`. The integer n is ≥1 and specifies the number of threads that the server is using to process commands. This may be less than the number of sockets specified, in which case only the first N socket file arguments will be opened for command processing.
 
 ### 9.2 The socket protocol
-
-**_❗The details of the socket protocol are relevant only if you are implementing a JSockD client library.❗_**
 
 The server listens for commands on the specified UNIX domain sockets. Each command consists of three fields separated
 by a separator byte:
