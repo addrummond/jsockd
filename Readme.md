@@ -21,8 +21,8 @@ Applications should connect to JSockD via a client library that manages the JSoc
 Steps to add JSockD to your application:
 
 * Bundle all of the required Javascript library code into a single ES6 module (using e.g. [esbuild](https://esbuild.github.io/api/)).
-* Generate an ED25519 public/private key pair for signing your code (see [section 2](#the-module-compiler)).
-* Compile the ES6 module into a QuickJS bytecode file using the `jsockd -c` command see [section 2](#the-module-compiler)).
+* Generate an ED25519 public/private key pair for signing your code (see [section 2](#2the-module-compiler)).
+* Compile the ES6 module into a QuickJS bytecode file using the `jsockd -c` command see [section 2](#2the-module-compiler)).
 * Configure your client library with the path to the bytecode file and the public key used to sign it.
 * Use the client library to send commands to the JSockD server.
 
