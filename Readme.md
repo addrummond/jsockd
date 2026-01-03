@@ -165,7 +165,7 @@ Exit code is non-zero iff there is a parse error or an exception occurs during e
 
 ### 4.4 Run the JSockD server
 
-The JSockD server should be started as a subprocess by the client library. See [section 9](#9the-server-and-socket-protocol) for further information.
+The JSockD server should be started as a subprocess by the client library. See [section 8](#8the-server-and-socket-protocol) for further information.
 
 ## 5. Logging and error reporting
 
@@ -300,7 +300,7 @@ The `format.sh` script in `jsockd_server` formats C source files using `clang-fo
 The server is started as follows:
 
 ```sh
-export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=xxxxx # see section 9.4
+export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=xxxxx # see section 8.4
 jsockd -m <es6_module_bytecode_file> -s <socket1_path> [<socket2_path> ...]
 ```
 
