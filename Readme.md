@@ -92,17 +92,47 @@ Minifying the module before compiling it will reduce the size of the compiled by
 
 To further reduce bytecode size, you can use the `-ss` flag to strip source code from the bytecode file or the `-sd` flag to strip all debug info including source code. Note that stripping source code means that error backtraces will not include line numbers or source code snippets. It may also break some JavaScript code which relies on inspecting function source code.
 
-For general use, I recommend minifiying your bundle but **not** using `-ss` or `-sd`. This way you can substantially reduce the size of the bytecode while still allowing useful error backtraces via source maps (see [section 4.3](#43source-maps)).
+For general use, I recommend minifiying your bundle but **not** using `-ss` or `-sd`. This way you can substantially reduce the size of the bytecode while still allowing useful error backtraces via source maps (see [section 5.3](#53source-maps)).
 
-## 3. JSockD usage
+## 3. Bundling your JavaScript code
 
-### 3.1 Get version
+### 3.1 Using a bundler
+
+JSockD can be used with any bundler that can output an ES6 module (or with no bundler at all if your JS code is contained in a single file). The following is an example of how to bundle your code using [esbuild](https://esbuild.github.io/). The `root_module.mjs` module should contain all the code that you want to execute in the JSockD server. It can import other modules as needed.
+
+```
+esbuild root_module.mjs --bundle --outfile=bundle.mjs --sourcemap --format=esm
+```
+
+Example `root_module.mjs` contents:
+
+```javascript
+import { flubBar } from "./library1"
+import { blagFoo } from "./library2"
+
+export { flubBar, blagFoo }
+````
+
+### 3.2 The JSockD runtime environment
+
+* The [QuickJS standard library](https://bellard.org/quickjs/quickjs.html#Standard-library) is available.
+* `TextEncoder` and `TextDecoder` are implemented.
+* A polyfill is included for [Web Streams](https://developer.mozilla.org/en-US/docs/Web/API/Streams_API).
+* `console.log`, `console.error`, etc. log to the JSockD server log (stderr).
+* `setTimeout` and `setInterval` are not available. As JSockD does not support long-running commands, you would generally want to shim these if any of your library code depends on them.
+* The global object is `globalThis`.
+* The global `JSockD` is available with the following method:
+  * `JSockD.sendMessage(message: any, replacer?: any, space?: any): any`: sends a JSON-serializable message to the client and synchronously waits for a response. The optional `replacer` and `space` arguments are passed to `JSON.stringify` when serializing the message. The return value is the response received from the client.
+
+## 4. `jsockd` command usage
+
+### 4.1 Get version
 
 ```sh
 jsockd -v
 ```
 
-### 3.2 Generate an ED25519 key pair
+### 4.2 Generate an ED25519 key pair
 
 ```sh
 jsockd -k <key_file_prefix>
@@ -110,7 +140,7 @@ jsockd -k <key_file_prefix>
 
 Outputs two files: `<key_file_prefix>.pubkey` (the public key) and `<key_file_prefix>.privkey` (the private key).
 
-### 3.3 Compile a module file
+### 4.3 Compile a module file
 
 ```sh
 jsockd -c <module_file> <output_bytecode_file> [-k <private_key_file>] [-ss] [-sd]
@@ -120,7 +150,7 @@ Compiles the specified ES6 module file to a QuickJS bytecode file. If the `-k` o
 
 The `-ss` and `-sd` options are mutually exclusive. Setting `-ss` strips all source code from the bytecode file, while `-sd` strips all debug info including source code.
 
-### 3.3 Evaluate a JavaScript expression
+### 4.3 Evaluate a JavaScript expression
 
 The `-e` option evaluates a JavaScript expression and prints the JSON-encoded result to standard output. If the argument ot `-e` is `-`, the expression is read from standard input.
 
@@ -133,13 +163,13 @@ jsockd [-m <module_bytecode_file>] [-sm <source_map_file>] -e -
 
 Exit code is non-zero iff there is a parse error or an exception occurs during evaluation.
 
-### 3.4 Run the JSockD server
+### 4.4 Run the JSockD server
 
 The JSockD server should be started as a subprocess by the client library. See [section 9](#9the-server-and-socket-protocol) for further information.
 
-## 4. Logging and error reporting
+## 5. Logging and error reporting
 
-### 4.1 Log format
+### 5.1 Log format
 
 The JSockD server logs messages to standard error in the following format (all characters literal except `<VAR>` variables):
 
@@ -169,7 +199,7 @@ An example of a multi-line log message:
 $ jsockd 2025-09-24T21:15:45.644776Z [INFO] Line 3
 ```
 
-### 4.2 Stack trace format
+### 5.2 Stack trace format
 
 ```javascript
 {
@@ -191,7 +221,7 @@ $ jsockd 2025-09-24T21:15:45.644776Z [INFO] Line 3
 }
 ```
 
-### 4.3 Source maps
+### 5.3 Source maps
 
 JSockD supports source maps for error backtrace reporting. Use the `-sm <source_map.js.map>`
 command line option to specify the path to a source map file for the bundle.
@@ -200,7 +230,7 @@ When a source map is provided, each entry in the `"trace"` array (see previous s
 
 It is recommended to specify a source map only for development and testing purposes, as the code for computing source mapped back traces is not optimized for performance. As long as you have a source map for your bundle, you always have the option of manually resolving the backtrace entries when looking at errors in production.
 
-## 5 Load balancing
+## 6 Load balancing
 
 The client should request a number of sockets roughly in line with the number of avaiable CPU cores (or fewer if a light load is anticipated).
 
@@ -209,7 +239,7 @@ if any socket except the first is unused for a significant period of time, the Q
 
 When an idle thread is woken, the typical time to initialize a new QuickJS runtime is on the order of a few milliseconds.
 
-## 6 Load balancing
+## 7 Memory leak detection
 
 JSockD tracks memory usage by each QuickJS runtime. If the memory used by a runtime continues to grow over multiple command executions then the runtime is reset to free up memory. (This is one reason why your JSockD commands should not depend on the persistence of global state, even if you route all commands to the same socket/runtime.)
 
@@ -222,37 +252,6 @@ The current logic for detecting memory leaks is as follows:
     * if current usage is higher than U, increment C and update U to the current usage;
     * otherwise reset C to zero.
     * If C = 3, reset the runtime and go to the first step; othwerwise, check again after another 100 command executions.
-  
-
-## 7. Bundling your JavaScript code
-
-### 7.1 Using a bundler
-
-JSockD can be used with any bundler that can output an ES6 module (or with no bundler at all if your JS code is contained in a single file). The following is an example of how to bundle your code using [esbuild](https://esbuild.github.io/). The `root_module.mjs` module should contain all the code that you want to execute in the JSockD server. It can import other modules as needed.
-
-```
-esbuild root_module.mjs --bundle --outfile=bundle.mjs --sourcemap --format=esm
-```
-
-Example `root_module.mjs` contents:
-
-```javascript
-import { flubBar } from "./library1"
-import { blagFoo } from "./library2"
-
-export { flubBar, blagFoo }
-````
-
-### 7.2 The JSockD runtime environment
-
-* The [QuickJS standard library](https://bellard.org/quickjs/quickjs.html#Standard-library) is available.
-* `TextEncoder` and `TextDecoder` are implemented.
-* A polyfill is included for [Web Streams](https://developer.mozilla.org/en-US/docs/Web/API/Streams_API).
-* `console.log`, `console.error`, etc. log to the JSockD server log (stderr).
-* `setTimeout` and `setInterval` are not available. As JSockD does not support long-running commands, you would generally want to shim these if any of your library code depends on them.
-* The global object is `globalThis`.
-* The global `JSockD` is available with the following method:
-  * `JSockD.sendMessage(message: any, replacer?: any, space?: any): any`: sends a JSON-serializable message to the client and synchronously waits for a response. The optional `replacer` and `space` arguments are passed to `JSON.stringify` when serializing the message. The return value is the response received from the client.
 
 ## 8. Building from source
 
