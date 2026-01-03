@@ -1,5 +1,7 @@
 # Go JSockD client
 
+[![GoDoc](http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](https://pkg.go.dev/github.com/addrummond/jsockd/clients/go/jsockdclient)
+
 ## Add JSockD to your Go project
 
 ```sh
