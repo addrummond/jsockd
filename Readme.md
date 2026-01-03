@@ -21,8 +21,8 @@ Applications should connect to JSockD via a client library that manages the JSoc
 Steps to add JSockD to your application:
 
 * Bundle all of the required Javascript library code into a single ES6 module (using e.g. [esbuild](https://esbuild.github.io/api/)).
-* Generate an ED25519 public/private key pair for signing your code (see section 2).
-* Compile the ES6 module into a QuickJS bytecode file using the `jsockd -c` command (see section 2).
+* Generate an ED25519 public/private key pair for signing your code (see [section 2](#the-module-compiler)).
+* Compile the ES6 module into a QuickJS bytecode file using the `jsockd -c` command see [section 2](#the-module-compiler)).
 * Configure your client library with the path to the bytecode file and the public key used to sign it.
 * Use the client library to send commands to the JSockD server.
 
@@ -92,19 +92,17 @@ Minifying the module before compiling it will reduce the size of the compiled by
 
 To further reduce bytecode size, you can use the `-ss` flag to strip source code from the bytecode file or the `-sd` flag to strip all debug info including source code. Note that stripping source code means that error backtraces will not include line numbers or source code snippets. It may also break some JavaScript code which relies on inspecting function source code.
 
-For general use, I recommend minifiying your bundle but **not** using `-ss` or `-sd`. This way you can substantially reduce the size of the bytecode while still allowing useful error backtraces via source maps (see section 3.5).
+For general use, I recommend minifiying your bundle but **not** using `-ss` or `-sd`. This way you can substantially reduce the size of the bytecode while still allowing useful error backtraces via source maps (see [section 4.3](#43-source-maps)).
 
-## 3. The JSockD server
+## 3. JSockD usage
 
-### 3.1 Command line options
-
-#### Get version
+### 3.1 Get version
 
 ```sh
 jsockd -v
 ```
 
-#### Generate public and private keys
+### 3.2 Generate an ED25519 key pair
 
 ```sh
 jsockd -k <key_file_prefix>
@@ -112,7 +110,7 @@ jsockd -k <key_file_prefix>
 
 Outputs two files: `<key_file_prefix>.pubkey` (the public key) and `<key_file_prefix>.privkey` (the private key).
 
-#### Compile a module file
+### 3.3 Compile a module file
 
 ```sh
 jsockd -c <module_file> <output_bytecode_file> [-k <private_key_file>] [-ss] [-sd]
@@ -122,7 +120,7 @@ Compiles the specified ES6 module file to a QuickJS bytecode file. If the `-k` o
 
 The `-ss` and `-sd` options are mutually exclusive. Setting `-ss` strips all source code from the bytecode file, while `-sd` strips all debug info including source code.
 
-#### Evaluate a Javascript expression
+### 3.3 Evaluate a JavaScript expression
 
 The `-e` option evaluates a JavaScript expression and prints the JSON-encoded result to standard output. If the argument ot `-e` is `-`, the expression is read from standard input.
 
@@ -135,69 +133,15 @@ jsockd [-m <module_bytecode_file>] [-sm <source_map_file>] -e -
 
 Exit code is non-zero iff there is a parse error or an exception occurs during evaluation.
 
-#### Run the server
+### 3.4 Run the JSockD server
 
-```sh
-jsockd -s <socket1> [<socket2> ...] [-m <module_bytecode_file>] [-sm <source_map_file>] [-t <microseconds>] [-i <microseconds>] [-b <XX>]
-```
+The JSockD server should be started as a subprocess by the client library. See [section 9](#9-the-server-and-socket-protocol) for further information.
 
-| Option      | Argument(s)                 | Description                                                                  | Default       | Repeatable | Required |
-|-------------|-----------------------------|------------------------------------------------------------------------------|---------------|------------|----------|
-| `-s`        | `<socket1> [<socket2> ...]` | One or more socket file paths. Use `-s -- <socket> ...` to permit file names beginning with `-`.                                              |               | Yes        | Yes      |
-| `-m`        | `<module_bytecode_file>`    | Path to ES6 module bytecode file.                                            |               | No         | No       |
-| `-sm`       | `<source_map_file>`         | Path to source map file (e.g. `foo.js.map`). Can only be used with `-m`.     |               | No         | No       |
-| `-t`        | `<microseconds>`            | Maximum command runtime in microseconds (must be integer > 0).               | 250000        | No         | No       |
-| `-i`        | `<microseconds>`            | Maximum time in microseconds that thread can remain idle before QuickJS runtime is shut down, or 0 for no idle timeout (must be integer ≥ 0). | 0             | No         | No       |
-| `-b`        | `<XX>`                      | Separator byte as two hex digits (e.g. `0A`).                                | `0A` (= `\n`) | No         | No       |
+## 4. Logging and error reporting
 
-### 3.2 Environment variables
+### 4.1 Log format
 
-* `JSOCKD_BYTECODE_MODULE_PUBLIC_KEY`: The hex-encoded ED25519 public key used to verify the signature of the module bytecode file specified with the `-m` option.
-* `JSOCKD_LOG_PREFIX`: This string is prepended to all logged messages (unless it contains a carriage return or line feed, in which case it is ignored).
-
-### 3.3 Error message and backtrace formats
-
-```javascript
-{
-  "raw": "...", // the raw QuickJS error message + stack trace
-  "pretty": "...", // The formatted backtrace with source map info (if sourcemap provided)
-  "errorMessage": "Error: foo", // the error message
-  "trace": [
-     {
-        "functionName": "flubFoo", // the function containing this line in the backtrace
-        "source": "foo.js",        // the source file (null if unavailable)
-        "line": 1,                 // the line number (null if unavailable)
-        "column": 26,              // the column number (null if unavailable)
-        "mapped": {                // null if no source map available
-          // the fields above for the function/location in the original source file
-        }
-     },
-     ...
-  ]
-}
-```
-
-### 3.4 Source maps
-
-JSockD supports source maps for error backtrace reporting. Use the `-sm <source_map.js.map>`
-command line option to specify the path to a source map file for the bundle.
-
-When a source map is provided, each entry in the `"trace"` array (see previous section) includes a `"mapped"` property with `"functionName"`, `"source"`, `"line"`, and `"column"` properties. These properties correspond to the original source code location of the error, as determined by the source map.
-
-It is recommended to specify a source map only for development and testing purposes, as the code for computing source mapped back traces is not optimized for performance. As long as you have a source map for your bundle, you always have the option of manually resolving the backtrace entries when looking at errors in production.
-
-### 3.5 Load balancing
-
-The client should request a number of sockets roughly in line with the number of avaiable CPU cores (or fewer if a light load is anticipated).
-
-The `-i` command line option can be used to adjust the amount of time that a QuickJS runtime is permitted to remain idle before being shut down. By default, idle runtimes are never shut down. If `-i` is set to a non-zero value, then
-if any socket except the first is unused for a significant period of time, the QuickJS runtime for that socket is shut down to free up memory. The next command received on that socket causes a new QuickJS runtime to be created. Thus the client may distribute commands over the first n sockets, with n rising and falling with increasing/decreasing load. A good rule of thumb is to route commands to socket n only if sockets 1..n-1 are all busy processing commands.
-
-When an idle thread is woken, the typical time to initialize a new QuickJS runtime is on the order of a few milliseconds.
-
-### 3.6 Server log format
-
-When executed as a server (i.e. with the `-s` option), JSockD logs messages to standard error in the following format (all characters literal except `<VAR>` variables):
+The JSockD server logs messages to standard error in the following format (all characters literal except `<VAR>` variables):
 
 ```
 <PREFIX> jsockd <DATETIME> [<LOG_LEVEL>] <LOG MESSAGE>
@@ -225,7 +169,47 @@ An example of a multi-line log message:
 $ jsockd 2025-09-24T21:15:45.644776Z [INFO] Line 3
 ```
 
-### 3.7 Memory leak protection
+## 4.2 Stack trace format
+
+```javascript
+{
+  "raw": "...", // the raw QuickJS error message + stack trace
+  "pretty": "...", // The formatted backtrace with source map info (if sourcemap provided)
+  "errorMessage": "Error: foo", // the error message
+  "trace": [
+     {
+        "functionName": "flubFoo", // the function containing this line in the backtrace
+        "source": "foo.js",        // the source file (null if unavailable)
+        "line": 1,                 // the line number (null if unavailable)
+        "column": 26,              // the column number (null if unavailable)
+        "mapped": {                // null if no source map available
+          // the fields above for the function/location in the original source file
+        }
+     },
+     ...
+  ]
+}
+```
+
+## 4.3 Source maps
+
+JSockD supports source maps for error backtrace reporting. Use the `-sm <source_map.js.map>`
+command line option to specify the path to a source map file for the bundle.
+
+When a source map is provided, each entry in the `"trace"` array (see previous subsection) includes a `"mapped"` property with `"functionName"`, `"source"`, `"line"`, and `"column"` properties. These properties correspond to the original source code location of the error, as determined by the source map.
+
+It is recommended to specify a source map only for development and testing purposes, as the code for computing source mapped back traces is not optimized for performance. As long as you have a source map for your bundle, you always have the option of manually resolving the backtrace entries when looking at errors in production.
+
+## 5 Load balancing
+
+The client should request a number of sockets roughly in line with the number of avaiable CPU cores (or fewer if a light load is anticipated).
+
+The `-i` command line option can be used to adjust the amount of time that a QuickJS runtime is permitted to remain idle before being shut down. By default, idle runtimes are never shut down. If `-i` is set to a non-zero value, then
+if any socket except the first is unused for a significant period of time, the QuickJS runtime for that socket is shut down to free up memory. The next command received on that socket causes a new QuickJS runtime to be created. Thus the client may distribute commands over the first n sockets, with n rising and falling with increasing/decreasing load. A good rule of thumb is to route commands to socket n only if sockets 1..n-1 are all busy processing commands.
+
+When an idle thread is woken, the typical time to initialize a new QuickJS runtime is on the order of a few milliseconds.
+
+## 6 Load balancing
 
 JSockD tracks memory usage by each QuickJS runtime. If the memory used by a runtime continues to grow over multiple command executions then the runtime is reset to free up memory. (This is one reason why your JSockD commands should not depend on the persistence of global state, even if you route all commands to the same socket/runtime.)
 
@@ -240,9 +224,9 @@ The current logic for detecting memory leaks is as follows:
     * If C = 3, reset the runtime and go to the first step; othwerwise, check again after another 100 command executions.
   
 
-## 4. Bundling your JavaScript code
+## 7. Bundling your JavaScript code
 
-### 4.1 Using a bundler
+### 7.1 Using a bundler
 
 JSockD can be used with any bundler that can output an ES6 module (or with no bundler at all if your JS code is contained in a single file). The following is an example of how to bundle your code using [esbuild](https://esbuild.github.io/). The `root_module.mjs` module should contain all the code that you want to execute in the JSockD server. It can import other modules as needed.
 
@@ -259,7 +243,7 @@ import { blagFoo } from "./library2"
 export { flubBar, blagFoo }
 ````
 
-### 4.2 The JSockD runtime environment
+### 7.2 The JSockD runtime environment
 
 * The [QuickJS standard library](https://bellard.org/quickjs/quickjs.html#Standard-library) is available.
 * `TextEncoder` and `TextDecoder` are implemented.
@@ -270,19 +254,19 @@ export { flubBar, blagFoo }
 * The global `JSockD` is available with the following method:
   * `JSockD.sendMessage(message: any, replacer?: any, space?: any): any`: sends a JSON-serializable message to the client and synchronously waits for a response. The optional `replacer` and `space` arguments are passed to `JSON.stringify` when serializing the message. The return value is the response received from the client.
 
-## 5. Building from source
+## 8. Building from source
 
 To build JSockD from source, you must first build QuickJS and then the JS server.
 
 The version of CMake required for the build is listed in `.tool-versions`, and can be installed using [mise-en-place](https://mise.jdx.dev/) or [asdf](https://asdf-vm.com/).
 
-### 5.1 Building QuickJS
+### 8.1 Building QuickJS
 
 QuickJS is built by running `./build_quickjs.sh`. This script downloads and builds the QuickJS library. The QuickJS build is kept separate from the main JSockD build because it needs to be run only once, and the QuickJS build system is a bit finicky to configure for different environments.
 
 On systems where `make` is a non-GNU Make, the script tries `gmake` by default. You can override this by setting the `MAKE` env var to the name of the GMake command on your system.
 
-### 5.2 Building the JS server
+### 8.2 Building the JS server
 
 The JS server is built using CMake 4. The `mk.sh` wrapper script invokes CMake with the correct arguments for common use cases.
 
@@ -306,25 +290,25 @@ Run unit tests as follows:
 ./mk.sh Debug test
 ```
 
-### 5.3 Code formatting
+### 8.3 Code formatting
 
 The `format.sh` script in `jsockd_server` formats C source files using `clang-format`. Run `npm i` to install the appropriate version of `clang-format`.
 
-### 5.4 Developing with Fil-C
+### 8.4 Developing with Fil-C
 
 **TODO: rough notes**
 
 * `FILC_CLANG=/path/to/fil-c/clang ./build_quickjs.sh linux_x86_64_filc`
 * [In `jsockd_server`] `TOOLCHAIN_FILE=TC-fil-c.cmake ./mk.sh Debug`
 
-## 6. The server and socket protocol
+## 9. The server and socket protocol
 
-### 6.1 Starting the server
+### 9.1 Starting the server
 
 The server is started as follows:
 
 ```sh
-export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=xxxxx # see previous section
+export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=xxxxx # see section 9.4
 jsockd -m <es6_module_bytecode_file> -s <socket1_path> [<socket2_path> ...]
 ```
 
@@ -332,7 +316,7 @@ The `-m` argument is the path to a precompiled ES6 module bytecode file. This mo
 
 When the server is ready to start accepting commands on the specified UNIX domain sockets, it prints `READY <n> <jsockd_version>` to the standard output followed by `\n`. The integer n is ≥1 and specifies the number of threads that the server is using to process commands. This may be less than the number of sockets specified, in which case only the first N socket file arguments will be opened for command processing.
 
-### 6.2 The socket protocol
+### 9.2 The socket protocol
 
 **_❗The details of the socket protocol are relevant only if you are implementing a JSockD client library.❗_**
 
@@ -399,3 +383,23 @@ following:
 * Sending a SIGTERM signal to the server process.
 
 JSockD will attempt to remove socket files when it exits, so it is not necessary for clients to clean these up. However, if the client has created a temporary dir to hold the socket files, it is the client's responsibility to remove this dir after the server has exited.
+
+### 9.3 JSockD server usage
+
+```sh
+jsockd -s <socket1> [<socket2> ...] [-m <module_bytecode_file>] [-sm <source_map_file>] [-t <microseconds>] [-i <microseconds>] [-b <XX>]
+```
+
+| Option      | Argument(s)                 | Description                                                                  | Default       | Repeatable | Required |
+|-------------|-----------------------------|------------------------------------------------------------------------------|---------------|------------|----------|
+| `-s`        | `<socket1> [<socket2> ...]` | One or more socket file paths. Use `-s -- <socket> ...` to permit file names beginning with `-`.                                              |               | Yes        | Yes      |
+| `-m`        | `<module_bytecode_file>`    | Path to ES6 module bytecode file.                                            |               | No         | No       |
+| `-sm`       | `<source_map_file>`         | Path to source map file (e.g. `foo.js.map`). Can only be used with `-m`.     |               | No         | No       |
+| `-t`        | `<microseconds>`            | Maximum command runtime in microseconds (must be integer > 0).               | 250000        | No         | No       |
+| `-i`        | `<microseconds>`            | Maximum time in microseconds that thread can remain idle before QuickJS runtime is shut down, or 0 for no idle timeout (must be integer ≥ 0). | 0             | No         | No       |
+| `-b`        | `<XX>`                      | Separator byte as two hex digits (e.g. `0A`).                                | `0A` (= `\n`) | No         | No       |
+
+### 9.4 JSockD server environment variables
+
+* `JSOCKD_BYTECODE_MODULE_PUBLIC_KEY`: The hex-encoded ED25519 public key used to verify the signature of the module bytecode file specified with the `-m` option.
+* `JSOCKD_LOG_PREFIX`: This string is prepended to all logged messages (unless it contains a carriage return or line feed, in which case it is ignored).
