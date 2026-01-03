@@ -230,16 +230,7 @@ When a source map is provided, each entry in the `"trace"` array (see previous s
 
 It is recommended to specify a source map only for development and testing purposes, as the code for computing source mapped back traces is not optimized for performance. As long as you have a source map for your bundle, you always have the option of manually resolving the backtrace entries when looking at errors in production.
 
-## 6 Load balancing
-
-The client should request a number of sockets roughly in line with the number of avaiable CPU cores (or fewer if a light load is anticipated).
-
-The `-i` command line option can be used to adjust the amount of time that a QuickJS runtime is permitted to remain idle before being shut down. By default, idle runtimes are never shut down. If `-i` is set to a non-zero value, then
-if any socket except the first is unused for a significant period of time, the QuickJS runtime for that socket is shut down to free up memory. The next command received on that socket causes a new QuickJS runtime to be created. Thus the client may distribute commands over the first n sockets, with n rising and falling with increasing/decreasing load. A good rule of thumb is to route commands to socket n only if sockets 1..n-1 are all busy processing commands.
-
-When an idle thread is woken, the typical time to initialize a new QuickJS runtime is on the order of a few milliseconds.
-
-## 7 Memory leak detection
+## 6 Memory leak detection
 
 JSockD tracks memory usage by each QuickJS runtime. If the memory used by a runtime continues to grow over multiple command executions then the runtime is reset to free up memory. (This is one reason why your JSockD commands should not depend on the persistence of global state, even if you route all commands to the same socket/runtime.)
 
@@ -253,19 +244,19 @@ The current logic for detecting memory leaks is as follows:
     * otherwise reset C to zero.
     * If C = 3, reset the runtime and go to the first step; othwerwise, check again after another 100 command executions.
 
-## 8. Building from source
+## 7. Building from source
 
 To build JSockD from source, you must first build QuickJS and then the JS server.
 
 The version of CMake required for the build is listed in `.tool-versions`, and can be installed using [mise-en-place](https://mise.jdx.dev/) or [asdf](https://asdf-vm.com/).
 
-### 8.1 Building QuickJS
+### 7.1 Building QuickJS
 
 QuickJS is built by running `./build_quickjs.sh`. This script downloads and builds the QuickJS library. The QuickJS build is kept separate from the main JSockD build because it needs to be run only once, and the QuickJS build system is a bit finicky to configure for different environments.
 
 On systems where `make` is a non-GNU Make, the script tries `gmake` by default. You can override this by setting the `MAKE` env var to the name of the GMake command on your system.
 
-### 8.2 Building the JS server
+### 7.2 Building the JS server
 
 The JS server is built using CMake 4. The `mk.sh` wrapper script invokes CMake with the correct arguments for common use cases.
 
@@ -289,22 +280,22 @@ Run unit tests as follows:
 ./mk.sh Debug test
 ```
 
-### 8.3 Code formatting
+### 7.3 Code formatting
 
 The `format.sh` script in `jsockd_server` formats C source files using `clang-format`. Run `npm i` to install the appropriate version of `clang-format`.
 
-### 8.4 Developing with Fil-C
+### 7.4 Developing with Fil-C
 
 **TODO: rough notes**
 
 * `FILC_CLANG=/path/to/fil-c/clang ./build_quickjs.sh linux_x86_64_filc`
 * [In `jsockd_server`] `TOOLCHAIN_FILE=TC-fil-c.cmake ./mk.sh Debug`
 
-## 9. The server and socket protocol
+## 8. The server and socket protocol
 
 **_❗This section is relevant only if you are implementing a JSockD client library.❗_**
 
-### 9.1 Starting the server
+### 8.1 Starting the server
 
 The server is started as follows:
 
@@ -317,7 +308,7 @@ The `-m` argument is the path to a precompiled ES6 module bytecode file. This mo
 
 When the server is ready to start accepting commands on the specified UNIX domain sockets, it prints `READY <n> <jsockd_version>` to the standard output followed by `\n`. The integer n is ≥1 and specifies the number of threads that the server is using to process commands. This may be less than the number of sockets specified, in which case only the first N socket file arguments will be opened for command processing.
 
-### 9.2 The socket protocol
+### 8.2 The socket protocol
 
 The server listens for commands on the specified UNIX domain sockets. Each command consists of three fields separated
 by a separator byte:
@@ -383,7 +374,7 @@ following:
 
 JSockD will attempt to remove socket files when it exits, so it is not necessary for clients to clean these up. However, if the client has created a temporary dir to hold the socket files, it is the client's responsibility to remove this dir after the server has exited.
 
-### 9.3 JSockD server usage
+### 8.3 JSockD server usage
 
 ```sh
 jsockd -s <socket1> [<socket2> ...] [-m <module_bytecode_file>] [-sm <source_map_file>] [-t <microseconds>] [-i <microseconds>] [-b <XX>]
@@ -398,7 +389,16 @@ jsockd -s <socket1> [<socket2> ...] [-m <module_bytecode_file>] [-sm <source_map
 | `-i`        | `<microseconds>`            | Maximum time in microseconds that thread can remain idle before QuickJS runtime is shut down, or 0 for no idle timeout (must be integer ≥ 0). | 0             | No         | No       |
 | `-b`        | `<XX>`                      | Separator byte as two hex digits (e.g. `0A`).                                | `0A` (= `\n`) | No         | No       |
 
-### 9.4 JSockD server environment variables
+### 8.4 JSockD server environment variables
 
 * `JSOCKD_BYTECODE_MODULE_PUBLIC_KEY`: The hex-encoded ED25519 public key used to verify the signature of the module bytecode file specified with the `-m` option.
 * `JSOCKD_LOG_PREFIX`: This string is prepended to all logged messages (unless it contains a carriage return or line feed, in which case it is ignored).
+
+### 8.5 Load balancing
+
+The client should request a number of sockets roughly in line with the number of avaiable CPU cores (or fewer if a light load is anticipated).
+
+The `-i` command line option can be used to adjust the amount of time that a QuickJS runtime is permitted to remain idle before being shut down. By default, idle runtimes are never shut down. If `-i` is set to a non-zero value, then
+if any socket except the first is unused for a significant period of time, the QuickJS runtime for that socket is shut down to free up memory. The next command received on that socket causes a new QuickJS runtime to be created. Thus the client may distribute commands over the first n sockets, with n rising and falling with increasing/decreasing load. A good rule of thumb is to route commands to socket n only if sockets 1..n-1 are all busy processing commands.
+
+When an idle thread is woken, the typical time to initialize a new QuickJS runtime is on the order of a few milliseconds.
