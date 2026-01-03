@@ -364,6 +364,7 @@ func SendRawCommand(client *JSockDClient, query string, jsonParam string) (RawRe
 // SendRawCommandWithMessageHandler is like SendRawCommand but with a message
 // handling function as an additional parameter. The message handling function
 // receives JSON-encoded messages and should return a valid JSON-encoded
+// response. If messageHandler is nil then all messages receive a `null`
 // response.
 //
 // Note that messageHandler, when called, will execute in a different
