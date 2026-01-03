@@ -15,9 +15,9 @@ The server receives commands over one or more UNIX domain sockets. The motivatin
 
 ## 1. Getting started
 
-**🚀 There's an example of using JSockD with React 19 in [`docs/ssr_with_react_19.md`](https://github.com/addrummond/jsockd/blob/main/docs/ssr_with_react_19.md). The example uses the Go client, but the essential steps are similar for other languages.🚀**
-
----
+🚀🚀🚀 
+There's an example of using JSockD with React 19 in [`docs/ssr_with_react_19.md`](https://github.com/addrummond/jsockd/blob/main/docs/ssr_with_react_19.md). The example uses the Go client, but the essential steps are similar for other languages. 
+🚀🚀🚀
 
 ### 1.1 Adding JSockD to your application
 
