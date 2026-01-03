@@ -161,7 +161,7 @@ jsockd [-m <module_bytecode_file>] [-sm <source_map_file>] -e <javascript_expres
 jsockd [-m <module_bytecode_file>] [-sm <source_map_file>] -e -
 ```
 
-Exit code is non-zero iff there is a parse error or an exception occurs during evaluation.
+Exit code is non-zero iff a parse error or exception occurs during evaluation.
 
 ### 4.4 Run the JSockD server
 
