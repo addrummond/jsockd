@@ -21,7 +21,7 @@ The server receives commands over one or more UNIX domain sockets. The motivatin
 
 ### 1.1 Adding JSockD to your application
 
-Applications should connect to JSockD via a [client library](https://github.com/addrummond/jsockd/tree/main/clients) that manages the JSockD server process. At the moment, this repo contains two examples of client libraries in [`clients/elixir/jsockd_client`](https://github.com/addrummond/jsockd/tree/main/clients/elixir/jsockd_client) and [`clients/go/jsockdclient`](https://github.com/addrummond/jsockd/tree/main/clients/go/jsockdclient).
+Applications should connect to JSockD via a [client library](https://github.com/addrummond/jsockd/tree/main/clients) that manages the JSockD server process. This repo contains client libraries for [Elixir](https://github.com/addrummond/jsockd/tree/main/clients/elixir/jsockd_client) and [Go](https://github.com/addrummond/jsockd/tree/main/clients/go/jsockdclient).
 
 Steps to add JSockD to your application:
 
