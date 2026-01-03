@@ -15,6 +15,10 @@ The server receives commands over one or more UNIX domain sockets. The motivatin
 
 ## 1. Getting started
 
+**🚀 There's an example of using JSockD with React 19 in [`docs/ssr_with_react_19.md`](https://github.com/addrummond/jsockd/blob/main/docs/ssr_with_react_19.md). The example uses the Go client, but the essential steps are similar for other languages.🚀**
+
+---
+
 ### 1.1 Adding JSockD to your application
 
 Applications should connect to JSockD via a client library that manages the JSockD server process. At the moment, this repo contains two examples of client libraries in `clients/elixir/jsockd_client` and `clients/go`.
@@ -25,12 +29,6 @@ Steps to add JSockD to your application:
 * Compile the ES6 module into a QuickJS bytecode file using the `jsockd -c` command see [section 2](#2the-module-compiler)).
 * Configure your client library with the path to the bytecode file and the public key used to sign it.
 * Use the client library to send commands to the JSockD server.
-
----
-
-**🚀 There's an example of using JSockD with React 19 in [`docs/ssr_with_react_19.md`](https://github.com/addrummond/jsockd/blob/main/docs/ssr_with_react_19.md). The example uses the Go client, but the essential steps are similar for other languages.🚀**
-
----
 
 ### 1.2 What is a JSockD command?
 
