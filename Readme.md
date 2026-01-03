@@ -92,7 +92,7 @@ Minifying the module before compiling it will reduce the size of the compiled by
 
 To further reduce bytecode size, you can use the `-ss` flag to strip source code from the bytecode file or the `-sd` flag to strip all debug info including source code. Note that stripping source code means that error backtraces will not include line numbers or source code snippets. It may also break some JavaScript code which relies on inspecting function source code.
 
-For general use, I recommend minifiying your bundle but **not** using `-ss` or `-sd`. This way you can substantially reduce the size of the bytecode while still allowing useful error backtraces via source maps (see [section 4.3](#43-source-maps)).
+For general use, I recommend minifiying your bundle but **not** using `-ss` or `-sd`. This way you can substantially reduce the size of the bytecode while still allowing useful error backtraces via source maps (see [section 4.3](#43source-maps)).
 
 ## 3. JSockD usage
 
@@ -135,7 +135,7 @@ Exit code is non-zero iff there is a parse error or an exception occurs during e
 
 ### 3.4 Run the JSockD server
 
-The JSockD server should be started as a subprocess by the client library. See [section 9](#9-the-server-and-socket-protocol) for further information.
+The JSockD server should be started as a subprocess by the client library. See [section 9](#9the-server-and-socket-protocol) for further information.
 
 ## 4. Logging and error reporting
 
@@ -169,7 +169,7 @@ An example of a multi-line log message:
 $ jsockd 2025-09-24T21:15:45.644776Z [INFO] Line 3
 ```
 
-## 4.2 Stack trace format
+### 4.2 Stack trace format
 
 ```javascript
 {
@@ -191,7 +191,7 @@ $ jsockd 2025-09-24T21:15:45.644776Z [INFO] Line 3
 }
 ```
 
-## 4.3 Source maps
+### 4.3 Source maps
 
 JSockD supports source maps for error backtrace reporting. Use the `-sm <source_map.js.map>`
 command line option to specify the path to a source map file for the bundle.
