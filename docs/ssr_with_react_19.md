@@ -74,12 +74,14 @@ jsockd -m server-bundle.quickjs_bytecode -sm server-bundle.mjs.map -e "M.renderC
 
 ## Setting up the server
 
+**_❗The example Go code in this section uses `InitJsockDClientViaAutoDownload`, which is not recommended for production use (use `InitJsockDClient` instead).❗_**
+
 ```sh
 go mod init react-ssr-example
 go get github.com/addrummond/jsockd/clients/go/jsockdclient
 ```
 
-The code for the server is as follows. **_❗This code uses `InitJsockDClientViaAutoDownload`, which is not recommended for production use (use `InitJsockDClient` instead).❗_**
+The code for the server:
 
 ```sh
 cat >main.go <<"END"
