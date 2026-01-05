@@ -79,7 +79,7 @@ go mod init react-ssr-example
 go get github.com/addrummond/jsockd/clients/go/jsockdclient
 ```
 
-The code for the server is as follows. **_Note that this code uses `InitJsockDClientViaAutoDownload`, which is not recommended for production use (use `InitJsockDClient` instead)._**
+The code for the server is as follows. **_❗This code uses `InitJsockDClientViaAutoDownload`, which is not recommended for production use (use `InitJsockDClient` instead).❗_**
 
 ```sh
 cat >main.go <<"END"
@@ -156,7 +156,7 @@ func main() {
 END
 ```
 
-Create the client bundle:
+The code for the client bundle:
 
 ```sh
 cat >client.jsx <<"END"
@@ -179,6 +179,8 @@ if (document.readyState === "loading")
 else hydrate();
 END
 ```
+
+Bundle the client code:
 
 ```sh
 npx esbuild ./client.jsx --bundle --outfile=client-bundle.mjs --sourcemap --format=esm
