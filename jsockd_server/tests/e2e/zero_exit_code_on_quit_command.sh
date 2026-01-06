@@ -42,7 +42,7 @@ cat /tmp/jsockd_memory_increase_test_input | nc -w 5 -U /tmp/jsockd_memory_incre
 
 wait $server_pid
 echo "Server has exited, checking exit code..."
-if [ $(cat /tmp/jsockd_memory_increase_test_server_exit_code) -ne 0 ]; then
+if [ "$(cat /tmp/jsockd_memory_increase_test_server_exit_code)" -ne 0 ]; then
     echo "Server exited with an error code, which is unexpected."
     exit 1
 fi

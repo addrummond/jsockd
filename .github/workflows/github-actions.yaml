@@ -26,6 +26,9 @@ jobs:
       - name: Check JSockD version constants
         run: ./ci.sh check_jsockd_version_constants
 
+      - name: Run shellcheck
+        run: ./ci.sh shellcheck
+
       - name: Check jsockd_server formatting
         run: |
           ./ci.sh check_jsockd_server_formatting

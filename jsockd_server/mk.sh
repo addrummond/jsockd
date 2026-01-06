@@ -19,18 +19,20 @@ BUILD_DIR="build_$BUILD_TYPE"
 
 cmake_cross_opts=""
 if ! [ -z "$TOOLCHAIN_FILE" ]; then
-  BUILD_DIR="${BUILD_DIR}_$(basename $TOOLCHAIN_FILE)"
+  BUILD_DIR="${BUILD_DIR}_$(basename "$TOOLCHAIN_FILE")"
   cmake_cross_opts="-DCMAKE_TOOLCHAIN_FILE=$TOOLCHAIN_FILE"
 fi
 
 echo "Running CMake for build type $BUILD_TYPE in directory $BUILD_DIR ..."
-cmake -S. -B$BUILD_DIR -D CMAKE_BUILD_TYPE=$BUILD_TYPE $cmake_cross_opts
-cmake --build $BUILD_DIR $BUILD_OPTS
+# shellcheck disable=SC2086 # Intended splitting of cmake_cross_opts
+cmake -S. -B"$BUILD_DIR" -D CMAKE_BUILD_TYPE="$BUILD_TYPE" $cmake_cross_opts
+# shellcheck disable=SC2086 # Intended splitting of BUILD_OPTS
+cmake --build "$BUILD_DIR" $BUILD_OPTS
 
 if [ "$2" = "run" ]; then
   shift ; shift
-  exec $BUILD_DIR/jsockd "$@"
+  exec "$BUILD_DIR/jsockd" "$@"
 elif [ "$2" = "test" ]; then
   shift ; shift
-  exec $BUILD_DIR/jsockd_tests "$@"
+  exec "$BUILD_DIR/jsockd_tests" "$@"
 fi

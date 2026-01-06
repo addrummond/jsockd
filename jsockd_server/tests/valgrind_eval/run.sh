@@ -7,7 +7,7 @@ cd jsockd_server
 
 rm -f valgrind_private_signing_key*
 ./build_Debug/jsockd -k valgrind_private_signing_key
-export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=$(cat valgrind_private_signing_key.pubkey)
+export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY="$(cat valgrind_private_signing_key.pubkey)"
 
 # Compile the example module to QuickJS bytecode.
 ./build_Debug/jsockd -c tests/valgrind_server/bundle.mjs /tmp/bundle.qjsb -k valgrind_private_signing_key.privkey

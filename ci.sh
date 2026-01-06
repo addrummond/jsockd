@@ -6,7 +6,7 @@ FILC_VERSION=0.677
 FILC_CHECKSUM=917de0dda219a49bb48ee88e6e20133e2bb1e19ee3e13276b68d4cc580d50bb7
 
 if ! [ -z "$GITHUB_WORKSPACE" ] && [ "$1" != "setup" ] && [ "$1" != "github_actions_create_release" ]; then
-    eval $(mise env)
+    eval "$(mise env)"
 fi
 
 # Useful when running the script locally
@@ -22,9 +22,9 @@ fi
 case $1 in
     setup)
         sudo apt-get update
-        sudo apt-get install -y unzip libncurses-dev valgrind gcc-aarch64-linux-gnu
+        sudo apt-get install -y unzip libncurses-dev valgrind gcc-aarch64-linux-gnu shellcheck
         curl -L https://github.com/jdx/mise/releases/download/v2025.8.18/mise-v2025.8.18-linux-x64 --output - | sudo tee -a /usr/local/bin/mise > /dev/null
-        if [ $(sha256sum /usr/local/bin/mise | awk '{ print $1 }') != "7265c5f8099bec212009fcd05bdb786423e9a06e316eddb4362a9869a1950c57" ]; then
+        if [ "$(sha256sum /usr/local/bin/mise | awk '{ print $1 }')" != "7265c5f8099bec212009fcd05bdb786423e9a06e316eddb4362a9869a1950c57" ]; then
             echo "Bad checksum for mise"
             exit 1
         fi
@@ -32,20 +32,20 @@ case $1 in
         # mise takes ages to install CMake, so use a binary distribution
         # instead (still taking the version from .tool-versions).
         ARCH=$(uname -p)
-        CMAKE_VERSION=$(fgrep cmake .tool-versions | awk '{print $2}')
+        CMAKE_VERSION=$(grep -F cmake .tool-versions | awk '{print $2}')
         CMAKE_DIST_NAME="cmake-${CMAKE_VERSION}-linux-${ARCH}"
         curl -L --output "${CMAKE_DIST_NAME}.tar.gz" "https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/${CMAKE_DIST_NAME}.tar.gz"
         tar -xzf "${CMAKE_DIST_NAME}.tar.gz"
         # Add CMake 4 path to beginning of special $GITHUB_PATH file
-        cp $GITHUB_PATH /tmp/ghp
-        echo "$(pwd)/${CMAKE_DIST_NAME}/bin" > $GITHUB_PATH
+        cp "$GITHUB_PATH" /tmp/ghp
+        echo "$(pwd)/${CMAKE_DIST_NAME}/bin" > "$GITHUB_PATH"
         # Make ~/bin and also add it to the path file
         mkdir -p ~/bin
-        echo "$HOME/bin" >> $GITHUB_PATH
-        cat /tmp/ghp >> $GITHUB_PATH
+        echo "$HOME/bin" >> "$GITHUB_PATH"
+        cat /tmp/ghp >> "$GITHUB_PATH"
         mise install node
         curl -L https://github.com/pizlonator/llvm-project-deluge/releases/download/v${FILC_VERSION}/filc-${FILC_VERSION}-linux-x86_64.tar.xz -o ~/filc-${FILC_VERSION}-linux-x86_64.tar.xz
-        if [ $(sha256sum ~/filc-${FILC_VERSION}-linux-x86_64.tar.xz | awk '{ print $1 }') != "$FILC_CHECKSUM" ]; then
+        if [ "$(sha256sum ~/filc-${FILC_VERSION}-linux-x86_64.tar.xz | awk '{ print $1 }')" != "$FILC_CHECKSUM" ]; then
             echo "SHA256 checksum of filc-${FILC_VERSION}-linux-x86_64.tar.xz does not match expected value."
             exit 1
         fi
@@ -57,6 +57,15 @@ case $1 in
         cmake --version
         node --version
         clang-format --version
+        ;;
+
+    shellcheck)
+        shellcheck -eSC2181,SC2030,SC2031,SC2129,SC2034,SC2004,SC2155,SC2235 \
+          ./ci.sh \
+          jsockd_server/mk.sh \
+          jsockd_server/tests/e2e/*.sh \
+          jsockd_server/tests/valgrind_server/*.sh \
+          jsockd_server/tests/valgrind_eval/*.sh
         ;;
 
     build_quickjs)
@@ -83,7 +92,7 @@ case $1 in
         # check that the version constant matches the current git tag.
         (
             set +e
-            cd $GITHUB_WORKSPACE
+            cd "$GITHUB_WORKSPACE"
             tag=$(git describe --tags --exact-match --match 'v[0-9.]*' 2>/dev/null)
             if [ $? -eq 0 ]; then
                 case "$tag" in
@@ -127,7 +136,7 @@ case $1 in
             all_tests=$(grep 'void TEST_.*' tests/unit/tests.c | sed -e 's/.*void TEST_\(.*\)(.*/\1/')
             error=false
             for t in $all_tests; do
-                if ! ( echo $test_list | grep -q "T($t)" tests/unit/tests.c ); then
+                if ! ( echo "$test_list" | grep -q "T($t)" tests/unit/tests.c ); then
                     echo "Test TEST_$t not included in TEST_LIST in tests/unit/tests.c"
                     error=true
                 fi
@@ -137,10 +146,10 @@ case $1 in
                 exit 1
             fi
 
-            echo "\n\nRunning tests for debug build...\n\n"
+            printf "\n\nRunning tests for debug build...\n\n"
             ./mk.sh Debug test
 
-            echo "\n\nRunning tests for release build...\n\n"
+            printf "\n\nRunning tests for release build...\n\n"
             ./mk.sh Release test
         )
         ;;
@@ -148,7 +157,7 @@ case $1 in
     run_jsockd_go_client_tests)
         (
             set -e
-            cd $GITHUB_WORKSPACE/clients/go/jsockdclient
+            cd "$GITHUB_WORKSPACE/clients/go/jsockdclient"
             export JSOCKD="$GITHUB_WORKSPACE/jsockd_server/build_Debug/jsockd"
             go test ./...
         )
@@ -157,7 +166,7 @@ case $1 in
     run_jsockd_go_stress_tests_with_debug_build)
         (
             set -e
-            cd $GITHUB_WORKSPACE/jsockd_server/tests/go
+            cd "$GITHUB_WORKSPACE/jsockd_server/tests/go"
             go run main.go normalStressTest "$GITHUB_WORKSPACE/jsockd_server/build_Debug/jsockd"
         )
         ;;
@@ -165,7 +174,7 @@ case $1 in
     run_jsockd_go_stress_tests_with_release_build)
         (
             set -e
-            cd $GITHUB_WORKSPACE/jsockd_server/tests/go
+            cd "$GITHUB_WORKSPACE/jsockd_server/tests/go"
             go run main.go normalStressTest "$GITHUB_WORKSPACE/jsockd_server/build_Release/jsockd"
         )
         ;;
@@ -173,7 +182,7 @@ case $1 in
     run_jsockd_go_idle_timeout_stress_tests_with_debug_build)
         (
             set -e
-            cd $GITHUB_WORKSPACE/jsockd_server/tests/go
+            cd "$GITHUB_WORKSPACE/jsockd_server/tests/go"
             go run main.go idleTimeoutStressTest "$GITHUB_WORKSPACE/jsockd_server/build_Debug/jsockd"
         )
         ;;
@@ -181,7 +190,7 @@ case $1 in
     run_jsockd_go_idle_timeout_stress_tests_with_release_build)
         (
             set -e
-            cd $GITHUB_WORKSPACE/jsockd_server/tests/go
+            cd "$GITHUB_WORKSPACE/jsockd_server/tests/go"
             go run main.go idleTimeoutStressTest "$GITHUB_WORKSPACE/jsockd_server/build_Release/jsockd"
         )
         ;;
@@ -251,42 +260,42 @@ case $1 in
                 exit 0
             fi
 
-            VERSION=$(echo $VERSION | sed -e 's/^v//')
+            VERSION=$(echo "$VERSION" | sed -e 's/^v//')
 
             cd jsockd_server
             mkdir -p jsockd-release-artifacts
 
             # Package Linux x86_64
             D="jsockd-${VERSION}-linux-x86_64"
-            mkdir jsockd-release-artifacts/$D
-            cp build_Release/jsockd jsockd-release-artifacts/$D
-            tar -C jsockd-release-artifacts -czf $D.tar.gz $D
+            mkdir "jsockd-release-artifacts/$D"
+            cp "build_Release/jsockd" "jsockd-release-artifacts/$D"
+            tar -C jsockd-release-artifacts -czf "$D.tar.gz" "$D"
 
             # Package Linux x86_64 Fil-C.
             D="jsockd-${VERSION}-linux-x86_64_filc"
-            mkdir -p jsockd-release-artifacts/$D
-            cp build_Release_TC-fil-c-CI.cmake/jsockd jsockd-release-artifacts/$D
-            tar -C jsockd-release-artifacts -czf $D.tar.gz $D
+            mkdir -p "jsockd-release-artifacts/$D"
+            cp build_Release_TC-fil-c-CI.cmake/jsockd "jsockd-release-artifacts/$D"
+            tar -C jsockd-release-artifacts -czf "$D.tar.gz" "$D"
 
             # Package Linux ARM64
             D="jsockd-${VERSION}-linux-arm64"
-            mkdir jsockd-release-artifacts/$D
-            cp build_Release_TC-gcc-arm64.cmake/jsockd jsockd-release-artifacts/$D
-            tar -C jsockd-release-artifacts -czf $D.tar.gz $D
+            mkdir "jsockd-release-artifacts/$D"
+            cp build_Release_TC-gcc-arm64.cmake/jsockd "jsockd-release-artifacts/$D"
+            tar -C jsockd-release-artifacts -czf "$D.tar.gz" "$D"
 
             # Package MacOS ARM64
             D="jsockd-${VERSION}-macos-arm64"
-            mkdir jsockd-release-artifacts/$D
-            cp build_Release_TC-oa64.cmake/jsockd jsockd-release-artifacts/$D
-            tar -C jsockd-release-artifacts -czf $D.tar.gz $D
+            mkdir "jsockd-release-artifacts/$D"
+            cp build_Release_TC-oa64.cmake/jsockd "jsockd-release-artifacts/$D"
+            tar -C jsockd-release-artifacts -czf "$D.tar.gz" "$D"
 
             # Create checksums
-            sha256sum *.tar.gz > checksums.txt
+            sha256sum ./*.tar.gz > checksums.txt
 
             # Sign archives with ED25519 private key.
             echo "$JSOCKD_RELEASE_ARTEFACT_PRIVATE_SIGNING_KEY" | sed 's/[[:space:]]//g' | base64 -d > jsockd_binary_private_signing_key.pem
-            for f in jsockd-*.tar.gz; do
-               openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out /dev/stdout -rawin -in $f | base64 | tr -d '\n' >> ed25519_signatures.txt
+            for f in ./jsockd-*.tar.gz; do
+               openssl pkeyutl -sign -inkey jsockd_binary_private_signing_key.pem -out /dev/stdout -rawin -in "$f" | base64 | tr -d '\n' >> ed25519_signatures.txt
                printf "\t%s" "$f" >> ed25519_signatures.txt
                printf "\n" >> ed25519_signatures.txt
             done
@@ -298,8 +307,8 @@ case $1 in
             (
                 set -e
                 cd jsockd_server
-                gh release create $2 --title $2
-                gh release upload $2 jsockd-*.tar.gz checksums.txt ed25519_signatures.txt
+                gh release create "$2" --title "$2"
+                gh release upload "$2" jsockd-*.tar.gz checksums.txt ed25519_signatures.txt
 
                 # Create Go client module tag
                 GO_CLIENT_TAG="clients/go/jsockdclient/$2"
