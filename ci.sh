@@ -62,10 +62,11 @@ case $1 in
     shellcheck)
         shellcheck -eSC2181,SC2030,SC2031,SC2129,SC2034,SC2004,SC2155,SC2235 \
           ./ci.sh \
-          jsockd_server/mk.sh \
-          jsockd_server/tests/e2e/*.sh \
-          jsockd_server/tests/valgrind_server/*.sh \
-          jsockd_server/tests/valgrind_eval/*.sh
+          ./build_quickjs.sh \
+          ./jsockd_server/mk.sh \
+          ./jsockd_server/tests/e2e/*.sh \
+          ./jsockd_server/tests/valgrind_server/*.sh \
+          ./jsockd_server/tests/valgrind_eval/*.sh
         ;;
 
     build_quickjs)

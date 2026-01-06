@@ -3,7 +3,7 @@
 set -e
 
 if [ -z "$MAKE" ]; then
-    MAKE=make
+    MAKE="make"
     if [ "GNU Make" != "$( ( make --version 2>/dev/null || true ) | head -n 1 | awk '{print $1,$2}' )" ]; then
         if [ "GNU Make" = "$( ( gmake --version 2>/dev/null || true ) | head -n 1 | awk '{print $1,$2}' )" ]; then
             MAKE=gmake
@@ -36,7 +36,7 @@ chmod +x unicode_download_curl.sh
 # which is annoying in CI, so retry a few times before giving up.
 retries=0
 while [ $retries -lt 5 ]; do
-    if [ ./unicode_download_curl.sh ]; then
+    if ./unicode_download_curl.sh; then
       break
     fi
     retries=$(($retries + 1))
@@ -80,20 +80,22 @@ for platform in $platforms; do
     $MAKE clean
     case "$platform" in
         native)
-            if [ "$(uname)" == OpenBSD ]; then
+            if [ "$(uname)" = OpenBSD ]; then
                 MAKE_OPTS='CONFIG_FREEBSD=y LIBS=-lm LIBS+=-lpthread HOST_LIBS=-lm HOST_LIBS+=-lpthread'
                 EXTRA_CFLAGS="-Denviron=NULL -Dsighandler_t=sig_t -Dmalloc_usable_size='0&&'"
                 git apply ../../openbsd-quickjs.patch
             fi
             # Debug build for quickjs library
+            # shellcheck disable=SC2086 # Intended splitting of MAKE_OPTS
             CFLAGS="$DEBUG_CFLAGS $EXTRA_CFLAGS" $MAKE CONFIG_LTO=n $MAKE_OPTS
             cp qjs ../../tools-bin
             cp qjsc ../../tools-bin
-            mv libquickjs.a /tmp/libquickjs_${OS}_${ARCH}_Debug.a
+            mv libquickjs.a "/tmp/libquickjs_${OS}_${ARCH}_Debug.a"
             # Release build for quickjs library
             $MAKE clean
+            # shellcheck disable=SC2086 # Intended splitting of MAKE_OPTS
             CFLAGS="$RELEASE_CFLAGS $EXTRA_CFLAGS" $MAKE CONFIG_LTO=y $MAKE_OPTS
-            mv libquickjs.a /tmp/libquickjs_${OS}_${ARCH}_Release.a
+            mv libquickjs.a "/tmp/libquickjs_${OS}_${ARCH}_Release.a"
             ;;
         mac_arm64)
             if [ "$OS" = "Darwin" ] && [ "$ARCH" = "arm64" ]; then
@@ -138,11 +140,11 @@ for platform in $platforms; do
             # Debug
             # See https://github.com/pizlonator/pizlonated-quickjs/commit/258a4a291fd0f080614e5b345528478c31e51705#diff-45f1ae674139f993bf8a99c382c1ba4863272a6fec2f492d76d7ff1b2cfcfbe2R56-R5187 for diff the patch is based on
             git apply ../../fil-c-quickjs.patch
-            CFLAGS="$DEBUG_CFLAGS -static" LDFLAGS="-static" $MAKE CC=$FILC_CLANG CONFIG_LTO= CONFIG_CLANG=y
+            CFLAGS="$DEBUG_CFLAGS -static" LDFLAGS="-static" $MAKE CC="$FILC_CLANG" CONFIG_LTO= CONFIG_CLANG=y
             mv libquickjs.a /tmp/libquickjs_Linux_x86_64_filc_Debug.a
             # Release
             $MAKE clean
-            CFLAGS="$FILC_RELEASE_CFLAGS -static" LDFLAGS="-static" $MAKE CC=$FILC_CLANG CONFIG_LTO= CONFIG_CLANG=y
+            CFLAGS="$FILC_RELEASE_CFLAGS -static" LDFLAGS="-static" $MAKE CC="$FILC_CLANG" CONFIG_LTO= CONFIG_CLANG=y
             git apply -R ../../fil-c-quickjs.patch
             mv libquickjs.a /tmp/libquickjs_Linux_x86_64_filc_Release.a
             ;;
