@@ -2,4 +2,3 @@
 - Format check for Elixir client code in CI
 - Full documentation for Elixir client
 - Vendor JS dependencies
-- Show which console.* function has been called in logs
