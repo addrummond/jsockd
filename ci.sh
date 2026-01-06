@@ -303,7 +303,7 @@ case $1 in
         ;;
 
     github_actions_create_release)
-        if [ ! -z "$2" ]; then
+        if [ -n "$2" ]; then
             (
                 set -e
                 cd jsockd_server
