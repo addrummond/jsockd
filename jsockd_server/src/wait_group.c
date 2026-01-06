@@ -10,14 +10,14 @@
 int wait_group_init(WaitGroup *wg, int n_waiting_for) {
   // Don't need a monotonic clock on Mac because we can use
   // pthread_cond_timedwait_relative_np to set a relative timeout.
-#if defined LINUX || defined FREEBSD || defined OPENBSD
+#ifdef MACOS
+  pthread_cond_init(&wg->cond, NULL);
+#else
   pthread_condattr_t attr;
   pthread_condattr_init(&attr);
   pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);
   pthread_cond_init(&wg->cond, &attr);
   pthread_condattr_destroy(&attr);
-#else
-  pthread_cond_init(&wg->cond, NULL);
 #endif
 
   atomic_init(&wg->n_remaining, n_waiting_for);
