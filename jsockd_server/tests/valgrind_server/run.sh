@@ -26,7 +26,8 @@ if [ -n "$JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX" ]; then
 fi
 
 # Start the server with Valgrind
-valgrind --error-exitcode=1 --leak-check=full --track-origins=yes -- ./build_Debug/jsockd "$DASH_B_ARG" -i 500000 -m /tmp/bundle.qjsb -s /tmp/jsockd_test_sock1 /tmp/jsockd_test_sock2 -sm tests/valgrind_server/bundle.mjs.map &
+# shellcheck disable=SC2086 # Intended splitting of DASH_B_ARG
+valgrind --error-exitcode=1 --leak-check=full --track-origins=yes -- ./build_Debug/jsockd $DASH_B_ARG -i 500000 -m /tmp/bundle.qjsb -s /tmp/jsockd_test_sock1 /tmp/jsockd_test_sock2 -sm tests/valgrind_server/bundle.mjs.map &
 server_pid=$!
 
 # Start the client
