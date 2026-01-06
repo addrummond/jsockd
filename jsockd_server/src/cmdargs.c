@@ -13,7 +13,7 @@ static int n_flags_set(const CmdArgs *cmdargs) {
          (cmdargs->source_map_file != NULL) + (cmdargs->n_sockets != 0) +
          (cmdargs->socket_sep_char_set == true) + (cmdargs->version == true) +
          (cmdargs->max_command_runtime_us != 0) +
-         (int)(cmdargs->max_idle_time_set) +
+         (cmdargs->max_idle_time_set == true) +
          (cmdargs->key_file_prefix != NULL) +
          (cmdargs->mod_to_compile != NULL) +
          (cmdargs->compile_opts != COMPILE_OPTS_NONE) + (cmdargs->eval == true);
