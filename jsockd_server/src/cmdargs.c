@@ -10,14 +10,13 @@ const char EVAL_INPUT_STDIN_SENTINEL[1] = {'\0'};
 
 static int n_flags_set(const CmdArgs *cmdargs) {
   return (cmdargs->es6_module_bytecode_file != NULL) +
-         (cmdargs->socket_path[0] != NULL) +
          (cmdargs->source_map_file != NULL) + (cmdargs->n_sockets != 0) +
-         (cmdargs->socket_sep_char_set != false) + (cmdargs->version != false) +
+         (cmdargs->socket_sep_char_set == true) + (cmdargs->version == true) +
          (cmdargs->max_command_runtime_us != 0) +
          (int)(cmdargs->max_idle_time_set) +
          (cmdargs->key_file_prefix != NULL) +
          (cmdargs->mod_to_compile != NULL) +
-         (cmdargs->compile_opts != COMPILE_OPTS_NONE);
+         (cmdargs->compile_opts != COMPILE_OPTS_NONE) + (cmdargs->eval == true);
 }
 
 static int parse_cmd_args_helper(int argc, char **argv,
@@ -53,8 +52,9 @@ static int parse_cmd_args_helper(int argc, char **argv,
         return -1;
       }
       errno = 0;
-      long long int v = strtoll(argv[i], NULL, 10);
-      if (errno != 0 || v <= 0) {
+      char *endptr = NULL;
+      long long int v = strtoll(argv[i], &endptr, 10);
+      if (errno != 0 || !endptr || *endptr != '\0' || v <= 0) {
         errlog("Error: -t requires a valid integer argument > 0\n");
         return -1;
       }
@@ -180,7 +180,7 @@ static int parse_cmd_args_helper(int argc, char **argv,
       ++i;
       if (i >= argc) {
         errlog("Error: -e requires an argument (JavaScript code to evaluate, "
-               "or ')\n");
+               "or '-' for stdin)\n");
         return -1;
       }
       cmdargs->eval = true;
@@ -207,10 +207,12 @@ static int parse_cmd_args_helper(int argc, char **argv,
     int expected_count = 1 + (cmdargs->source_map_file != NULL) +
                          (cmdargs->es6_module_bytecode_file != NULL);
     if (n_flags != expected_count) {
-      if (cmdargs->source_map_file && !cmdargs->es6_module_bytecode_file) {
-        errlog("Error: -e (eval) can only be used with -m and -sm options\n");
-        return -1;
-      }
+      errlog("Error: -e (eval) can only be used with -m and -sm options\n");
+      return -1;
+    }
+    if (cmdargs->source_map_file && !cmdargs->es6_module_bytecode_file) {
+      errlog("Error: -e (eval) can only be used with -m and -sm options\n");
+      return -1;
     }
   }
 

@@ -20,7 +20,7 @@ typedef struct {
   const char *socket_path[MAX_THREADS];
   const char *source_map_file;
   int n_sockets;
-  char socket_sep_char;
+  unsigned char socket_sep_char;
   bool socket_sep_char_set;
   bool version;
   uint64_t max_command_runtime_us;
