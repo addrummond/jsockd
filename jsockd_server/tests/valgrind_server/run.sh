@@ -21,7 +21,7 @@ export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY="$(cat valgrind_private_signing_key.pub
 ./build_Debug/jsockd -c tests/valgrind_server/bundle.mjs /tmp/bundle.qjsb -k valgrind_private_signing_key.privkey
 
 DASH_B_ARG=""
-if [ ! -z "$JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX" ]; then
+if [ -n "$JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX" ]; then
     DASH_B_ARG="-b $JSOCKD_JS_SERVER_SOCKET_SEP_CHAR_HEX"
 fi
 

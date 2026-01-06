@@ -5,7 +5,7 @@ set -e
 FILC_VERSION=0.677
 FILC_CHECKSUM=917de0dda219a49bb48ee88e6e20133e2bb1e19ee3e13276b68d4cc580d50bb7
 
-if ! [ -z "$GITHUB_WORKSPACE" ] && [ "$1" != "setup" ] && [ "$1" != "github_actions_create_release" ]; then
+if [ -n "$GITHUB_WORKSPACE" ] && [ "$1" != "setup" ] && [ "$1" != "github_actions_create_release" ]; then
     eval "$(mise env)"
 fi
 
@@ -78,7 +78,7 @@ case $1 in
             cd jsockd_server
             npm i # clang-format is installed via npm
             format_errors=$(CLANG_FORMAT_COMMAND="./node_modules/.bin/clang-format --dry-run --Werror" ./format.sh 2>&1)
-            if [ ! -z "$format_errors" ]; then
+            if [ -n "$format_errors" ]; then
                 echo "jsockd_server code formatting errors found:"
                 echo "$format_errors"
                 exit 1

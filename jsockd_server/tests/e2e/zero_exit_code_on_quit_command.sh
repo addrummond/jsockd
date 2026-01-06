@@ -38,7 +38,7 @@ while ! [ -e /tmp/jsockd_memory_increase_test_sock ] && [ $i -lt 15 ]; do
 done
 sleep 1
 
-cat /tmp/jsockd_memory_increase_test_input | nc -w 5 -U /tmp/jsockd_memory_increase_test_sock > /dev/null
+nc -w 5 -U /tmp/jsockd_memory_increase_test_sock < /tmp/jsockd_memory_increase_test_input > /dev/null
 
 wait $server_pid
 echo "Server has exited, checking exit code..."

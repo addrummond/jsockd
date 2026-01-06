@@ -13,7 +13,7 @@ rm -f /tmp/jsockd_fuzz_test_random_data
 
 n_lines=1000
 
-if ! [ -z "$1" ]; then
+if [ -n "$1" ]; then
     # Use the data supplied
     echo "Using supplied data in $1"
     base64 -d < "$1" > /tmp/jsockd_fuzz_test_random_data

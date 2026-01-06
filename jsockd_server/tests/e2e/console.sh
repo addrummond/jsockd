@@ -28,7 +28,7 @@ CMD7='console.log("MESSAGE1", {foo: "bar"})'
 RES7='<console.log>: MESSAGE1 { foo: "bar" }'
 
 i=1
-while [ ! -z "$(eval echo\ \$CMD$i)" ]; do
+while [ -n "$(eval echo\ \$CMD$i)" ]; do
     CMD="$(eval echo \$CMD$i)"
     RES="$(eval echo \$RES$i)"
     printf "Running command '%s' with debug build..." "$CMD"

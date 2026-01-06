@@ -18,7 +18,7 @@ fi
 BUILD_DIR="build_$BUILD_TYPE"
 
 cmake_cross_opts=""
-if ! [ -z "$TOOLCHAIN_FILE" ]; then
+if [ -n "$TOOLCHAIN_FILE" ]; then
   BUILD_DIR="${BUILD_DIR}_$(basename "$TOOLCHAIN_FILE")"
   cmake_cross_opts="-DCMAKE_TOOLCHAIN_FILE=$TOOLCHAIN_FILE"
 fi
