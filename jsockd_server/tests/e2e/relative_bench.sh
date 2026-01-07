@@ -26,7 +26,7 @@ TOOLCHAIN_FILE=TC-fil-c.cmake ./mk.sh "$BUILD"
 JS_SERVER=build_$BUILD/jsockd
 FILC_JS_SERVER=build_${BUILD}_TC-fil-c.cmake/jsockd
 
-npm install
+npm ci
 
 ./node_modules/.bin/esbuild --target=es2018 --format=esm --bundle tests/e2e/relative_bench/bench.jsx --outfile=tests/e2e/relative_bench/bundle.js
 

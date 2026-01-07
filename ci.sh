@@ -77,7 +77,7 @@ case $1 in
         (
             set -e
             cd jsockd_server
-            npm i # clang-format is installed via npm
+            npm ci # clang-format is installed via npm
             format_errors=$(CLANG_FORMAT_COMMAND="./node_modules/.bin/clang-format --dry-run --Werror" ./format.sh 2>&1)
             if [ -n "$format_errors" ]; then
                 echo "jsockd_server code formatting errors found:"
@@ -121,7 +121,7 @@ case $1 in
         (
             set -e
             cd jsockd_server
-            npm i
+            npm ci
             ./mk.sh Debug
             ./mk.sh Release
         )
