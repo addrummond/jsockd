@@ -117,6 +117,27 @@ case $1 in
         )
         ;;
 
+    jsockd_server_install_freebsd_platform_prereqs)
+        (
+            set -e
+            sudo pkg install -y git gmake node npm
+            wget https://github.com/Kitware/CMake/releases/download/v4.2.0/cmake-4.2.0.tar.gz
+            tar -xzf cmake-4.2.0.tar.gz
+            cd cmake-4.2.0
+            ./bootstrap && make && sudo make install
+        )
+        ;;
+
+    install_cmake_from_source)
+        (
+            set -e
+            wget https://github.com/Kitware/CMake/releases/download/v4.2.0/cmake-4.2.0.tar.gz
+            tar -xzf cmake-4.2.0.tar.gz
+            cd cmake-4.2.0
+            ./bootstrap && make && sudo make install
+        )
+        ;;
+
     build_jsockd_server)
         (
             set -e

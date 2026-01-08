@@ -125,3 +125,36 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.TOKEN }}
         run: ./ci.sh github_actions_create_release $(basename "${{ github.ref }}")
+  freebsd-build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up tools
+        run: ./ci.sh jsockd_server_install_freebsd_platform_prereqs
+
+      - name: Build CMake 4.2.0 for FreeBSD cross-compilation
+        if: steps.cache-freebsd-quickjs-cmake.cache-hit != 'true'
+        run: ./ci.sh install_cmake_from_source
+
+      - name: Build QuickJS
+        if: steps.cache-freebsd-quickjs-cmake.cache-hit != 'true'
+        run: ./ci.sh build_quickjs
+
+      - name: Cache QuickJS and CMake build output
+        id: cache-freebsd-quickjs-cmake
+        uses: actions/cache@v4
+        with:
+          path: |
+            /usr/local/bin/cmake
+            .scratch/quickjs
+            tools-bin
+          # This key is based on the hash of the build script to ensure cache
+          # is updated when the script changes.
+          key: freebsd-quickjs-${{ hashFiles('build_quickjs.sh') }}-${{ hashFiles('quickjs.patch') }}-${{ hashFiles('fil-c-quickjs.patch') }}-cmake-4.2.0
+
+      - name: Build jsockd_server for FreeBSD/AMD64
+        run: ./ci.sh build_jsockd_server
