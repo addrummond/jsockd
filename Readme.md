@@ -121,7 +121,7 @@ To further reduce bytecode size, you can use the `-ss` flag to strip source code
 
 For general use, I recommend minifiying your bundle but **not** using `-ss` or `-sd`. This way you can substantially reduce the size of the bytecode while still allowing useful error backtraces via source maps (see [section 4.3](#43source-maps)).
 
-## 3. `jsockd` command usage
+## 3. `jsockd` usage
 
 ### 3.1 Get version
 
