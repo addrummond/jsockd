@@ -80,7 +80,7 @@ for platform in $platforms; do
     $MAKE clean
     case "$platform" in
         native)
-            if [ "$(uname)" = OpenBSD ]; then
+            if [ "$OS" = OpenBSD ]; then
                 MAKE_OPTS='CONFIG_FREEBSD=y LIBS=-lm LIBS+=-lpthread HOST_LIBS=-lm HOST_LIBS+=-lpthread'
                 EXTRA_CFLAGS="-Denviron=NULL -Dsighandler_t=sig_t -Dmalloc_usable_size='0&&'"
                 git apply ../../openbsd-quickjs.patch
