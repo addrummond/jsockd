@@ -124,20 +124,19 @@ if(_use_git_version)
   target_compile_definitions(jsockd_lib PUBLIC VERSION="${VERSION_STRING}")
 endif()
 
-target_compile_options(jsockd_lib PUBLIC $<$<CONFIG:Release>:-O2>)
+target_compile_options(jsockd_lib PUBLIC $<$<CONFIG:Release>:-O2> $<$<CONFIG:Debug>:-O0>)
 if (CMAKE_C_COMPILER_ID MATCHES "Clang")
   target_compile_options(jsockd_lib PUBLIC
-    $<$<CONFIG:Debug>:-O0 -Wall -Wextra -Wpedantic -Werror
+    $<$<CONFIG:Debug>:-Wall -Wextra -Wpedantic -Werror
       -Wno-unused-parameter -Wno-unused-function -Wno-unused-variable
       -Wno-missing-field-initializers>
   )
 elseif (CMAKE_C_COMPILER_ID MATCHES "GNU")
   target_compile_options(jsockd_lib PUBLIC
-    $<$<CONFIG:Debug>:-O0 -Wall -Wextra -Wpedantic -Werror -Wno-unused-parameter -Wno-unknown-pragmas>
+    $<$<CONFIG:Debug>:-Wall -Wextra -Wpedantic -Werror -Wno-unused-parameter -Wno-unknown-pragmas>
   )
 endif()
 
-# Build-type macros (optional, preserved behavior) via config-only generator expressions
 target_compile_definitions(jsockd_lib
   PUBLIC
     $<$<CONFIG:Release>:CMAKE_BUILD_TYPE_RELEASE>
