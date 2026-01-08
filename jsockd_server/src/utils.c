@@ -3,7 +3,7 @@
 #include "log.h"
 #include "quickjs-libc.h"
 #include <errno.h>
-#ifdef LINUX
+#ifdef __linux__
 #define _GNU_SOURCE // make ppoll available
 #endif
 #include <poll.h>
@@ -194,7 +194,7 @@ PollFdResult poll_fd(int fd, int timeout_ms) {
 }
 
 PollFdResult ppoll_fd(int fd, const struct timespec *timeout) {
-#ifdef MACOS
+#ifdef __APPLE__
   int ms =
       MAX(1, (int)timeout->tv_sec * 1000 + (int)timeout->tv_nsec / 1000000);
   return poll_fd(fd, ms);

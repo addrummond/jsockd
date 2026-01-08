@@ -1,6 +1,5 @@
 
 #include "wait_group.h"
-#include "utils.h"
 #include <assert.h>
 #include <stdatomic.h>
 #include <stdio.h>
@@ -10,7 +9,7 @@
 int wait_group_init(WaitGroup *wg, int n_waiting_for) {
   // Don't need a monotonic clock on Mac because we can use
   // pthread_cond_timedwait_relative_np to set a relative timeout.
-#ifdef MACOS
+#ifdef __APPLE__
   pthread_cond_init(&wg->cond, NULL);
 #else
   pthread_condattr_t attr;
@@ -63,7 +62,7 @@ int wait_group_timed_wait(WaitGroup *wg, uint64_t timeout_ns) {
   if (atomic_load_explicit(&wg->n_remaining, memory_order_acquire) == 0)
     return pthread_mutex_unlock(&wg->mutex);
 
-#if defined MACOS
+#if defined __APPLE__
   // MacOS supports pthread_cond_timedwait but not with a monotonic clock, so we
   // use pthread_cond_timedwait_relative_np instead.
   struct timespec relative_time = {.tv_nsec = timeout_ns % 1000000000,
@@ -79,7 +78,7 @@ int wait_group_timed_wait(WaitGroup *wg, uint64_t timeout_ns) {
       return r;
     }
   }
-#elif defined LINUX || defined FREEBSD || defined OPENBSD
+#elif defined __linux__ || defined __FreeBSD__ || defined __OpenBSD__
   struct timespec abstime;
   if (0 != clock_gettime(MONOTONIC_CLOCK, &abstime)) {
     pthread_mutex_unlock(&wg->mutex);

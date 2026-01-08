@@ -1,96 +1,81 @@
 cmake_minimum_required(VERSION 4.0)
 
-project(
-  jsockd_js_server
-  VERSION 1.0
-  LANGUAGES C)
+project(jsockd_js_server VERSION 1.0 LANGUAGES C)
 
-MESSAGE(STATUS "Using toolchain file: ${CMAKE_TOOLCHAIN_FILE}")
+message(STATUS "Using toolchain file: ${CMAKE_TOOLCHAIN_FILE}")
 
-execute_process(COMMAND git describe --tags --match "v*.*.*"
-  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-  OUTPUT_VARIABLE VERSION_STRING
-  OUTPUT_STRIP_TRAILING_WHITESPACE
-  COMMAND_ERROR_IS_FATAL NONE)
-string(REPLACE "v" "" VERSION_STRING "${VERSION_STRING}")
-string(STRIP VERSION_STRING "${VERSION_STRING}")
-MESSAGE(STATUS "Version string: '${VERSION_STRING}'")
-
-# If the version string matches /-[0-9]+-g[0-9a-f]+$/ then the current commit is not
-# tagged, so we don't know the version
-if((NOT "${VERSION_STRING}" STREQUAL "") AND NOT (VERSION_STRING MATCHES "-[0-9]+-g[0-9a-f]+$"))
-    string(REGEX REPLACE "-[0-9]+-g[0-9a-f]+$" "" VERSION_STRING "${VERSION_STRING}")
-    add_compile_definitions(VERSION=${VERSION_STRING})
+# Derive version from git tag if available and the current commit is tagged
+find_package(Git QUIET)
+if(Git_FOUND)
+  execute_process(
+    COMMAND "${GIT_EXECUTABLE}" describe --tags --match "v*.*.*"
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+    OUTPUT_VARIABLE VERSION_STRING
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    COMMAND_ERROR_IS_FATAL NONE
+  )
+  string(REPLACE "v" "" VERSION_STRING "${VERSION_STRING}")
+  string(STRIP VERSION_STRING "${VERSION_STRING}")
+  if(VERSION_STRING)
+    message(STATUS "Version string: '${VERSION_STRING}'")
+  endif()
 endif()
 
-if(UNIX)
-    add_compile_definitions(UNIX)
-    if (APPLE)
-        add_compile_definitions(MACOS)
-    endif()
-    if (BSD STREQUAL "FreeBSD")
-        add_compile_definitions(FREEBSD)
-    endif()
-    if (BSD STREQUAL "OpenBSD")
-        add_compile_definitions(OPENBSD)
-    endif()
-    if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
-        add_compile_definitions(LINUX)
-    endif()
+# If the version string matches /-[0-9]+-g[0-9a-f]+$/ then the current commit is not tagged
+# and we don't know the version. If it is a clean tag, use it.
+set(_use_git_version OFF)
+if(VERSION_STRING AND NOT VERSION_STRING MATCHES "-[0-9]+-g[0-9a-f]+$")
+  string(REGEX REPLACE "-[0-9]+-g[0-9a-f]+$" "" VERSION_STRING "${VERSION_STRING}")
+  set(_use_git_version ON)
 endif()
 
-if(CMAKE_BUILD_TYPE STREQUAL Release)
-    add_compile_definitions(CMAKE_BUILD_TYPE_RELEASE)
-    add_compile_options(-O2)
-endif()
-
-if(CMAKE_BUILD_TYPE STREQUAL Debug)
-    add_compile_definitions(CMAKE_BUILD_TYPE_DEBUG)
-
-    if (CMAKE_C_COMPILER_ID MATCHES "Clang")
-        add_compile_options(-O0 -Wall -Wextra -Wpedantic -Werror
-          -Wno-unused-parameter -Wno-unused-function -Wno-unused-variable
-          -Wno-missing-field-initializers)
-    endif()
-    if (CMAKE_C_COMPILER_ID MATCHES "GNU")
-        add_compile_options(-O0 -Wall -Wextra -Wpedantic -Werror -Wno-unused-parameter -Wno-unknown-pragmas)
-    endif()
-endif()
-
-# For x86-64, ensure we have AVX support for 128-bit atomics
-if (CMAKE_SIZEOF_VOID_P EQUAL 8 AND (CMAKE_SYSTEM_PROCESSOR MATCHES "86" OR CMAKE_SYSTEM_PROCESSOR MATCHES "amd64"))
-    add_compile_options(-march=x86-64 -mcx16 -mtune=generic)
-endif()
-
+# Toolchain suffix for filc builds
 if(CMAKE_C_COMPILER MATCHES "filc")
-    set(FILC "_filc")
+  set(FILC "_filc")
 endif()
 
-# Add https://github.com/Cyan4973/xxHash/ hash library
-set(XXHASH_BUILD_XXHSUM OFF)        # Don't build command line tool
-option(BUILD_SHARED_LIBS OFF)       # Build static library
+# Add xxHash without global side effects (static only)
+set(_save_BUILD_SHARED_LIBS "${BUILD_SHARED_LIBS}")
+set(BUILD_SHARED_LIBS OFF)
+set(XXHASH_BUILD_XXHSUM OFF CACHE BOOL "Do not build xxhsum tool")
 add_subdirectory(src/lib/xxHash/build/cmake xxhash_build EXCLUDE_FROM_ALL)
+set(BUILD_SHARED_LIBS "${_save_BUILD_SHARED_LIBS}")
 
 # Generate the QuickJS bytecode for the backtrace module
 add_custom_command(
-  OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/src/js/gen_backtrace.c
-  COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../tools-bin/qjsc -c -o ${CMAKE_CURRENT_SOURCE_DIR}/src/js/gen_backtrace.c -N g_backtrace_module_bytecode ${CMAKE_CURRENT_SOURCE_DIR}/src/js/backtrace.mjs
-  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/js/backtrace.mjs ../.scratch/quickjs/quickjs.c
+  OUTPUT  "${CMAKE_CURRENT_SOURCE_DIR}/src/js/gen_backtrace.c"
+  COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/../tools-bin/qjsc"
+          -c
+          -o "${CMAKE_CURRENT_SOURCE_DIR}/src/js/gen_backtrace.c"
+          -N g_backtrace_module_bytecode
+          "${CMAKE_CURRENT_SOURCE_DIR}/src/js/backtrace.mjs"
+  DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/js/backtrace.mjs" ../.scratch/quickjs/quickjs.c
+  VERBATIM
 )
 
 # Bundle the shims module
 add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/src/js/shims/bundle.mjs
-    COMMAND sh -c "( cd ${CMAKE_CURRENT_SOURCE_DIR} && npm ci ) && ${CMAKE_CURRENT_SOURCE_DIR}/node_modules/.bin/esbuild ${CMAKE_CURRENT_SOURCE_DIR}/src/js/shims/shims.mjs --bundle --outfile=${CMAKE_CURRENT_SOURCE_DIR}/src/js/shims/bundle.mjs --format=esm"
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/js/shims/shims.mjs ../.scratch/quickjs/quickjs.c
-    VERBATIM
+  OUTPUT  "${CMAKE_CURRENT_SOURCE_DIR}/src/js/shims/bundle.mjs"
+  COMMAND sh -c "( cd ${CMAKE_CURRENT_SOURCE_DIR} && npm ci ) && \
+                 ${CMAKE_CURRENT_SOURCE_DIR}/node_modules/.bin/esbuild \
+                 ${CMAKE_CURRENT_SOURCE_DIR}/src/js/shims/shims.mjs \
+                 --bundle \
+                 --outfile=${CMAKE_CURRENT_SOURCE_DIR}/src/js/shims/bundle.mjs \
+                 --format=esm"
+  DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/js/shims/shims.mjs" ../.scratch/quickjs/quickjs.c
+  VERBATIM
 )
 
 # Generate the QuickJS bytecode source file for the shims module
 add_custom_command(
-  OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/src/js/gen_shims.c
-  COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../tools-bin/qjsc -c -o ${CMAKE_CURRENT_SOURCE_DIR}/src/js/gen_shims.c -N g_shims_module_bytecode ${CMAKE_CURRENT_SOURCE_DIR}/src/js/shims/bundle.mjs
-  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/js/shims/bundle.mjs ../.scratch/quickjs/quickjs.c
+  OUTPUT  "${CMAKE_CURRENT_SOURCE_DIR}/src/js/gen_shims.c"
+  COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/../tools-bin/qjsc"
+          -c
+          -o "${CMAKE_CURRENT_SOURCE_DIR}/src/js/gen_shims.c"
+          -N g_shims_module_bytecode
+          "${CMAKE_CURRENT_SOURCE_DIR}/src/js/shims/bundle.mjs"
+  DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/js/shims/bundle.mjs" ../.scratch/quickjs/quickjs.c
+  VERBATIM
 )
 
 set(ED25519_LIB_SOURCES
@@ -129,44 +114,78 @@ set(JSOCKD_SERVER_SOURCES
   ${ED25519_LIB_SOURCES}
 )
 
-# This lib is just here to stop CMake building most of the sources twice, once
-# for the main executable and once for the tests.
-add_library(jsockd_lib STATIC ${JSOCKD_SERVER_SOURCES})
+# Core static library holding most sources to avoid duplicate compilation between exe and tests
+add_library(jsockd_lib STATIC)
+target_sources(jsockd_lib PRIVATE ${JSOCKD_SERVER_SOURCES})
 target_compile_features(jsockd_lib PUBLIC c_std_23)
+
+# Embed VERSION if we have a clean (tagged) git version
+if(_use_git_version)
+  target_compile_definitions(jsockd_lib PUBLIC VERSION="${VERSION_STRING}")
+endif()
+
+target_compile_options(jsockd_lib PUBLIC $<$<CONFIG:Release>:-O2>)
+if (CMAKE_C_COMPILER_ID MATCHES "Clang")
+  target_compile_options(jsockd_lib PUBLIC
+    $<$<CONFIG:Debug>:-O0 -Wall -Wextra -Wpedantic -Werror
+      -Wno-unused-parameter -Wno-unused-function -Wno-unused-variable
+      -Wno-missing-field-initializers>
+  )
+elseif (CMAKE_C_COMPILER_ID MATCHES "GNU")
+  target_compile_options(jsockd_lib PUBLIC
+    $<$<CONFIG:Debug>:-O0 -Wall -Wextra -Wpedantic -Werror -Wno-unused-parameter -Wno-unknown-pragmas>
+  )
+endif()
+
+# Build-type macros (optional, preserved behavior) via config-only generator expressions
+target_compile_definitions(jsockd_lib
+  PUBLIC
+    $<$<CONFIG:Release>:CMAKE_BUILD_TYPE_RELEASE>
+    $<$<CONFIG:Debug>:CMAKE_BUILD_TYPE_DEBUG>
+)
+
+# For x86-64, ensure we have CX16 (CMPXCHG16B) support for 128-bit atomics (Clang/GCC)
+if(CMAKE_SIZEOF_VOID_P EQUAL 8 AND (CMAKE_SYSTEM_PROCESSOR MATCHES "86" OR CMAKE_SYSTEM_PROCESSOR MATCHES "amd64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64"))
+  if(CMAKE_C_COMPILER_ID MATCHES "Clang" OR CMAKE_C_COMPILER_ID MATCHES "GNU")
+    target_compile_options(jsockd_lib PUBLIC -march=x86-64 -mcx16 -mtune=generic)
+  endif()
+endif()
+
+# Determine architecture for QuickJS imported lib
+if(CMAKE_SIZEOF_VOID_P EQUAL 8 AND (CMAKE_SYSTEM_PROCESSOR MATCHES "arm" OR CMAKE_SYSTEM_PROCESSOR MATCHES "aarch"))
+  set(QUICKJS_LIB_ARCH "arm64")
+elseif(CMAKE_SIZEOF_VOID_P EQUAL 8 AND (CMAKE_SYSTEM_PROCESSOR MATCHES "86" OR CMAKE_SYSTEM_PROCESSOR MATCHES "amd64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64"))
+  set(QUICKJS_LIB_ARCH "x86_64")
+else()
+  message(FATAL_ERROR "No QuickJS lib has been built for this architecture: ${CMAKE_SYSTEM_PROCESSOR} / ${CMAKE_SIZEOF_VOID_P}")
+endif()
+
+add_library(qjs STATIC IMPORTED)
+set(_qjs_prefix "${CMAKE_SOURCE_DIR}/../.scratch/quickjs/libquickjs_${CMAKE_SYSTEM_NAME}_${QUICKJS_LIB_ARCH}${FILC}_")
+set_target_properties(qjs PROPERTIES
+  IMPORTED_LOCATION_DEBUG          "${_qjs_prefix}Debug.a"
+  IMPORTED_LOCATION_RELEASE        "${_qjs_prefix}Release.a"
+  INTERFACE_INCLUDE_DIRECTORIES    "${CMAKE_SOURCE_DIR}/../.scratch/quickjs;${CMAKE_SOURCE_DIR}/src/lib"
+)
+
 target_link_libraries(jsockd_lib PUBLIC qjs xxHash::xxhash)
 
-# Ensure anything that links qjs also links libm on Linux/*BSD
-if (UNIX AND NOT APPLE)
-    target_link_libraries(jsockd_lib INTERFACE m)
+if(UNIX AND NOT APPLE)
+  target_link_libraries(jsockd_lib PUBLIC m)
 endif()
 
 if(CMAKE_C_COMPILER_ID MATCHES "GNU")
-    target_link_libraries(jsockd_lib PUBLIC atomic)
+  target_link_libraries(jsockd_lib PUBLIC atomic)
 endif()
-if(CMAKE_SYSTEM_NAME MATCHES "BSD")
-    target_link_libraries(jsockd_lib PUBLIC pthread)
+
+if(CMAKE_SYSTEM_NAME MATCHES "FreeBSD" OR CMAKE_SYSTEM_NAME MATCHES "OpenBSD")
+  target_link_libraries(jsockd_lib PUBLIC pthread)
 endif()
 
 add_executable(jsockd src/main.c)
 target_link_libraries(jsockd PRIVATE jsockd_lib)
-target_compile_features(jsockd PUBLIC c_std_23)
+target_compile_features(jsockd PRIVATE c_std_23)
 
 add_executable(jsockd_tests tests/unit/tests.c tests/unit/lib/pcg.c)
 target_link_libraries(jsockd_tests PRIVATE jsockd_lib)
-target_compile_features(jsockd_tests PUBLIC c_std_23)
-
-if (CMAKE_SIZEOF_VOID_P EQUAL 8 AND (CMAKE_SYSTEM_PROCESSOR MATCHES "arm" OR CMAKE_SYSTEM_PROCESSOR MATCHES "aarch"))
-    set(QUICKJS_LIB_ARCH "arm64")
-elseif (CMAKE_SIZEOF_VOID_P EQUAL 8 AND (CMAKE_SYSTEM_PROCESSOR MATCHES "86" OR CMAKE_SYSTEM_PROCESSOR MATCHES "amd64"))
-    set(QUICKJS_LIB_ARCH "x86_64")
-else()
-    message(FATAL_ERROR "No QuickJS lib has been built for this architecture: ${CMAKE_SYSTEM_PROCESSOR} / ${CMAKE_SIZEOF_VOID_P}")
-endif()
-
-add_library(qjs STATIC IMPORTED)
-set_target_properties(qjs PROPERTIES
-  IMPORTED_LOCATION
-    ${CMAKE_SOURCE_DIR}/../.scratch/quickjs/libquickjs_${CMAKE_SYSTEM_NAME}_${QUICKJS_LIB_ARCH}${FILC}_${CMAKE_BUILD_TYPE}.a
-  INTERFACE_INCLUDE_DIRECTORIES
-    "${CMAKE_SOURCE_DIR}/../.scratch/quickjs;${CMAKE_SOURCE_DIR}/src/lib"
-)
+target_compile_features(jsockd_tests PRIVATE c_std_23)
