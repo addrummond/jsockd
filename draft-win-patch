@@ -248,10 +248,10 @@ index 52ff164..bdda10a 100644
                                                        const char *fmt, ...)
  {
 diff --git a/cutils.h b/cutils.h
-index 094a8f1..c086b47 100644
+index 094a8f1..81160b2 100644
 --- a/cutils.h
 +++ b/cutils.h
-@@ -25,12 +25,13 @@
+@@ -25,15 +25,16 @@
  #ifndef CUTILS_H
  #define CUTILS_H
  
@@ -262,11 +262,17 @@ index 094a8f1..c086b47 100644
  
 -#define likely(x)       __builtin_expect(!!(x), 1)
 -#define unlikely(x)     __builtin_expect(!!(x), 0)
+-#define force_inline inline __attribute__((always_inline))
+-#define no_inline __attribute__((noinline))
+-#define __maybe_unused __attribute__((unused))
 +#define likely(x)      (x)
 +#define unlikely(x)     (x)
- #define force_inline inline __attribute__((always_inline))
- #define no_inline __attribute__((noinline))
- #define __maybe_unused __attribute__((unused))
++#define force_inline
++#define no_inline
++#define __maybe_unused
+ 
+ #define xglue(x, y) x ## y
+ #define glue(x, y) xglue(x, y)
 @@ -149,15 +150,15 @@ static inline int ctz64(uint64_t a)
      return __builtin_ctzll(a);
  }
