@@ -166,6 +166,8 @@ done
 if [ "$windows_x64_msvc" = 1 ]; then
    echo "Build done!"
    ls -l
+   echo "Obj dir"
+   ls -l .obj
 else
     cp /tmp/libquickjs_*.a .
 fi
