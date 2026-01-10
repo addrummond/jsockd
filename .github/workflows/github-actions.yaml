@@ -134,4 +134,6 @@ jobs:
         with:
           fetch-depth: 0
       - name: Set up tools
-        run: echo Y | winget install -e --id GnuWin32.Make
+        run: |
+          echo Y | winget install -e --id GnuWin32.Make
+          cl
