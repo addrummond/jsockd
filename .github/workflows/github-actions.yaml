@@ -133,13 +133,13 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
       - name: Set up tools
         shell: cmd
         run: |
           echo Y | winget install -e --id GnuWin32.Make
           winget install -e --id JernejSimoncic.Wget
-          "%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -prerelease -products * -requires Microsoft.Component.MSBuild -property installationPath > "%TEMP%\vsdir.txt"
-          set /p VSDIR=<"%TEMP%\vsdir.txt"
-          call "%VSDIR%\VC\Auxiliary\Build\VsDevCmd.bat" -arch=x64
           cl /?
           where cl
