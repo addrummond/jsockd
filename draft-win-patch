@@ -762,7 +762,7 @@ index c24b6d5..6331cf6 100644
  #if !defined(_WIN32)
      OS_FLAG(S_IFSOCK),
 diff --git a/quickjs.c b/quickjs.c
-index e30d393..296ef70 100644
+index e30d393..6a3339a 100644
 --- a/quickjs.c
 +++ b/quickjs.c
 @@ -22,13 +22,17 @@
@@ -927,6 +927,42 @@ index e30d393..296ef70 100644
  {
      JSValue val;
      va_list ap;
+@@ -7972,7 +7983,7 @@ static int JS_DefinePrivateField(JSContext *ctx, JSValueConst obj,
+         JS_ThrowTypeErrorNotASymbol(ctx);
+         goto fail;
+     }
+-    prop = js_symbol_to_atom(ctx, (JSValue)name);
++    prop = js_symbol_to_atom(ctx, name);
+     p = JS_VALUE_GET_OBJ(obj);
+     prs = find_own_property(&pr, p, prop);
+     if (prs) {
+@@ -8003,7 +8014,7 @@ static JSValue JS_GetPrivateField(JSContext *ctx, JSValueConst obj,
+     /* safety check */
+     if (unlikely(JS_VALUE_GET_TAG(name) != JS_TAG_SYMBOL))
+         return JS_ThrowTypeErrorNotASymbol(ctx);
+-    prop = js_symbol_to_atom(ctx, (JSValue)name);
++    prop = js_symbol_to_atom(ctx, name);
+     p = JS_VALUE_GET_OBJ(obj);
+     prs = find_own_property(&pr, p, prop);
+     if (!prs) {
+@@ -8030,7 +8041,7 @@ static int JS_SetPrivateField(JSContext *ctx, JSValueConst obj,
+         JS_ThrowTypeErrorNotASymbol(ctx);
+         goto fail;
+     }
+-    prop = js_symbol_to_atom(ctx, (JSValue)name);
++    prop = js_symbol_to_atom(ctx, name);
+     p = JS_VALUE_GET_OBJ(obj);
+     prs = find_own_property(&pr, p, prop);
+     if (!prs) {
+@@ -8129,7 +8140,7 @@ static int JS_CheckBrand(JSContext *ctx, JSValueConst obj, JSValueConst func)
+         return -1;
+     }
+     p = JS_VALUE_GET_OBJ(obj);
+-    prs = find_own_property(&pr, p, js_symbol_to_atom(ctx, (JSValue)brand));
++    prs = find_own_property(&pr, p, js_symbol_to_atom(ctx, brand));
+     return (prs != NULL);
+ }
+ 
 @@ -12405,7 +12416,8 @@ static JSValue js_atof(JSContext *ctx, const char *str, const char **pp,
          if (!(flags & ATOD_INT_ONLY) &&
              (atod_type == ATOD_TYPE_FLOAT64) &&
@@ -946,6 +982,24 @@ index e30d393..296ef70 100644
  {
      va_list ap;
      char buf[256];
+@@ -17200,7 +17212,7 @@ static JSValue js_call_c_function(JSContext *ctx, JSValueConst func_obj,
+     rt->current_stack_frame = sf;
+     ctx = p->u.cfunc.realm; /* change the current realm */
+     sf->js_mode = 0;
+-    sf->cur_func = (JSValue)func_obj;
++    sf->cur_func = func_obj;
+     sf->arg_count = argc;
+     arg_buf = argv;
+ 
+@@ -17446,7 +17458,7 @@ static JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
+     sf->js_mode = b->js_mode;
+     arg_buf = argv;
+     sf->arg_count = argc;
+-    sf->cur_func = (JSValue)func_obj;
++    sf->cur_func = func_obj;
+     var_refs = p->u.func.var_refs;
+ 
+     local_buf = alloca(alloca_size);
 @@ -22816,7 +22828,8 @@ static int json_parse_number(JSParseState *s, const uint8_t **pp)
      if (!is_digit(*p)) {
          if (s->ext_json) {
@@ -956,6 +1010,17 @@ index e30d393..296ef70 100644
                  if (*p_start == '-')
                      d = -d;
                  goto done;
+@@ -42567,8 +42580,8 @@ static int64_t JS_FlattenIntoArray(JSContext *ctx, JSValueConst target,
+         if (!JS_IsUndefined(mapperFunction)) {
+             JSValueConst args[3] = { element, JS_NewInt64(ctx, sourceIndex), source };
+             element = JS_Call(ctx, mapperFunction, thisArg, 3, args);
+-            JS_FreeValue(ctx, (JSValue)args[0]);
+-            JS_FreeValue(ctx, (JSValue)args[1]);
++            JS_FreeValue(ctx, args[0]);
++            JS_FreeValue(ctx, args[1]);
+             if (JS_IsException(element))
+                 return -1;
+         }
 @@ -46268,7 +46281,8 @@ static JSValue js_math_min_max(JSContext *ctx, JSValueConst this_val,
      uint32_t tag;
  
@@ -966,6 +1031,44 @@ index e30d393..296ef70 100644
      }
  
      tag = JS_VALUE_GET_TAG(argv[0]);
+@@ -50726,7 +50740,7 @@ static JSValue js_weakref_new(JSContext *ctx, JSValueConst val)
+     } else {
+         assert(JS_IsUndefined(val));
+     }
+-    return (JSValue)val;
++    return val;
+ }
+ 
+ #define MAGIC_SET (1 << 0)
+@@ -50856,7 +50870,7 @@ static JSValue map_normalize_key(JSContext *ctx, JSValue key)
+ 
+ static JSValueConst map_normalize_key_const(JSContext *ctx, JSValueConst key)
+ {
+-    return (JSValueConst)map_normalize_key(ctx, (JSValue)key);
++    return (JSValueConst)map_normalize_key(ctx, key);
+ }
+ 
+ /* hash multipliers, same as the Linux kernel (see Knuth vol 3,
+@@ -51289,7 +51303,7 @@ static JSValue js_map_forEach(JSContext *ctx, JSValueConst this_val,
+                 args[0] = args[1];
+             else
+                 args[0] = JS_DupValue(ctx, mr->value);
+-            args[2] = (JSValue)this_val;
++            args[2] = this_val;
+             ret = JS_Call(ctx, func, this_arg, 3, (JSValueConst *)args);
+             JS_FreeValue(ctx, args[0]);
+             if (!magic)
+@@ -57750,8 +57764,8 @@ static int js_TA_cmp_generic(const void *a, const void *b, void *opaque) {
+             cmp = (a_idx > b_idx) - (a_idx < b_idx);
+         }
+     done:
+-        JS_FreeValue(ctx, (JSValue)argv[0]);
+-        JS_FreeValue(ctx, (JSValue)argv[1]);
++        JS_FreeValue(ctx, argv[0]);
++        JS_FreeValue(ctx, argv[1]);
+     }
+     return cmp;
+ }
 @@ -59059,7 +59073,7 @@ static JSValue js_atomics_wait(JSContext *ctx,
          ret = 0;
      } else {
@@ -976,10 +1079,19 @@ index e30d393..296ef70 100644
          ts.tv_nsec += (timeout % 1000) * 1000000;
          if (ts.tv_nsec >= 1000000000) {
 diff --git a/quickjs.h b/quickjs.h
-index 92cc000..0230bf8 100644
+index 92cc000..0e262d7 100644
 --- a/quickjs.h
 +++ b/quickjs.h
-@@ -701,7 +701,7 @@ static inline JSValue JS_DupValue(JSContext *ctx, JSValueConst v)
+@@ -64,6 +64,8 @@ typedef uint32_t JSAtom;
+ #define JS_NAN_BOXING
+ #endif
+ 
++#undef JS_NAN_BOXING
++
+ #if defined(__SIZEOF_INT128__) && (INTPTR_MAX >= INT64_MAX)
+ #define JS_LIMB_BITS 64
+ #else
+@@ -701,7 +703,7 @@ static inline JSValue JS_DupValue(JSContext *ctx, JSValueConst v)
          JSRefCountHeader *p = (JSRefCountHeader *)JS_VALUE_GET_PTR(v);
          p->ref_count++;
      }
@@ -988,7 +1100,7 @@ index 92cc000..0230bf8 100644
  }
  
  static inline JSValue JS_DupValueRT(JSRuntime *rt, JSValueConst v)
-@@ -710,7 +710,7 @@ static inline JSValue JS_DupValueRT(JSRuntime *rt, JSValueConst v)
+@@ -710,7 +712,7 @@ static inline JSValue JS_DupValueRT(JSRuntime *rt, JSValueConst v)
          JSRefCountHeader *p = (JSRefCountHeader *)JS_VALUE_GET_PTR(v);
          p->ref_count++;
      }
