@@ -473,7 +473,7 @@ index e55ca61..18f142a 100644
          char *arg = argv[optind] + 1;
          const char *longopt = "";
 diff --git a/quickjs-libc.c b/quickjs-libc.c
-index c24b6d5..cd46c40 100644
+index c24b6d5..077abce 100644
 --- a/quickjs-libc.c
 +++ b/quickjs-libc.c
 @@ -1,5 +1,4 @@
@@ -583,7 +583,19 @@ index c24b6d5..cd46c40 100644
  static JSValue js_std_fdopen(JSContext *ctx, JSValueConst this_val,
                               int argc, JSValueConst *argv)
  {
-@@ -1459,162 +1422,6 @@ static int http_get_status(const char *buf)
+@@ -1176,10 +1139,7 @@ static JSValue js_std_file_close(JSContext *ctx, JSValueConst this_val,
+         return JS_EXCEPTION;
+     if (!s->f)
+         return JS_ThrowTypeError(ctx, "invalid file handle");
+-    if (s->is_popen)
+-        err = js_get_errno(pclose(s->f));
+-    else
+-        err = js_get_errno(fclose(s->f));
++    err = js_get_errno(fclose(s->f));
+     s->f = NULL;
+     return JS_NewInt32(ctx, err);
+ }
+@@ -1459,162 +1419,6 @@ static int http_get_status(const char *buf)
      return atoi(p);
  }
  
@@ -746,7 +758,7 @@ index c24b6d5..cd46c40 100644
  static JSClassDef js_std_file_class = {
      "FILE",
      .finalizer = js_std_file_finalizer,
-@@ -1646,14 +1453,12 @@ static const JSCFunctionListEntry js_std_funcs[] = {
+@@ -1646,14 +1450,12 @@ static const JSCFunctionListEntry js_std_funcs[] = {
      JS_CFUNC_DEF("setenv", 1, js_std_setenv ),
      JS_CFUNC_DEF("unsetenv", 1, js_std_unsetenv ),
      JS_CFUNC_DEF("getenviron", 1, js_std_getenviron ),
@@ -761,7 +773,20 @@ index c24b6d5..cd46c40 100644
      JS_CFUNC_DEF("fdopen", 2, js_std_fdopen ),
      JS_CFUNC_DEF("tmpfile", 0, js_std_tmpfile ),
      JS_CFUNC_MAGIC_DEF("puts", 1, js_std_file_puts, 0 ),
-@@ -1941,7 +1746,7 @@ static JSValue js_os_remove(JSContext *ctx, JSValueConst this_val,
+@@ -1929,6 +1731,12 @@ static JSValue js_os_ttySetRaw(JSContext *ctx, JSValueConst this_val,
+ 
+ #endif /* !_WIN32 */
+ 
++#if defined __WIN32__ || defined _WIN32 || defined _Windows
++      #if !defined S_ISDIR
++            #define S_ISDIR(m) (((m) & _S_IFDIR) == _S_IFDIR)
++      #endif
++#endif
++
+ static JSValue js_os_remove(JSContext *ctx, JSValueConst this_val,
+                             int argc, JSValueConst *argv)
+ {
+@@ -1941,7 +1749,7 @@ static JSValue js_os_remove(JSContext *ctx, JSValueConst this_val,
  #if defined(_WIN32)
      {
          struct stat st;
@@ -770,7 +795,7 @@ index c24b6d5..cd46c40 100644
              ret = rmdir(filename);
          } else {
              ret = unlink(filename);
-@@ -2699,50 +2504,6 @@ static JSValue js_os_mkdir(JSContext *ctx, JSValueConst this_val,
+@@ -2699,50 +2507,6 @@ static JSValue js_os_mkdir(JSContext *ctx, JSValueConst this_val,
      return JS_NewInt32(ctx, ret);
  }
  
@@ -821,7 +846,7 @@ index c24b6d5..cd46c40 100644
  #if !defined(_WIN32)
  static int64_t timespec_to_ms(const struct timespec *tv)
  {
-@@ -3939,13 +3700,10 @@ static const JSCFunctionListEntry js_os_funcs[] = {
+@@ -3939,13 +3703,10 @@ static const JSCFunctionListEntry js_os_funcs[] = {
      JS_CFUNC_DEF("getcwd", 0, js_os_getcwd ),
      JS_CFUNC_DEF("chdir", 0, js_os_chdir ),
      JS_CFUNC_DEF("mkdir", 1, js_os_mkdir ),
