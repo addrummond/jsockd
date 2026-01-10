@@ -116,6 +116,8 @@ jobs:
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Download release artifacts
         uses: actions/download-artifact@v4
         with:
@@ -129,5 +131,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
       - name: Set up tools
-        run: winget install -e --id GnuWin32.Make
+        run: echo Y | winget install -e --id GnuWin32.Make
