@@ -91,15 +91,15 @@ index dcbbf7e..d8abb1a 100644
  
  $(OBJDIR)/%.check.o: %.c | $(OBJDIR)
 -	$(CC) $(CFLAGS) -DCONFIG_CHECK_JSVALUE -c -o $@ $<
-+	$(CC) $(CFLAGS) -DCONFIG_CHECK_JSVALUE -c -/Fo$@ $<
++	$(CC) $(CFLAGS) -DCONFIG_CHECK_JSVALUE -c /Fo$@ $<
  
  regexp_test: libregexp.c libunicode.c cutils.c
 -	$(CC) $(LDFLAGS) $(CFLAGS) -DTEST -o $@ libregexp.c libunicode.c cutils.c $(LIBS)
-+	$(CC) $(LDFLAGS) $(CFLAGS) -DTEST -/Fe$@ libregexp.c libunicode.c cutils.c $(LIBS)
++	$(CC) $(LDFLAGS) $(CFLAGS) -DTEST /Fe$@ libregexp.c libunicode.c cutils.c $(LIBS)
  
  unicode_gen: $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/cutils.host.o libunicode.c unicode_gen_def.h
 -	$(HOST_CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/cutils.host.o
-+	$(HOST_CC) $(LDFLAGS) $(CFLAGS) -/Fe$@ $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/cutils.host.o
++	$(HOST_CC) $(LDFLAGS) $(CFLAGS) /Fe$@ $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/cutils.host.o
  
  clean:
  	rm -f repl.c out.c
@@ -108,11 +108,11 @@ index dcbbf7e..d8abb1a 100644
  
  hello.c: $(QJSC) $(HELLO_SRCS)
 -	$(QJSC) -e $(HELLO_OPTS) -o $@ $(HELLO_SRCS)
-+	$(QJSC) -e $(HELLO_OPTS) -/Fo$@ $(HELLO_SRCS)
++	$(QJSC) -e $(HELLO_OPTS) /Fo$@ $(HELLO_SRCS)
  
  examples/hello: $(OBJDIR)/hello.o $(QJS_LIB_OBJS)
 -	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
-+	$(CC) $(LDFLAGS) -/Fe$@ $^ $(LIBS)
++	$(CC) $(LDFLAGS) /Fe$@ $^ $(LIBS)
  
  # example of static JS compilation with modules
  HELLO_MODULE_SRCS=examples/hello_module.js
@@ -121,7 +121,7 @@ index dcbbf7e..d8abb1a 100644
  
  examples/test_fib: $(OBJDIR)/test_fib.o $(OBJDIR)/examples/fib.o libquickjs$(LTOEXT).a
 -	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
-+	$(CC) $(LDFLAGS) -/Fe$@ $^ $(LIBS)
++	$(CC) $(LDFLAGS) /Fe$@ $^ $(LIBS)
  
  examples/fib.so: $(OBJDIR)/examples/fib.pic.o
  	$(CC) $(LDFLAGS) -shared -o $@ $^
