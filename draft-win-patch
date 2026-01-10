@@ -1,5 +1,5 @@
 diff --git a/Makefile b/Makefile
-index dcbbf7e..439d9e3 100644
+index dcbbf7e..92f3bf8 100644
 --- a/Makefile
 +++ b/Makefile
 @@ -132,7 +132,6 @@ else
@@ -48,17 +48,7 @@ index dcbbf7e..439d9e3 100644
  
  endif #CROSS_PREFIX
  
-@@ -311,9 +310,6 @@ endif # CONFIG_LTO
- libquickjs.fuzz.a: $(patsubst %.o, %.fuzz.o, $(QJS_LIB_OBJS))
- 	$(AR) rcs $@ $^
- 
--repl.c: $(QJSC) repl.js
--	$(QJSC) -s -c -o $@ -m repl.js
--
- ifneq ($(wildcard unicode/UnicodeData.txt),)
- $(OBJDIR)/libunicode.o $(OBJDIR)/libunicode.nolto.o: libunicode-table.h
- 
-@@ -322,42 +318,42 @@ libunicode-table.h: unicode_gen
+@@ -322,42 +321,42 @@ libunicode-table.h: unicode_gen
  endif
  
  run-test262$(EXE): $(OBJDIR)/run-test262.o $(QJS_LIB_OBJS)
@@ -113,7 +103,7 @@ index dcbbf7e..439d9e3 100644
  
  clean:
  	rm -f repl.c out.c
-@@ -390,10 +386,10 @@ HELLO_OPTS=-fno-string-normalize -fno-map -fno-promise -fno-typedarray \
+@@ -390,10 +389,10 @@ HELLO_OPTS=-fno-string-normalize -fno-map -fno-promise -fno-typedarray \
             -fno-date -fno-module-loader
  
  hello.c: $(QJSC) $(HELLO_SRCS)
@@ -126,7 +116,7 @@ index dcbbf7e..439d9e3 100644
  
  # example of static JS compilation with modules
  HELLO_MODULE_SRCS=examples/hello_module.js
-@@ -409,7 +405,7 @@ test_fib.c: $(QJSC) examples/test_fib.js
+@@ -409,7 +408,7 @@ test_fib.c: $(QJSC) examples/test_fib.js
  	$(QJSC) -e -M examples/fib.so,fib -m -o $@ examples/test_fib.js
  
  examples/test_fib: $(OBJDIR)/test_fib.o $(OBJDIR)/examples/fib.o libquickjs$(LTOEXT).a
@@ -135,7 +125,7 @@ index dcbbf7e..439d9e3 100644
  
  examples/fib.so: $(OBJDIR)/examples/fib.pic.o
  	$(CC) $(LDFLAGS) -shared -o $@ $^
-@@ -536,10 +532,10 @@ tests/bjson.so: $(OBJDIR)/tests/bjson.pic.o
+@@ -536,10 +535,10 @@ tests/bjson.so: $(OBJDIR)/tests/bjson.pic.o
  BENCHMARKDIR=../quickjs-benchmarks
  
  run_sunspider_like: $(BENCHMARKDIR)/run_sunspider_like.c
