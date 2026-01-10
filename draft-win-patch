@@ -248,15 +248,16 @@ index 52ff164..bdda10a 100644
                                                        const char *fmt, ...)
  {
 diff --git a/cutils.h b/cutils.h
-index 094a8f1..542a8e3 100644
+index 094a8f1..c609cd4 100644
 --- a/cutils.h
 +++ b/cutils.h
-@@ -25,15 +25,19 @@
+@@ -25,15 +25,20 @@
  #ifndef CUTILS_H
  #define CUTILS_H
  
 +#define WIN32_LEAN_AND_MEAN
 +#include <windows.h>
++#include <time.h>
 +
 +#include "builtins.h"
  #include <stdlib.h>
@@ -276,7 +277,7 @@ index 094a8f1..542a8e3 100644
  
  #define xglue(x, y) x ## y
  #define glue(x, y) xglue(x, y)
-@@ -149,15 +153,15 @@ static inline int ctz64(uint64_t a)
+@@ -149,15 +154,15 @@ static inline int ctz64(uint64_t a)
      return __builtin_ctzll(a);
  }
  
@@ -295,7 +296,7 @@ index 094a8f1..542a8e3 100644
      uint16_t v;
  };
  
-@@ -316,7 +320,7 @@ static inline int dbuf_put_u64(DynBuf *s, uint64_t val)
+@@ -316,7 +321,7 @@ static inline int dbuf_put_u64(DynBuf *s, uint64_t val)
      }
  }
  
@@ -304,7 +305,7 @@ index 094a8f1..542a8e3 100644
                                                        const char *fmt, ...);
  void dbuf_free(DynBuf *s);
  static inline BOOL dbuf_error(DynBuf *s) {
-@@ -454,4 +458,44 @@ static inline int isfp16zero(uint16_t v)
+@@ -454,4 +459,44 @@ static inline int isfp16zero(uint16_t v)
      return (v & 0x7FFF) == 0;
  }
  
