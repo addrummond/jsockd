@@ -141,8 +141,6 @@ jobs:
         run: |
           echo Y | winget install -e --id GnuWin32.Make
           winget install -e --id JernejSimoncic.Wget
-          cl /?
-          where cl
           cd ${{ github.workspace }}
           mkdir .scratch
           cd .scratch
