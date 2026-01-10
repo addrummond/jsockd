@@ -248,17 +248,17 @@ index 52ff164..bdda10a 100644
                                                        const char *fmt, ...)
  {
 diff --git a/cutils.h b/cutils.h
-index 094a8f1..7ad00c0 100644
+index 094a8f1..a2d2a24 100644
 --- a/cutils.h
 +++ b/cutils.h
 @@ -25,15 +25,21 @@
  #ifndef CUTILS_H
  #define CUTILS_H
  
++#include <winsock2.h>
 +#define WIN32_LEAN_AND_MEAN
 +#include <windows.h>
 +#include <time.h>
-+#include <winsock2.h>
 +
 +#include "builtins.h"
  #include <stdlib.h>
