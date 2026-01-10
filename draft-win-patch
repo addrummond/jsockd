@@ -248,7 +248,7 @@ index 52ff164..bdda10a 100644
                                                        const char *fmt, ...)
  {
 diff --git a/cutils.h b/cutils.h
-index 094a8f1..9f6d123 100644
+index 094a8f1..81d3915 100644
 --- a/cutils.h
 +++ b/cutils.h
 @@ -25,15 +25,20 @@
@@ -305,7 +305,7 @@ index 094a8f1..9f6d123 100644
                                                        const char *fmt, ...);
  void dbuf_free(DynBuf *s);
  static inline BOOL dbuf_error(DynBuf *s) {
-@@ -454,4 +459,54 @@ static inline int isfp16zero(uint16_t v)
+@@ -454,4 +459,73 @@ static inline int isfp16zero(uint16_t v)
      return (v & 0x7FFF) == 0;
  }
  
@@ -324,6 +324,25 @@ index 094a8f1..9f6d123 100644
 +  t100 -= EPOCH_DIFF_100NS;
 +  ts->tv_sec  = (long)(t100 / 10000000ULL);           /* 10^7 100ns ticks per second */
 +  ts->tv_nsec = (long)((t100 % 10000000ULL) * 100ULL);/* remainder * 100 -> nanoseconds */
++}
++
++/* gettimeofday replacement: tz is ignored (as on many platforms) */
++static int gettimeofday(struct timeval* tv, void* tz_unused) {
++  if (!tv) return -1;
++  FILETIME ft;
++  /* Prefer precise clock on Win8+ if available */
++  static BOOL (WINAPI *pGetPrecise)(LPFILETIME) = NULL;
++  static int init = 0;
++  if (!init) {
++    HMODULE h = GetModuleHandleW(L"kernel32.dll");
++    if (h) pGetPrecise = (BOOL (WINAPI *)(LPFILETIME))GetProcAddress(h, "GetSystemTimePreciseAsFileTime");
++    init = 1;
++  }
++  if (pGetPrecise) pGetPrecise(&ft);
++  else GetSystemTimeAsFileTime(&ft);
++
++  filetime_to_timeval(&ft, tv);
++  return 0;
 +}
 +
 +static inline int clock_gettime(int clk_id, struct timespec* ts) {
