@@ -1145,3 +1145,16 @@ index 92cc000..0e262d7 100644
  }
  
  JS_BOOL JS_StrictEq(JSContext *ctx, JSValueConst op1, JSValueConst op2);
+diff --git a/unicode_gen.c b/unicode_gen.c
+index c793ba1..95230e1 100644
+--- a/unicode_gen.c
++++ b/unicode_gen.c
+@@ -189,6 +189,8 @@ static void re_string_list_init(REStringList *s)
+     s->hash_table = NULL;
+ }
+ 
++#define __maybe_unused
++
+ static  __maybe_unused void re_string_list_free(REStringList *s)
+ {
+     REString *p, *p_next;
