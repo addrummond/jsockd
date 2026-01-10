@@ -98,6 +98,7 @@ for platform in $platforms; do
             mv libquickjs.a "/tmp/libquickjs_${OS}_${ARCH}_Release.a"
             ;;
         windows_x64_msvc)
+            windows_x64_msvc=1
             git apply ../../draft-win-patch
             /c/msys64/usr/bin/wget --recursive --no-parent --reject 'index.html*' --tries=3 --timeout=10 --ftp-user=anonymous --ftp-password=you@example.com --directory-prefix=./pthreads-win32-tmp ftp://sourceware.org/pub/pthreads-win32/dll-latest/
             mv pthreads-win32-tmp/sourceware.org/pub/pthreads-win32/dll-latest/ ./pthreads-win32
@@ -161,4 +162,10 @@ for platform in $platforms; do
             ;;
     esac
 done
-cp /tmp/libquickjs_*.a .
+
+if [ "$windows_x64_msvc" = 1 ]; then
+   echo "Build done!"
+   ls -l
+else
+    cp /tmp/libquickjs_*.a .
+fi
