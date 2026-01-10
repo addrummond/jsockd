@@ -976,10 +976,19 @@ index e30d393..296ef70 100644
          ts.tv_nsec += (timeout % 1000) * 1000000;
          if (ts.tv_nsec >= 1000000000) {
 diff --git a/quickjs.h b/quickjs.h
-index 92cc000..0230bf8 100644
+index 92cc000..0e262d7 100644
 --- a/quickjs.h
 +++ b/quickjs.h
-@@ -701,7 +701,7 @@ static inline JSValue JS_DupValue(JSContext *ctx, JSValueConst v)
+@@ -64,6 +64,8 @@ typedef uint32_t JSAtom;
+ #define JS_NAN_BOXING
+ #endif
+ 
++#undef JS_NAN_BOXING
++
+ #if defined(__SIZEOF_INT128__) && (INTPTR_MAX >= INT64_MAX)
+ #define JS_LIMB_BITS 64
+ #else
+@@ -701,7 +703,7 @@ static inline JSValue JS_DupValue(JSContext *ctx, JSValueConst v)
          JSRefCountHeader *p = (JSRefCountHeader *)JS_VALUE_GET_PTR(v);
          p->ref_count++;
      }
@@ -988,7 +997,7 @@ index 92cc000..0230bf8 100644
  }
  
  static inline JSValue JS_DupValueRT(JSRuntime *rt, JSValueConst v)
-@@ -710,7 +710,7 @@ static inline JSValue JS_DupValueRT(JSRuntime *rt, JSValueConst v)
+@@ -710,7 +712,7 @@ static inline JSValue JS_DupValueRT(JSRuntime *rt, JSValueConst v)
          JSRefCountHeader *p = (JSRefCountHeader *)JS_VALUE_GET_PTR(v);
          p->ref_count++;
      }
