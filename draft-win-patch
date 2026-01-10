@@ -868,7 +868,7 @@ index c24b6d5..ea38152 100644
  #if !defined(_WIN32)
      OS_FLAG(S_IFSOCK),
 diff --git a/quickjs.c b/quickjs.c
-index e30d393..220e52a 100644
+index e30d393..e5d6b10 100644
 --- a/quickjs.c
 +++ b/quickjs.c
 @@ -22,13 +22,17 @@
@@ -912,7 +912,7 @@ index e30d393..220e52a 100644
  /* enable stack limitation */
  #define CONFIG_STACK_CHECK
  #endif
-++#undef CONFIG_STACK_CHECK
++#undef CONFIG_STACK_CHECK
  
  
  /* dump object free */
