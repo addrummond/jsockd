@@ -137,7 +137,7 @@ jobs:
         run: |
           echo Y | winget install -e --id GnuWin32.Make
           winget install -e --id JernejSimoncic.Wget
-          "%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -prerelease -products * -requires Microsoft.Component.MSBuild -property installationPath > "%TEMP%\vsdir.txt"
+          "c:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -prerelease -products * -requires Microsoft.Component.MSBuild -property installationPath > "%TEMP%\vsdir.txt"
           set /p VSDIR=<"%TEMP%\vsdir.txt"
           call "%VSDIR%\VC\Auxiliary\Build\VsDevCmd.bat" -arch=x64
           cl /?
