@@ -248,7 +248,7 @@ index 52ff164..bdda10a 100644
                                                        const char *fmt, ...)
  {
 diff --git a/cutils.h b/cutils.h
-index 094a8f1..81d3915 100644
+index 094a8f1..88fb97b 100644
 --- a/cutils.h
 +++ b/cutils.h
 @@ -25,15 +25,20 @@
@@ -305,7 +305,7 @@ index 094a8f1..81d3915 100644
                                                        const char *fmt, ...);
  void dbuf_free(DynBuf *s);
  static inline BOOL dbuf_error(DynBuf *s) {
-@@ -454,4 +459,73 @@ static inline int isfp16zero(uint16_t v)
+@@ -454,4 +459,76 @@ static inline int isfp16zero(uint16_t v)
      return (v & 0x7FFF) == 0;
  }
  
@@ -341,7 +341,10 @@ index 094a8f1..81d3915 100644
 +  if (pGetPrecise) pGetPrecise(&ft);
 +  else GetSystemTimeAsFileTime(&ft);
 +
-+  filetime_to_timeval(&ft, tv);
++  struct timespec ts;
++  filetime_to_timespec(&ft, &ts);
++  tv->tv_sec  = ts.tv_sec;
++  tv->tv_usec = (long)(ts.tv_nsec / 1000);
 +  return 0;
 +}
 +
