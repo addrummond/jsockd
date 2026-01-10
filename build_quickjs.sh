@@ -80,29 +80,34 @@ for platform in $platforms; do
     $MAKE clean
     case "$platform" in
         native)
-            if [ "$OS" = OpenBSD ]; then
-                MAKE_OPTS='CONFIG_FREEBSD=y LIBS=-lm LIBS+=-lpthread HOST_LIBS=-lm HOST_LIBS+=-lpthread'
-                EXTRA_CFLAGS="-Denviron=NULL -Dsighandler_t=sig_t -Dmalloc_usable_size='0&&'"
-                git apply ../../openbsd-quickjs.patch
-            fi
-            # Debug build for quickjs library
-            # shellcheck disable=SC2086 # Intended splitting of MAKE_OPTS
-            CFLAGS="$DEBUG_CFLAGS $EXTRA_CFLAGS" $MAKE CONFIG_LTO=n $MAKE_OPTS
-            cp qjs ../../tools-bin
-            cp qjsc ../../tools-bin
-            mv libquickjs.a "/tmp/libquickjs_${OS}_${ARCH}_Debug.a"
-            # Release build for quickjs library
-            $MAKE clean
-            # shellcheck disable=SC2086 # Intended splitting of MAKE_OPTS
-            CFLAGS="$RELEASE_CFLAGS $EXTRA_CFLAGS" $MAKE CONFIG_LTO=y $MAKE_OPTS
-            mv libquickjs.a "/tmp/libquickjs_${OS}_${ARCH}_Release.a"
-            ;;
-        native_windows_x64)
-            git apply ../../draft-win-patch
-            wget --recursive --no-parent --reject 'index.html*' --tries=3 --timeout=10 --ftp-user=anonymous --ftp-password=you@example.com --directory-prefix=./pthreads-win32-tmp ftp://sourceware.org/pub/pthreads-win32/dll-latest/
-            mv pthreads-win32-tmp/sourceware.org/pub/pthreads-win32/dll-latest/ ./pthreads-win32
-            ls pthreads-win32\lib
-            /c/Program\ Files\ */GnuWin32/bin/make.exe CC=cl CFLAGS='/std:c11 /experimental:c11atomics -Ipthreads-win32/include -D__maybe_unused -Dforce_inline' LDFLAGS='-Lpthreads-win32/lib'
+            case "$OS$ARCH" in
+                *MINGW64*x86_64)
+                    # Native Windows MSVC build
+                    git apply ../../draft-win-patch
+                    wget --recursive --no-parent --reject 'index.html*' --tries=3 --timeout=10 --ftp-user=anonymous --ftp-password=you@example.com --directory-prefix=./pthreads-win32-tmp ftp://sourceware.org/pub/pthreads-win32/dll-latest/
+                    mv pthreads-win32-tmp/sourceware.org/pub/pthreads-win32/dll-latest/ ./pthreads-win32
+                    ls pthreads-win32\lib
+                    /c/Program\ Files\ */GnuWin32/bin/make.exe CC=cl CFLAGS='/std:c11 /experimental:c11atomics -Ipthreads-win32/include -D__maybe_unused -Dforce_inline' LDFLAGS='-Lpthreads-win32/lib'
+                ;;
+                *)
+                    if [ "$OS" = OpenBSD ]; then
+                        MAKE_OPTS='CONFIG_FREEBSD=y LIBS=-lm LIBS+=-lpthread HOST_LIBS=-lm HOST_LIBS+=-lpthread'
+                        EXTRA_CFLAGS="-Denviron=NULL -Dsighandler_t=sig_t -Dmalloc_usable_size='0&&'"
+                        git apply ../../openbsd-quickjs.patch
+                    fi
+                    # Debug build for quickjs library
+                    # shellcheck disable=SC2086 # Intended splitting of MAKE_OPTS
+                    CFLAGS="$DEBUG_CFLAGS $EXTRA_CFLAGS" $MAKE CONFIG_LTO=n $MAKE_OPTS
+                    cp qjs ../../tools-bin
+                    cp qjsc ../../tools-bin
+                    mv libquickjs.a "/tmp/libquickjs_${OS}_${ARCH}_Debug.a"
+                    # Release build for quickjs library
+                    $MAKE clean
+                    # shellcheck disable=SC2086 # Intended splitting of MAKE_OPTS
+                    CFLAGS="$RELEASE_CFLAGS $EXTRA_CFLAGS" $MAKE CONFIG_LTO=y $MAKE_OPTS
+                    mv libquickjs.a "/tmp/libquickjs_${OS}_${ARCH}_Release.a"
+                ;;
+            esac
             ;;
         mac_arm64)
             if [ "$OS" = "Darwin" ] && [ "$ARCH" = "arm64" ]; then
