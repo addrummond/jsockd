@@ -1,0 +1,881 @@
+diff --git a/Makefile b/Makefile
+index dcbbf7e..d8abb1a 100644
+--- a/Makefile
++++ b/Makefile
+@@ -132,7 +132,6 @@ else
+   HOST_CC=gcc
+   CC=$(CROSS_PREFIX)gcc
+   CFLAGS+=-g -Wall -MMD -MF $(OBJDIR)/$(@F).d
+-  CFLAGS += -Wno-array-bounds -Wno-format-truncation -Wno-infinite-recursion
+   ifdef CONFIG_LTO
+     AR=$(CROSS_PREFIX)gcc-ar
+   else
+@@ -258,22 +257,22 @@ $(OBJDIR):
+ 	mkdir -p $(OBJDIR) $(OBJDIR)/examples $(OBJDIR)/tests
+ 
+ qjs$(EXE): $(QJS_OBJS)
+-	$(CC) $(LDFLAGS) $(LDEXPORT) -o $@ $^ $(LIBS)
++	$(CC) $(LDFLAGS) $(LDEXPORT) /Fe$@ $^ $(LIBS)
+ 
+ qjs-debug$(EXE): $(patsubst %.o, %.debug.o, $(QJS_OBJS))
+-	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
++	$(CC) $(LDFLAGS) /Fe$@ $^ $(LIBS)
+ 
+ qjsc$(EXE): $(OBJDIR)/qjsc.o $(QJS_LIB_OBJS)
+-	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
++	$(CC) $(LDFLAGS) /Fe$@ $^ $(LIBS)
+ 
+ fuzz_eval: $(OBJDIR)/fuzz_eval.o $(OBJDIR)/fuzz_common.o libquickjs.fuzz.a
+-	$(CC) $(CFLAGS_OPT) $^ -o fuzz_eval $(LIB_FUZZING_ENGINE)
++	$(CC) $(CFLAGS_OPT) $^ /Fefuzz_eval $(LIB_FUZZING_ENGINE)
+ 
+ fuzz_compile: $(OBJDIR)/fuzz_compile.o $(OBJDIR)/fuzz_common.o libquickjs.fuzz.a
+-	$(CC) $(CFLAGS_OPT) $^ -o fuzz_compile $(LIB_FUZZING_ENGINE)
++	$(CC) $(CFLAGS_OPT) $^ /Fefuzz_compile $(LIB_FUZZING_ENGINE)
+ 
+ fuzz_regexp: $(OBJDIR)/fuzz_regexp.o $(OBJDIR)/libregexp.fuzz.o $(OBJDIR)/cutils.fuzz.o $(OBJDIR)/libunicode.fuzz.o
+-	$(CC) $(CFLAGS_OPT) $^ -o fuzz_regexp $(LIB_FUZZING_ENGINE)
++	$(CC) $(CFLAGS_OPT) $^ /Fefuzz_regexp $(LIB_FUZZING_ENGINE)
+ 
+ libfuzzer: fuzz_eval fuzz_compile fuzz_regexp
+ 
+@@ -281,7 +280,7 @@ ifneq ($(CROSS_PREFIX),)
+ 
+ $(QJSC): $(OBJDIR)/qjsc.host.o \
+     $(patsubst %.o, %.host.o, $(QJS_LIB_OBJS))
+-	$(HOST_CC) $(LDFLAGS) -o $@ $^ $(HOST_LIBS)
++	$(HOST_CC) $(LDFLAGS) /Fe$@ $^ $(HOST_LIBS)
+ 
+ endif #CROSS_PREFIX
+ 
+@@ -322,42 +321,42 @@ libunicode-table.h: unicode_gen
+ endif
+ 
+ run-test262$(EXE): $(OBJDIR)/run-test262.o $(QJS_LIB_OBJS)
+-	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
++	$(CC) $(LDFLAGS) /Fe$@ $^ $(LIBS)
+ 
+ run-test262-debug: $(patsubst %.o, %.debug.o, $(OBJDIR)/run-test262.o $(QJS_LIB_OBJS))
+-	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
++	$(CC) $(LDFLAGS) /Fe$@ $^ $(LIBS)
+ 
+ # object suffix order: nolto
+ 
+ $(OBJDIR)/%.o: %.c | $(OBJDIR)
+-	$(CC) $(CFLAGS_OPT) -c -o $@ $<
++	$(CC) $(CFLAGS_OPT) -c /Fo$@ $<
+ 
+ $(OBJDIR)/fuzz_%.o: fuzz/fuzz_%.c | $(OBJDIR)
+-	$(CC) $(CFLAGS_OPT) -c -I. -o $@ $<
++	$(CC) $(CFLAGS_OPT) -c -I. /Fo$@ $<
+ 
+ $(OBJDIR)/%.host.o: %.c | $(OBJDIR)
+-	$(HOST_CC) $(CFLAGS_OPT) -c -o $@ $<
++	$(HOST_CC) $(CFLAGS_OPT) -c /Fo$@ $<
+ 
+ $(OBJDIR)/%.pic.o: %.c | $(OBJDIR)
+-	$(CC) $(CFLAGS_OPT) -fPIC -DJS_SHARED_LIBRARY -c -o $@ $<
++	$(CC) $(CFLAGS_OPT) -fPIC -DJS_SHARED_LIBRARY -c /Fo$@ $<
+ 
+ $(OBJDIR)/%.nolto.o: %.c | $(OBJDIR)
+-	$(CC) $(CFLAGS_NOLTO) -c -o $@ $<
++	$(CC) $(CFLAGS_NOLTO) -c /Fo$@ $<
+ 
+ $(OBJDIR)/%.debug.o: %.c | $(OBJDIR)
+-	$(CC) $(CFLAGS_DEBUG) -c -o $@ $<
++	$(CC) $(CFLAGS_DEBUG) -c /Fo$@ $<
+ 
+ $(OBJDIR)/%.fuzz.o: %.c | $(OBJDIR)
+-	$(CC) $(CFLAGS_OPT) -fsanitize=fuzzer-no-link -c -o $@ $<
++	$(CC) $(CFLAGS_OPT) -fsanitize=fuzzer-no-link -c /Fo$@ $<
+ 
+ $(OBJDIR)/%.check.o: %.c | $(OBJDIR)
+-	$(CC) $(CFLAGS) -DCONFIG_CHECK_JSVALUE -c -o $@ $<
++	$(CC) $(CFLAGS) -DCONFIG_CHECK_JSVALUE -c -/Fo$@ $<
+ 
+ regexp_test: libregexp.c libunicode.c cutils.c
+-	$(CC) $(LDFLAGS) $(CFLAGS) -DTEST -o $@ libregexp.c libunicode.c cutils.c $(LIBS)
++	$(CC) $(LDFLAGS) $(CFLAGS) -DTEST -/Fe$@ libregexp.c libunicode.c cutils.c $(LIBS)
+ 
+ unicode_gen: $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/cutils.host.o libunicode.c unicode_gen_def.h
+-	$(HOST_CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/cutils.host.o
++	$(HOST_CC) $(LDFLAGS) $(CFLAGS) -/Fe$@ $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/cutils.host.o
+ 
+ clean:
+ 	rm -f repl.c out.c
+@@ -390,10 +389,10 @@ HELLO_OPTS=-fno-string-normalize -fno-map -fno-promise -fno-typedarray \
+            -fno-date -fno-module-loader
+ 
+ hello.c: $(QJSC) $(HELLO_SRCS)
+-	$(QJSC) -e $(HELLO_OPTS) -o $@ $(HELLO_SRCS)
++	$(QJSC) -e $(HELLO_OPTS) -/Fo$@ $(HELLO_SRCS)
+ 
+ examples/hello: $(OBJDIR)/hello.o $(QJS_LIB_OBJS)
+-	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
++	$(CC) $(LDFLAGS) -/Fe$@ $^ $(LIBS)
+ 
+ # example of static JS compilation with modules
+ HELLO_MODULE_SRCS=examples/hello_module.js
+@@ -409,7 +408,7 @@ test_fib.c: $(QJSC) examples/test_fib.js
+ 	$(QJSC) -e -M examples/fib.so,fib -m -o $@ examples/test_fib.js
+ 
+ examples/test_fib: $(OBJDIR)/test_fib.o $(OBJDIR)/examples/fib.o libquickjs$(LTOEXT).a
+-	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
++	$(CC) $(LDFLAGS) -/Fe$@ $^ $(LIBS)
+ 
+ examples/fib.so: $(OBJDIR)/examples/fib.pic.o
+ 	$(CC) $(LDFLAGS) -shared -o $@ $^
+@@ -536,10 +535,10 @@ tests/bjson.so: $(OBJDIR)/tests/bjson.pic.o
+ BENCHMARKDIR=../quickjs-benchmarks
+ 
+ run_sunspider_like: $(BENCHMARKDIR)/run_sunspider_like.c
+-	$(CC) $(CFLAGS) $(LDFLAGS) -DNO_INCLUDE_DIR -I. -o $@ $< libquickjs$(LTOEXT).a $(LIBS)
++	$(CC) $(CFLAGS) $(LDFLAGS) -DNO_INCLUDE_DIR -I. /Fe$@ $< libquickjs$(LTOEXT).a $(LIBS)
+ 
+ run_octane: $(BENCHMARKDIR)/run_octane.c
+-	$(CC) $(CFLAGS) $(LDFLAGS) -DNO_INCLUDE_DIR -I. -o $@ $< libquickjs$(LTOEXT).a $(LIBS)
++	$(CC) $(CFLAGS) $(LDFLAGS) -DNO_INCLUDE_DIR -I. /Fe$@ $< libquickjs$(LTOEXT).a $(LIBS)
+ 
+ benchmarks: run_sunspider_like run_octane
+ 	./run_sunspider_like $(BENCHMARKDIR)/kraken-1.0/
+diff --git a/cutils.c b/cutils.c
+index 52ff164..bdda10a 100644
+--- a/cutils.c
++++ b/cutils.c
+@@ -174,6 +174,8 @@ int dbuf_putstr(DynBuf *s, const char *str)
+     return dbuf_put(s, (const uint8_t *)str, strlen(str));
+ }
+ 
++#define __attribute__(...)
++
+ int __attribute__((format(printf, 2, 3))) dbuf_printf(DynBuf *s,
+                                                       const char *fmt, ...)
+ {
+diff --git a/cutils.h b/cutils.h
+index 094a8f1..c086b47 100644
+--- a/cutils.h
++++ b/cutils.h
+@@ -25,12 +25,13 @@
+ #ifndef CUTILS_H
+ #define CUTILS_H
+ 
++#include "builtins.h"
+ #include <stdlib.h>
+ #include <string.h>
+ #include <inttypes.h>
+ 
+-#define likely(x)       __builtin_expect(!!(x), 1)
+-#define unlikely(x)     __builtin_expect(!!(x), 0)
++#define likely(x)      (x)
++#define unlikely(x)     (x)
+ #define force_inline inline __attribute__((always_inline))
+ #define no_inline __attribute__((noinline))
+ #define __maybe_unused __attribute__((unused))
+@@ -149,15 +150,15 @@ static inline int ctz64(uint64_t a)
+     return __builtin_ctzll(a);
+ }
+ 
+-struct __attribute__((packed)) packed_u64 {
++struct packed_u64 {
+     uint64_t v;
+ };
+ 
+-struct __attribute__((packed)) packed_u32 {
++struct packed_u32 {
+     uint32_t v;
+ };
+ 
+-struct __attribute__((packed)) packed_u16 {
++struct packed_u16 {
+     uint16_t v;
+ };
+ 
+@@ -316,7 +317,7 @@ static inline int dbuf_put_u64(DynBuf *s, uint64_t val)
+     }
+ }
+ 
+-int __attribute__((format(printf, 2, 3))) dbuf_printf(DynBuf *s,
++int dbuf_printf(DynBuf *s,
+                                                       const char *fmt, ...);
+ void dbuf_free(DynBuf *s);
+ static inline BOOL dbuf_error(DynBuf *s) {
+diff --git a/dtoa.c b/dtoa.c
+index ac1be8d..60d3116 100644
+--- a/dtoa.c
++++ b/dtoa.c
+@@ -28,7 +28,7 @@
+ #include <string.h>
+ #include <assert.h>
+ #include <ctype.h>
+-#include <sys/time.h>
++#include <time.h>
+ #include <math.h>
+ #include <setjmp.h>
+ 
+@@ -183,6 +183,9 @@ static limb_t mp_shl(limb_t *tab_r, const limb_t *tab, mp_size_t n,
+     return l;
+ }
+ 
++#define no_inline
++#define __maybe_unused
++
+ static no_inline limb_t mp_div1norm(limb_t *tabr, const limb_t *taba, limb_t n,
+                                     limb_t b, limb_t r, limb_t b_inv, int shift)
+ {
+diff --git a/libregexp.c b/libregexp.c
+index c387f00..df88c15 100644
+--- a/libregexp.c
++++ b/libregexp.c
+@@ -193,6 +193,8 @@ static void lre_print_char(int c, BOOL is_range)
+     }
+ }
+ 
++#define __maybe_unused
++
+ static __maybe_unused void re_string_list_dump(const char *str, const REStringList *s)
+ {
+     REString *p;
+@@ -670,6 +672,8 @@ static void re_emit_op_u16(REParseState *s, int op, uint32_t val)
+     dbuf_put_u16(&s->byte_code, val);
+ }
+ 
++#define __attribute__(...)
++
+ static int __attribute__((format(printf, 2, 3))) re_parse_error(REParseState *s, const char *fmt, ...)
+ {
+     va_list ap;
+diff --git a/libunicode.c b/libunicode.c
+index 0c510cc..bb7a87c 100644
+--- a/libunicode.c
++++ b/libunicode.c
+@@ -378,6 +378,8 @@ BOOL lre_is_case_ignorable(uint32_t c)
+ 
+ /* character range */
+ 
++#define __maybe_unused
++
+ static __maybe_unused void cr_dump(CharRange *cr)
+ {
+     int i;
+diff --git a/qjs.c b/qjs.c
+index 0224f7c..bd955a3 100644
+--- a/qjs.c
++++ b/qjs.c
+@@ -28,7 +28,6 @@
+ #include <inttypes.h>
+ #include <string.h>
+ #include <assert.h>
+-#include <unistd.h>
+ #include <errno.h>
+ #include <fcntl.h>
+ #include <time.h>
+@@ -43,6 +42,8 @@
+ #include "cutils.h"
+ #include "quickjs-libc.h"
+ 
++#define __attribute__(...)
++
+ extern const uint8_t qjsc_repl[];
+ extern const uint32_t qjsc_repl_size;
+ 
+@@ -290,8 +291,8 @@ static size_t get_suffixed_size(const char *str)
+ 
+ void help(void)
+ {
+-    printf("QuickJS version " CONFIG_VERSION "\n"
+-           "usage: " PROG_NAME " [options] [file [args]]\n"
++    printf("QuickJS version \n"
++           "usage: [options] [file [args]]\n"
+            "-h  --help         list options\n"
+            "-e  --eval EXPR    evaluate EXPR\n"
+            "-i  --interactive  go to interactive mode\n"
+diff --git a/qjsc.c b/qjsc.c
+index e55ca61..18f142a 100644
+--- a/qjsc.c
++++ b/qjsc.c
+@@ -27,7 +27,6 @@
+ #include <inttypes.h>
+ #include <string.h>
+ #include <assert.h>
+-#include <unistd.h>
+ #include <errno.h>
+ #if !defined(_WIN32)
+ #include <sys/wait.h>
+@@ -392,8 +391,8 @@ static const char main_c_template2[] =
+ 
+ void help(void)
+ {
+-    printf("QuickJS Compiler version " CONFIG_VERSION "\n"
+-           "usage: " PROG_NAME " [options] [files]\n"
++    printf("QuickJS Compiler version " "\n"
++           "usage: " " [options] [files]\n"
+            "\n"
+            "options are:\n"
+            "-c          only output bytecode to a C file\n"
+@@ -603,7 +602,7 @@ int main(int argc, char **argv)
+     namelist_add(&cmodule_list, "std", "std", 0);
+     namelist_add(&cmodule_list, "os", "os", 0);
+ 
+-    optind = 1;
++    int optind = 1;
+     while (optind < argc && *argv[optind] == '-') {
+         char *arg = argv[optind] + 1;
+         const char *longopt = "";
+diff --git a/quickjs-libc.c b/quickjs-libc.c
+index c24b6d5..6331cf6 100644
+--- a/quickjs-libc.c
++++ b/quickjs-libc.c
+@@ -1,5 +1,4 @@
+-/*
+- * QuickJS C library
++ /* QuickJS C library
+  *
+  * Copyright (c) 2017-2021 Fabrice Bellard
+  * Copyright (c) 2017-2021 Charlie Gordon
+@@ -22,25 +21,25 @@
+  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+  * THE SOFTWARE.
+  */
++#define HAVE_STRUCT_TIMESPEC
++
+ #include <stdlib.h>
+ #include <stdio.h>
+ #include <stdarg.h>
+ #include <inttypes.h>
+ #include <string.h>
+ #include <assert.h>
+-#include <unistd.h>
+ #include <errno.h>
+ #include <fcntl.h>
+-#include <sys/time.h>
++#include <time.h>
+ #include <time.h>
+ #include <signal.h>
+ #include <limits.h>
+ #include <sys/stat.h>
+-#include <dirent.h>
+ #if defined(_WIN32)
+ #include <windows.h>
+ #include <conio.h>
+-#include <utime.h>
++#include <sys/utime.h>
+ #else
+ #include <dlfcn.h>
+ #include <termios.h>
+@@ -68,6 +67,7 @@ typedef sig_t sighandler_t;
+ #define USE_WORKER
+ 
+ #ifdef USE_WORKER
++#define PTW32_STATIC_LIB 1
+ #include <pthread.h>
+ #include <stdatomic.h>
+ #endif
+@@ -941,6 +941,8 @@ static void js_std_file_finalizer(JSRuntime *rt, JSValue val)
+     }
+ }
+ 
++typedef SSIZE_T ssize_t;
++
+ static ssize_t js_get_errno(ssize_t ret)
+ {
+     if (ret == -1)
+@@ -1036,42 +1038,6 @@ static JSValue js_std_open(JSContext *ctx, JSValueConst this_val,
+     return JS_EXCEPTION;
+ }
+ 
+-static JSValue js_std_popen(JSContext *ctx, JSValueConst this_val,
+-                            int argc, JSValueConst *argv)
+-{
+-    const char *filename, *mode = NULL;
+-    FILE *f;
+-    int err;
+-
+-    filename = JS_ToCString(ctx, argv[0]);
+-    if (!filename)
+-        goto fail;
+-    mode = JS_ToCString(ctx, argv[1]);
+-    if (!mode)
+-        goto fail;
+-    if (mode[strspn(mode, "rw")] != '\0') {
+-        JS_ThrowTypeError(ctx, "invalid file mode");
+-        goto fail;
+-    }
+-
+-    f = popen(filename, mode);
+-    if (!f)
+-        err = errno;
+-    else
+-        err = 0;
+-    if (argc >= 3)
+-        js_set_error_object(ctx, argv[2], err);
+-    JS_FreeCString(ctx, filename);
+-    JS_FreeCString(ctx, mode);
+-    if (!f)
+-        return JS_NULL;
+-    return js_new_std_file(ctx, f, TRUE, TRUE);
+- fail:
+-    JS_FreeCString(ctx, filename);
+-    JS_FreeCString(ctx, mode);
+-    return JS_EXCEPTION;
+-}
+-
+ static JSValue js_std_fdopen(JSContext *ctx, JSValueConst this_val,
+                              int argc, JSValueConst *argv)
+ {
+@@ -1459,162 +1425,6 @@ static int http_get_status(const char *buf)
+     return atoi(p);
+ }
+ 
+-static JSValue js_std_urlGet(JSContext *ctx, JSValueConst this_val,
+-                             int argc, JSValueConst *argv)
+-{
+-    const char *url;
+-    DynBuf cmd_buf;
+-    DynBuf data_buf_s, *data_buf = &data_buf_s;
+-    DynBuf header_buf_s, *header_buf = &header_buf_s;
+-    char *buf;
+-    size_t i, len;
+-    int status;
+-    JSValue response = JS_UNDEFINED, ret_obj;
+-    JSValueConst options_obj;
+-    FILE *f;
+-    BOOL binary_flag, full_flag;
+-
+-    url = JS_ToCString(ctx, argv[0]);
+-    if (!url)
+-        return JS_EXCEPTION;
+-
+-    binary_flag = FALSE;
+-    full_flag = FALSE;
+-
+-    if (argc >= 2) {
+-        options_obj = argv[1];
+-
+-        if (get_bool_option(ctx, &binary_flag, options_obj, "binary"))
+-            goto fail_obj;
+-
+-        if (get_bool_option(ctx, &full_flag, options_obj, "full")) {
+-        fail_obj:
+-            JS_FreeCString(ctx, url);
+-            return JS_EXCEPTION;
+-        }
+-    }
+-
+-    js_std_dbuf_init(ctx, &cmd_buf);
+-    dbuf_printf(&cmd_buf, "%s '", URL_GET_PROGRAM);
+-    for(i = 0; url[i] != '\0'; i++) {
+-        unsigned char c = url[i];
+-        switch (c) {
+-        case '\'':
+-            /* shell single quoted string does not support \' */
+-            dbuf_putstr(&cmd_buf, "'\\''");
+-            break;
+-        case '[': case ']': case '{': case '}': case '\\':
+-            /* prevent interpretation by curl as range or set specification */
+-            dbuf_putc(&cmd_buf, '\\');
+-            /* FALLTHROUGH */
+-        default:
+-            dbuf_putc(&cmd_buf, c);
+-            break;
+-        }
+-    }
+-    JS_FreeCString(ctx, url);
+-    dbuf_putstr(&cmd_buf, "'");
+-    dbuf_putc(&cmd_buf, '\0');
+-    if (dbuf_error(&cmd_buf)) {
+-        dbuf_free(&cmd_buf);
+-        return JS_EXCEPTION;
+-    }
+-    //    printf("%s\n", (char *)cmd_buf.buf);
+-    f = popen((char *)cmd_buf.buf, "r");
+-    dbuf_free(&cmd_buf);
+-    if (!f) {
+-        return JS_ThrowTypeError(ctx, "could not start curl");
+-    }
+-
+-    js_std_dbuf_init(ctx, data_buf);
+-    js_std_dbuf_init(ctx, header_buf);
+-
+-    buf = js_malloc(ctx, URL_GET_BUF_SIZE);
+-    if (!buf)
+-        goto fail;
+-
+-    /* get the HTTP status */
+-    if (http_get_header_line(f, buf, URL_GET_BUF_SIZE, NULL) < 0) {
+-        status = 0;
+-        goto bad_header;
+-    }
+-    status = http_get_status(buf);
+-    if (!full_flag && !(status >= 200 && status <= 299)) {
+-        goto bad_header;
+-    }
+-
+-    /* wait until there is an empty line */
+-    for(;;) {
+-        if (http_get_header_line(f, buf, URL_GET_BUF_SIZE, header_buf) < 0) {
+-        bad_header:
+-            response = JS_NULL;
+-            goto done;
+-        }
+-        if (!strcmp(buf, "\r\n"))
+-            break;
+-    }
+-    if (dbuf_error(header_buf))
+-        goto fail;
+-    header_buf->size -= 2; /* remove the trailing CRLF */
+-
+-    /* download the data */
+-    for(;;) {
+-        len = fread(buf, 1, URL_GET_BUF_SIZE, f);
+-        if (len == 0)
+-            break;
+-        dbuf_put(data_buf, (uint8_t *)buf, len);
+-    }
+-    if (dbuf_error(data_buf))
+-        goto fail;
+-    if (binary_flag) {
+-        response = JS_NewArrayBufferCopy(ctx,
+-                                         data_buf->buf, data_buf->size);
+-    } else {
+-        response = JS_NewStringLen(ctx, (char *)data_buf->buf, data_buf->size);
+-    }
+-    if (JS_IsException(response))
+-        goto fail;
+- done:
+-    js_free(ctx, buf);
+-    buf = NULL;
+-    pclose(f);
+-    f = NULL;
+-    dbuf_free(data_buf);
+-    data_buf = NULL;
+-
+-    if (full_flag) {
+-        ret_obj = JS_NewObject(ctx);
+-        if (JS_IsException(ret_obj))
+-            goto fail;
+-        JS_DefinePropertyValueStr(ctx, ret_obj, "response",
+-                                  response,
+-                                  JS_PROP_C_W_E);
+-        if (!JS_IsNull(response)) {
+-            JS_DefinePropertyValueStr(ctx, ret_obj, "responseHeaders",
+-                                      JS_NewStringLen(ctx, (char *)header_buf->buf,
+-                                                      header_buf->size),
+-                                      JS_PROP_C_W_E);
+-            JS_DefinePropertyValueStr(ctx, ret_obj, "status",
+-                                      JS_NewInt32(ctx, status),
+-                                      JS_PROP_C_W_E);
+-        }
+-    } else {
+-        ret_obj = response;
+-    }
+-    dbuf_free(header_buf);
+-    return ret_obj;
+- fail:
+-    if (f)
+-        pclose(f);
+-    js_free(ctx, buf);
+-    if (data_buf)
+-        dbuf_free(data_buf);
+-    if (header_buf)
+-        dbuf_free(header_buf);
+-    JS_FreeValue(ctx, response);
+-    return JS_EXCEPTION;
+-}
+-
+ static JSClassDef js_std_file_class = {
+     "FILE",
+     .finalizer = js_std_file_finalizer,
+@@ -1646,14 +1456,12 @@ static const JSCFunctionListEntry js_std_funcs[] = {
+     JS_CFUNC_DEF("setenv", 1, js_std_setenv ),
+     JS_CFUNC_DEF("unsetenv", 1, js_std_unsetenv ),
+     JS_CFUNC_DEF("getenviron", 1, js_std_getenviron ),
+-    JS_CFUNC_DEF("urlGet", 1, js_std_urlGet ),
+     JS_CFUNC_DEF("loadFile", 1, js_std_loadFile ),
+     JS_CFUNC_DEF("strerror", 1, js_std_strerror ),
+     JS_CFUNC_DEF("parseExtJSON", 1, js_std_parseExtJSON ),
+ 
+     /* FILE I/O */
+     JS_CFUNC_DEF("open", 2, js_std_open ),
+-    JS_CFUNC_DEF("popen", 2, js_std_popen ),
+     JS_CFUNC_DEF("fdopen", 2, js_std_fdopen ),
+     JS_CFUNC_DEF("tmpfile", 0, js_std_tmpfile ),
+     JS_CFUNC_MAGIC_DEF("puts", 1, js_std_file_puts, 0 ),
+@@ -2699,50 +2507,6 @@ static JSValue js_os_mkdir(JSContext *ctx, JSValueConst this_val,
+     return JS_NewInt32(ctx, ret);
+ }
+ 
+-/* return [array, errorcode] */
+-static JSValue js_os_readdir(JSContext *ctx, JSValueConst this_val,
+-                             int argc, JSValueConst *argv)
+-{
+-    const char *path;
+-    DIR *f;
+-    struct dirent *d;
+-    JSValue obj;
+-    int err;
+-    uint32_t len;
+-
+-    path = JS_ToCString(ctx, argv[0]);
+-    if (!path)
+-        return JS_EXCEPTION;
+-    obj = JS_NewArray(ctx);
+-    if (JS_IsException(obj)) {
+-        JS_FreeCString(ctx, path);
+-        return JS_EXCEPTION;
+-    }
+-    f = opendir(path);
+-    if (!f)
+-        err = errno;
+-    else
+-        err = 0;
+-    JS_FreeCString(ctx, path);
+-    if (!f)
+-        goto done;
+-    len = 0;
+-    for(;;) {
+-        errno = 0;
+-        d = readdir(f);
+-        if (!d) {
+-            err = errno;
+-            break;
+-        }
+-        JS_DefinePropertyValueUint32(ctx, obj, len++,
+-                                     JS_NewString(ctx, d->d_name),
+-                                     JS_PROP_C_W_E);
+-    }
+-    closedir(f);
+- done:
+-    return make_obj_error(ctx, obj, err);
+-}
+-
+ #if !defined(_WIN32)
+ static int64_t timespec_to_ms(const struct timespec *tv)
+ {
+@@ -3939,13 +3703,10 @@ static const JSCFunctionListEntry js_os_funcs[] = {
+     JS_CFUNC_DEF("getcwd", 0, js_os_getcwd ),
+     JS_CFUNC_DEF("chdir", 0, js_os_chdir ),
+     JS_CFUNC_DEF("mkdir", 1, js_os_mkdir ),
+-    JS_CFUNC_DEF("readdir", 1, js_os_readdir ),
+     /* st_mode constants */
+     OS_FLAG(S_IFMT),
+-    OS_FLAG(S_IFIFO),
+     OS_FLAG(S_IFCHR),
+     OS_FLAG(S_IFDIR),
+-    OS_FLAG(S_IFBLK),
+     OS_FLAG(S_IFREG),
+ #if !defined(_WIN32)
+     OS_FLAG(S_IFSOCK),
+diff --git a/quickjs.c b/quickjs.c
+index e30d393..296ef70 100644
+--- a/quickjs.c
++++ b/quickjs.c
+@@ -22,13 +22,17 @@
+  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+  * THE SOFTWARE.
+  */
++
++#define __attribute__(...)
++#define __attribute(...)
++
+ #include <stdlib.h>
+ #include <stdio.h>
+ #include <stdarg.h>
+ #include <inttypes.h>
+ #include <string.h>
+ #include <assert.h>
+-#include <sys/time.h>
++#include <time.h>
+ #include <time.h>
+ #include <fenv.h>
+ #include <math.h>
+@@ -47,6 +51,9 @@
+ #include "libunicode.h"
+ #include "dtoa.h"
+ 
++#include <winsock2.h>   // defines struct timeval, FD_SET, select(), etc.
++#pragma comment(lib, "Ws2_32.lib")  // MSVC: auto-link winsock library
++
+ #define OPTIMIZE         1
+ #define SHORT_OPCODES    1
+ #if defined(EMSCRIPTEN)
+@@ -54,6 +61,7 @@
+ #else
+ #define DIRECT_DISPATCH  1
+ #endif
++#define DIRECT_DISPATCH 0
+ 
+ #if defined(__APPLE__)
+ #define MALLOC_OVERHEAD  0
+@@ -112,6 +120,8 @@
+ //#define FORCE_GC_AT_MALLOC
+ 
+ #ifdef CONFIG_ATOMICS
++#define _TIMESPEC_DEFINED
++#define PTW32_STATIC_LIB 1
+ #include <pthread.h>
+ #include <stdatomic.h>
+ #include <errno.h>
+@@ -216,7 +226,7 @@ typedef enum JSErrorEnum {
+ /* rope depth at which we rebalance */
+ #define JS_STRING_ROPE_MAX_DEPTH 60
+ 
+-#define __exception __attribute__((warn_unused_result))
++#define __exception
+ 
+ typedef struct JSShape JSShape;
+ typedef struct JSString JSString;
+@@ -1111,7 +1121,8 @@ static __exception int JS_ToArrayLengthFree(JSContext *ctx, uint32_t *plen,
+                                             JSValue val, BOOL is_array_ctor);
+ static JSValue JS_EvalObject(JSContext *ctx, JSValueConst this_obj,
+                              JSValueConst val, int flags, int scope_idx);
+-JSValue __attribute__((format(printf, 2, 3))) JS_ThrowInternalError(JSContext *ctx, const char *fmt, ...);
++JSValue JS_ThrowInternalError(JSContext *ctx, const char *fmt, ...);
++#define __maybe_unused
+ static __maybe_unused void JS_DumpAtoms(JSRuntime *rt);
+ static __maybe_unused void JS_DumpString(JSRuntime *rt, const JSString *p);
+ static __maybe_unused void JS_DumpObjectHeader(JSRuntime *rt);
+@@ -1484,6 +1495,7 @@ char *js_strdup(JSContext *ctx, const char *str)
+     return js_strndup(ctx, str, strlen(str));
+ }
+ 
++#define no_inline
+ static no_inline int js_realloc_array(JSContext *ctx, void **parray,
+                                       int elem_size, int *psize, int req_size)
+ {
+@@ -5696,6 +5708,7 @@ static void free_property(JSRuntime *rt, JSProperty *pr, int prop_flags)
+     }
+ }
+ 
++#define force_inline
+ static force_inline JSShapeProperty *find_own_property1(JSObject *p,
+                                                         JSAtom atom)
+ {
+@@ -6807,8 +6820,6 @@ void JS_ComputeMemoryUsage(JSRuntime *rt, JSMemoryUsage *s)
+ 
+ void JS_DumpMemoryUsage(FILE *fp, const JSMemoryUsage *s, JSRuntime *rt)
+ {
+-    fprintf(fp, "QuickJS memory usage -- " CONFIG_VERSION " version, %d-bit, malloc limit: %"PRId64"\n\n",
+-            (int)sizeof(void *) * 8, s->malloc_limit);
+ #if 1
+     if (rt) {
+         static const struct {
+@@ -7257,7 +7268,7 @@ static JSValue JS_ThrowError(JSContext *ctx, JSErrorEnum error_num,
+     return JS_ThrowError2(ctx, error_num, fmt, ap, add_backtrace);
+ }
+ 
+-JSValue __attribute__((format(printf, 2, 3))) JS_ThrowSyntaxError(JSContext *ctx, const char *fmt, ...)
++JSValue JS_ThrowSyntaxError(JSContext *ctx, const char *fmt, ...)
+ {
+     JSValue val;
+     va_list ap;
+@@ -7268,7 +7279,7 @@ JSValue __attribute__((format(printf, 2, 3))) JS_ThrowSyntaxError(JSContext *ctx
+     return val;
+ }
+ 
+-JSValue __attribute__((format(printf, 2, 3))) JS_ThrowTypeError(JSContext *ctx, const char *fmt, ...)
++JSValue JS_ThrowTypeError(JSContext *ctx, const char *fmt, ...)
+ {
+     JSValue val;
+     va_list ap;
+@@ -7279,7 +7290,7 @@ JSValue __attribute__((format(printf, 2, 3))) JS_ThrowTypeError(JSContext *ctx,
+     return val;
+ }
+ 
+-static int __attribute__((format(printf, 3, 4))) JS_ThrowTypeErrorOrFalse(JSContext *ctx, int flags, const char *fmt, ...)
++static int JS_ThrowTypeErrorOrFalse(JSContext *ctx, int flags, const char *fmt, ...)
+ {
+     va_list ap;
+ 
+@@ -7295,7 +7306,7 @@ static int __attribute__((format(printf, 3, 4))) JS_ThrowTypeErrorOrFalse(JSCont
+ }
+ 
+ /* never use it directly */
+-static JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowTypeErrorAtom(JSContext *ctx, JSAtom atom, const char *fmt, ...)
++static JSValue __JS_ThrowTypeErrorAtom(JSContext *ctx, JSAtom atom, const char *fmt, ...)
+ {
+     char buf[ATOM_GET_STR_BUF_SIZE];
+     return JS_ThrowTypeError(ctx, fmt,
+@@ -7303,7 +7314,7 @@ static JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowTypeErrorAtom(JSC
+ }
+ 
+ /* never use it directly */
+-static JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowSyntaxErrorAtom(JSContext *ctx, JSAtom atom, const char *fmt, ...)
++static JSValue __JS_ThrowSyntaxErrorAtom(JSContext *ctx, JSAtom atom, const char *fmt, ...)
+ {
+     char buf[ATOM_GET_STR_BUF_SIZE];
+     return JS_ThrowSyntaxError(ctx, fmt,
+@@ -7326,7 +7337,7 @@ static int JS_ThrowTypeErrorReadOnly(JSContext *ctx, int flags, JSAtom atom)
+     }
+ }
+ 
+-JSValue __attribute__((format(printf, 2, 3))) JS_ThrowReferenceError(JSContext *ctx, const char *fmt, ...)
++JSValue JS_ThrowReferenceError(JSContext *ctx, const char *fmt, ...)
+ {
+     JSValue val;
+     va_list ap;
+@@ -7337,7 +7348,7 @@ JSValue __attribute__((format(printf, 2, 3))) JS_ThrowReferenceError(JSContext *
+     return val;
+ }
+ 
+-JSValue __attribute__((format(printf, 2, 3))) JS_ThrowRangeError(JSContext *ctx, const char *fmt, ...)
++JSValue JS_ThrowRangeError(JSContext *ctx, const char *fmt, ...)
+ {
+     JSValue val;
+     va_list ap;
+@@ -7348,7 +7359,7 @@ JSValue __attribute__((format(printf, 2, 3))) JS_ThrowRangeError(JSContext *ctx,
+     return val;
+ }
+ 
+-JSValue __attribute__((format(printf, 2, 3))) JS_ThrowInternalError(JSContext *ctx, const char *fmt, ...)
++JSValue JS_ThrowInternalError(JSContext *ctx, const char *fmt, ...)
+ {
+     JSValue val;
+     va_list ap;
+@@ -12405,7 +12416,8 @@ static JSValue js_atof(JSContext *ctx, const char *str, const char **pp,
+         if (!(flags & ATOD_INT_ONLY) &&
+             (atod_type == ATOD_TYPE_FLOAT64) &&
+             strstart(p, "Infinity", &p)) {
+-            double d = 1.0 / 0.0;
++	    double zero = 0.0;
++            double d = 1.0 / zero;
+             if (is_neg)
+                 d = -d;
+             val = JS_NewFloat64(ctx, d);
+@@ -13288,7 +13300,7 @@ static void js_puts(JSPrintValueState *s, const char *str)
+     s->write_func(s->write_opaque, str, strlen(str));
+ }
+ 
+-static void __attribute__((format(printf, 2, 3))) js_printf(JSPrintValueState *s, const char *fmt, ...)
++static void js_printf(JSPrintValueState *s, const char *fmt, ...)
+ {
+     va_list ap;
+     char buf[256];
+@@ -22816,7 +22828,8 @@ static int json_parse_number(JSParseState *s, const uint8_t **pp)
+     if (!is_digit(*p)) {
+         if (s->ext_json) {
+             if (strstart((const char *)p, "Infinity", (const char **)&p)) {
+-                d = 1.0 / 0.0;
++		double zero = 0;
++                d = 1.0 / zero;
+                 if (*p_start == '-')
+                     d = -d;
+                 goto done;
+@@ -46268,7 +46281,8 @@ static JSValue js_math_min_max(JSContext *ctx, JSValueConst this_val,
+     uint32_t tag;
+ 
+     if (unlikely(argc == 0)) {
+-        return __JS_NewFloat64(ctx, is_max ? -1.0 / 0.0 : 1.0 / 0.0);
++	double zero = 0;
++        return __JS_NewFloat64(ctx, is_max ? -1.0 / zero : 1.0 / zero);
+     }
+ 
+     tag = JS_VALUE_GET_TAG(argv[0]);
+@@ -59059,7 +59073,7 @@ static JSValue js_atomics_wait(JSContext *ctx,
+         ret = 0;
+     } else {
+         /* XXX: use clock monotonic */
+-        clock_gettime(CLOCK_REALTIME, &ts);
++        clock_gettime(0/*CLOCK_REALTIME*/, &ts);
+         ts.tv_sec += timeout / 1000;
+         ts.tv_nsec += (timeout % 1000) * 1000000;
+         if (ts.tv_nsec >= 1000000000) {
