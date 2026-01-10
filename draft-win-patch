@@ -1,5 +1,5 @@
 diff --git a/Makefile b/Makefile
-index dcbbf7e..ab90e49 100644
+index dcbbf7e..2bef769 100644
 --- a/Makefile
 +++ b/Makefile
 @@ -132,7 +132,6 @@ else
@@ -15,15 +15,15 @@ index dcbbf7e..ab90e49 100644
  
  qjs$(EXE): $(QJS_OBJS)
 -	$(CC) $(LDFLAGS) $(LDEXPORT) -o $@ $^ $(LIBS)
-+	$(CC) $(LDFLAGS) $(LDEXPORT) /Fe$@ $^ $(LIBS)
++	link $(LDFLAGS) $(LDEXPORT) /Fe$@ $^ $(LIBS)
  
  qjs-debug$(EXE): $(patsubst %.o, %.debug.o, $(QJS_OBJS))
 -	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
-+	$(CC) $(LDFLAGS) /Fe$@ $^ $(LIBS)
++	link $(LDFLAGS) /Fe$@ $^ $(LIBS)
  
  qjsc$(EXE): $(OBJDIR)/qjsc.o $(QJS_LIB_OBJS)
 -	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
-+	$(CC) $(LDFLAGS) /Fe$@ $^ $(LIBS)
++	link $(LDFLAGS) /Fe$@ $^ $(LIBS)
  
  fuzz_eval: $(OBJDIR)/fuzz_eval.o $(OBJDIR)/fuzz_common.o libquickjs.fuzz.a
 -	$(CC) $(CFLAGS_OPT) $^ -o fuzz_eval $(LIB_FUZZING_ENGINE)
@@ -44,7 +44,7 @@ index dcbbf7e..ab90e49 100644
  $(QJSC): $(OBJDIR)/qjsc.host.o \
      $(patsubst %.o, %.host.o, $(QJS_LIB_OBJS))
 -	$(HOST_CC) $(LDFLAGS) -o $@ $^ $(HOST_LIBS)
-+	$(HOST_CC) $(LDFLAGS) /Fe$@ $^ $(HOST_LIBS)
++	link $(LDFLAGS) /Fe$@ $^ $(HOST_LIBS)
  
  endif #CROSS_PREFIX
  
@@ -99,7 +99,7 @@ index dcbbf7e..ab90e49 100644
  
  unicode_gen: $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/cutils.host.o libunicode.c unicode_gen_def.h
 -	$(HOST_CC) $(LDFLAGS) $(CFLAGS) -o $@ $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/cutils.host.o
-+	$(HOST_CC) $(LDFLAGS) $(CFLAGS) /Fe$@ $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/cutils.host.o
++	link $(LDFLAGS) /Fe$@ $(OBJDIR)/unicode_gen.host.o $(OBJDIR)/cutils.host.o
  
  clean:
  	rm -f repl.c out.c

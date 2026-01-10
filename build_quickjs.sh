@@ -102,7 +102,7 @@ for platform in $platforms; do
             /c/msys64/usr/bin/wget --recursive --no-parent --reject 'index.html*' --tries=3 --timeout=10 --ftp-user=anonymous --ftp-password=you@example.com --directory-prefix=./pthreads-win32-tmp ftp://sourceware.org/pub/pthreads-win32/dll-latest/
             mv pthreads-win32-tmp/sourceware.org/pub/pthreads-win32/dll-latest/ ./pthreads-win32
             ls pthreads-win32/lib
-            /c/Program\ Files\ */GnuWin32/bin/make.exe CC=cl HOST_CC=cl CFLAGS='/std:c17 /experimental:c11atomics -Ipthreads-win32/include' LDFLAGS='/link /LIBPATH:pthreads-win32/lib/x64'
+            /c/Program\ Files\ */GnuWin32/bin/make.exe CC=cl HOST_CC=cl CFLAGS='/std:c17 /experimental:c11atomics -Ipthreads-win32/include' LDFLAGS='/LIBPATH:pthreads-win32/lib/x64'
             ;;
         mac_arm64)
             if [ "$OS" = "Darwin" ] && [ "$ARCH" = "arm64" ]; then
