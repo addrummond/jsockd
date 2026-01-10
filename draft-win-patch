@@ -248,13 +248,16 @@ index 52ff164..bdda10a 100644
                                                        const char *fmt, ...)
  {
 diff --git a/cutils.h b/cutils.h
-index 094a8f1..81160b2 100644
+index 094a8f1..542a8e3 100644
 --- a/cutils.h
 +++ b/cutils.h
-@@ -25,15 +25,16 @@
+@@ -25,15 +25,19 @@
  #ifndef CUTILS_H
  #define CUTILS_H
  
++#define WIN32_LEAN_AND_MEAN
++#include <windows.h>
++
 +#include "builtins.h"
  #include <stdlib.h>
  #include <string.h>
@@ -273,7 +276,7 @@ index 094a8f1..81160b2 100644
  
  #define xglue(x, y) x ## y
  #define glue(x, y) xglue(x, y)
-@@ -149,15 +150,15 @@ static inline int ctz64(uint64_t a)
+@@ -149,15 +153,15 @@ static inline int ctz64(uint64_t a)
      return __builtin_ctzll(a);
  }
  
@@ -292,7 +295,7 @@ index 094a8f1..81160b2 100644
      uint16_t v;
  };
  
-@@ -316,7 +317,7 @@ static inline int dbuf_put_u64(DynBuf *s, uint64_t val)
+@@ -316,7 +320,7 @@ static inline int dbuf_put_u64(DynBuf *s, uint64_t val)
      }
  }
  
@@ -301,6 +304,51 @@ index 094a8f1..81160b2 100644
                                                        const char *fmt, ...);
  void dbuf_free(DynBuf *s);
  static inline BOOL dbuf_error(DynBuf *s) {
+@@ -454,4 +458,44 @@ static inline int isfp16zero(uint16_t v)
+     return (v & 0x7FFF) == 0;
+ }
+ 
++#ifndef CLOCK_REALTIME
++#define CLOCK_REALTIME 0
++#endif
++#ifndef CLOCK_MONOTONIC
++#define CLOCK_MONOTONIC 1
++#endif
++
++static inline int clock_gettime(int clk_id, struct timespec* ts) {
++  if (!ts) return -1;
++
++  if (clk_id == CLOCK_REALTIME) {
++    FILETIME ft;
++    static BOOL (WINAPI *pGetPrecise)(LPFILETIME) = NULL;
++    static int init = 0;
++    if (!init) {
++      HMODULE h = GetModuleHandleW(L"kernel32.dll");
++      if (h) pGetPrecise = (BOOL (WINAPI *)(LPFILETIME))GetProcAddress(h, "GetSystemTimePreciseAsFileTime");
++      init = 1;
++    }
++    if (pGetPrecise) pGetPrecise(&ft);
++    else GetSystemTimeAsFileTime(&ft);
++    filetime_to_timespec(&ft, ts);
++    return 0;
++  }
++
++  if (clk_id == CLOCK_MONOTONIC) {
++    LARGE_INTEGER freq, counter;
++    if (!QueryPerformanceFrequency(&freq) || !QueryPerformanceCounter(&counter)) {
++      ts->tv_sec = 0; ts->tv_nsec = 0; return -1;
++    }
++    ts->tv_sec  = (long)(counter.QuadPart / freq.QuadPart);
++    ts->tv_nsec = (long)((counter.QuadPart % freq.QuadPart) * 1000000000ULL / freq.QuadPart);
++    return 0;
++  }
++
++  /* Unsupported clock id */
++  ts->tv_sec = 0; ts->tv_nsec = 0;
++  return -1;
++}
++
+ #endif  /* CUTILS_H */
 diff --git a/dtoa.c b/dtoa.c
 index ac1be8d..60d3116 100644
 --- a/dtoa.c
@@ -424,7 +472,7 @@ index e55ca61..18f142a 100644
          char *arg = argv[optind] + 1;
          const char *longopt = "";
 diff --git a/quickjs-libc.c b/quickjs-libc.c
-index c24b6d5..6331cf6 100644
+index c24b6d5..cd46c40 100644
 --- a/quickjs-libc.c
 +++ b/quickjs-libc.c
 @@ -1,5 +1,4 @@
@@ -472,7 +520,17 @@ index c24b6d5..6331cf6 100644
  #include <pthread.h>
  #include <stdatomic.h>
  #endif
-@@ -941,6 +941,8 @@ static void js_std_file_finalizer(JSRuntime *rt, JSValue val)
+@@ -932,15 +932,14 @@ static void js_std_file_finalizer(JSRuntime *rt, JSValue val)
+     JSSTDFile *s = JS_GetOpaque(val, js_std_file_class_id);
+     if (s) {
+         if (s->f && s->close_in_finalizer) {
+-            if (s->is_popen)
+-                pclose(s->f);
+-            else
+-                fclose(s->f);
++            fclose(s->f);
+         }
+         js_free_rt(rt, s);
      }
  }
  
@@ -481,7 +539,7 @@ index c24b6d5..6331cf6 100644
  static ssize_t js_get_errno(ssize_t ret)
  {
      if (ret == -1)
-@@ -1036,42 +1038,6 @@ static JSValue js_std_open(JSContext *ctx, JSValueConst this_val,
+@@ -1036,42 +1035,6 @@ static JSValue js_std_open(JSContext *ctx, JSValueConst this_val,
      return JS_EXCEPTION;
  }
  
@@ -524,7 +582,7 @@ index c24b6d5..6331cf6 100644
  static JSValue js_std_fdopen(JSContext *ctx, JSValueConst this_val,
                               int argc, JSValueConst *argv)
  {
-@@ -1459,162 +1425,6 @@ static int http_get_status(const char *buf)
+@@ -1459,162 +1422,6 @@ static int http_get_status(const char *buf)
      return atoi(p);
  }
  
@@ -687,7 +745,7 @@ index c24b6d5..6331cf6 100644
  static JSClassDef js_std_file_class = {
      "FILE",
      .finalizer = js_std_file_finalizer,
-@@ -1646,14 +1456,12 @@ static const JSCFunctionListEntry js_std_funcs[] = {
+@@ -1646,14 +1453,12 @@ static const JSCFunctionListEntry js_std_funcs[] = {
      JS_CFUNC_DEF("setenv", 1, js_std_setenv ),
      JS_CFUNC_DEF("unsetenv", 1, js_std_unsetenv ),
      JS_CFUNC_DEF("getenviron", 1, js_std_getenviron ),
@@ -702,7 +760,16 @@ index c24b6d5..6331cf6 100644
      JS_CFUNC_DEF("fdopen", 2, js_std_fdopen ),
      JS_CFUNC_DEF("tmpfile", 0, js_std_tmpfile ),
      JS_CFUNC_MAGIC_DEF("puts", 1, js_std_file_puts, 0 ),
-@@ -2699,50 +2507,6 @@ static JSValue js_os_mkdir(JSContext *ctx, JSValueConst this_val,
+@@ -1941,7 +1746,7 @@ static JSValue js_os_remove(JSContext *ctx, JSValueConst this_val,
+ #if defined(_WIN32)
+     {
+         struct stat st;
+-        if (stat(filename, &st) == 0 && S_ISDIR(st.st_mode)) {
++        if (stat(filename, &st) == 0 && _S_ISDIR(st.st_mode)) {
+             ret = rmdir(filename);
+         } else {
+             ret = unlink(filename);
+@@ -2699,50 +2504,6 @@ static JSValue js_os_mkdir(JSContext *ctx, JSValueConst this_val,
      return JS_NewInt32(ctx, ret);
  }
  
@@ -753,7 +820,7 @@ index c24b6d5..6331cf6 100644
  #if !defined(_WIN32)
  static int64_t timespec_to_ms(const struct timespec *tv)
  {
-@@ -3939,13 +3703,10 @@ static const JSCFunctionListEntry js_os_funcs[] = {
+@@ -3939,13 +3700,10 @@ static const JSCFunctionListEntry js_os_funcs[] = {
      JS_CFUNC_DEF("getcwd", 0, js_os_getcwd ),
      JS_CFUNC_DEF("chdir", 0, js_os_chdir ),
      JS_CFUNC_DEF("mkdir", 1, js_os_mkdir ),
