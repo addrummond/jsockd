@@ -103,6 +103,7 @@ for platform in $platforms; do
             mv pthreads-win32-tmp/sourceware.org/pub/pthreads-win32/dll-latest/ ./pthreads-win32
             ls pthreads-win32\lib
             /c/Program\ Files\ */GnuWin32/bin/make.exe CC=cl CFLAGS='/std:c11 /experimental:c11atomics -Ipthreads-win32/include -D__maybe_unused -Dforce_inline' LDFLAGS='-Lpthreads-win32/lib'
+            ;;
         mac_arm64)
             if [ "$OS" = "Darwin" ] && [ "$ARCH" = "arm64" ]; then
                 echo "You seem to be on a MacOS/ARM64 system, so pass the 'native' argument to 'build_quickjs.sh', not 'mac_arm64'."
