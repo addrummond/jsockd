@@ -143,4 +143,4 @@ jobs:
           echo Y | winget install -e --id JernejSimoncic.Wget
           set PATH="C:\msys64\usr\bin;%PATH%"
           cd ${{ github.workspace }}
-          "%PROGRAMFILES%\Git\bin\sh.exe" build_quickjs.sh native_windows_x64
+          "%PROGRAMFILES%\Git\bin\sh.exe" build_quickjs.sh windows_x64_msvc
