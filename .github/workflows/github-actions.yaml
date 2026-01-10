@@ -150,6 +150,7 @@ jobs:
           "%PROGRAMFILES%\Git\bin\sh.exe" unicode_download.sh
           git apply ../../draft-win-patch
           "C:\Program Files\Git\bin\bash.exe" -c "wget --recursive --no-parent --reject 'index.html*' --tries=3 --timeout=10 --ftp-user=anonymous --ftp-password=you@example.com --directory-prefix=./pthreads-win32-tmp ftp://sourceware.org/pub/pthreads-win32/dll-latest/"
+          move pthreads-win32-tmp/sourceware.org/pub/pthreads-win32/dll-latest/ ./pthreads-win32
           echo "LIB DIR ECHO"
           dir pthreads-win32\lib
           "C:\Program Files\Git\bin\bash.exe" -c "/c/Program\ Files\ */GnuWin32/bin/make.exe CC=cl CFLAGS='/std:c11 /experimental:c11atomics -Ipthreads-win32/include -D__maybe_unused -Dforce_inline' LDFLAGS='-Lpthreads-win32/lib'"
