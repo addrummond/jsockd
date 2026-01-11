@@ -552,7 +552,7 @@ index c24b6d5..ea38152 100644
  #define USE_WORKER
  
  #ifdef USE_WORKER
-+#define PTW32_STATIC_LIB 1
++#undef PTW32_STATIC_LIB
  #include <pthread.h>
  #include <stdatomic.h>
  #endif
@@ -947,7 +947,7 @@ index e30d393..4b2247c 100644
  
  #ifdef CONFIG_ATOMICS
 +#define _TIMESPEC_DEFINED
-+#define PTW32_STATIC_LIB 1
++#undef PTW32_STATIC_LIB
  #include <pthread.h>
  #include <stdatomic.h>
  #include <errno.h>
