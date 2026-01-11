@@ -91,7 +91,7 @@ rm -f /tmp/libquickjs_*.a || true
 for platform in $platforms; do
     echo "Building for platform $platform..."
     mkdir -p ../../tools-bin
-    $MAKE clean
+    "$MAKE" clean
     case "$platform" in
         native)
             if [ "$OS" = OpenBSD ]; then
