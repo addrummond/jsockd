@@ -122,8 +122,10 @@ for platform in $platforms; do
             curl -fsSL --disable-epsv --ftp-method nocwd -o pthreads-win32-include/semaphore.h "$BASE_FTP/include/semaphore.h"
             curl -fsSL --disable-epsv --ftp-method nocwd -o pthreads-win32-include/pthread.h   "$BASE_FTP/include/pthread.h"
             curl -fsSL --disable-epsv --ftp-method nocwd -o pthreads-win32-lib/pthreadVC2.lib  "$BASE_FTP/lib/x64/pthreadVC2.lib"
-            # DLL in cwd next to executable
+            # DLLs in cwd next to executable
             curl -fsSL --disable-epsv --ftp-method nocwd -o pthreadVC2.dll                     "$BASE_FTP/dll/x64/pthreadVC2.dll"
+            # b8df5005596340e07c742d33ccdb6e1d0e1f8053db1c9360b32ce84c9dbd7fb22ae8643328990311bd9639df47feb5bfb1579e8fcb56e9965981a8234533224a
+            curl -o msvcr100.dll https://www.dllrepair.com/dll/dll-files/msvcr100.dll
             /c/Program\ Files\ */GnuWin32/bin/make.exe clean
             /c/Program\ Files\ */GnuWin32/bin/make.exe -d CC=cl HOST_CC=cl CFLAGS='/nologo /std:c17 /experimental:c11atomics -Ipthreads-win32-include -D_WINSOCKAPI_' LDFLAGS='/LIBPATH:pthreads-win32-lib pthreadVC2.lib'
             ;;
