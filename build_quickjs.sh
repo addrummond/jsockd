@@ -115,12 +115,16 @@ for platform in $platforms; do
             windows_x64_msvc=1
             git apply ../../draft-win-patch
             WGET=/c/msys64/usr/bin/wget.exe
-            if [ ! -f "$WGET" ]; then
+            if [ ! -f "$WGET" ] && ! ( which "$WGET" 2>/dev/null ) ; then
                 WGET="/c/Program Files (x86)/GnuWin32/bin/wget.exe"
+                if [ ! -f "$WGET" ]; then
+                    WGET=wget
+                fi
             fi
             "$WGET" --recursive --no-parent --reject 'index.html*' --tries=3 --timeout=10 --ftp-user=anonymous --ftp-password=you@example.com --directory-prefix=./pthreads-win32-tmp ftp://sourceware.org/pub/pthreads-win32/dll-latest/
             mv pthreads-win32-tmp/sourceware.org/pub/pthreads-win32/dll-latest/ ./pthreads-win32
             ls pthreads-win32/lib
+            /c/Program\ Files\ */GnuWin32/bin/make.exe clean
             /c/Program\ Files\ */GnuWin32/bin/make.exe -d CC=cl HOST_CC=cl CFLAGS='/nologo /std:c17 /experimental:c11atomics -Ipthreads-win32/include -D_WINSOCKAPI_' LDFLAGS='/LIBPATH:pthreads-win32/lib/x64 pthreadVC2.lib'
             ;;
         mac_arm64)
