@@ -101,14 +101,14 @@ for platform in $platforms; do
             fi
             # Debug build for quickjs library
             # shellcheck disable=SC2086 # Intended splitting of MAKE_OPTS
-            CFLAGS="$DEBUG_CFLAGS $EXTRA_CFLAGS" $MAKE CONFIG_LTO=n $MAKE_OPTS
+            CFLAGS="$DEBUG_CFLAGS $EXTRA_CFLAGS" "$MAKE" CONFIG_LTO=n $MAKE_OPTS
             cp qjs ../../tools-bin
             cp qjsc ../../tools-bin
             mv libquickjs.a "/tmp/libquickjs_${OS}_${ARCH}_Debug.a"
             # Release build for quickjs library
-            $MAKE clean
+            "$MAKE" clean
             # shellcheck disable=SC2086 # Intended splitting of MAKE_OPTS
-            CFLAGS="$RELEASE_CFLAGS $EXTRA_CFLAGS" $MAKE CONFIG_LTO=y $MAKE_OPTS
+            CFLAGS="$RELEASE_CFLAGS $EXTRA_CFLAGS" "$MAKE" CONFIG_LTO=y $MAKE_OPTS
             mv libquickjs.a "/tmp/libquickjs_${OS}_${ARCH}_Release.a"
             ;;
         windows_x64_msvc)
@@ -129,11 +129,11 @@ for platform in $platforms; do
                 exit 1
             fi
             # Debug
-            CFLAGS="$DEBUG_CFLAGS" $MAKE CONFIG_DEFAULT_AR=y CONFIG_CLANG=y CROSS_PREFIX=aarch64-apple-darwin24.5-
+            CFLAGS="$DEBUG_CFLAGS" "$MAKE" CONFIG_DEFAULT_AR=y CONFIG_CLANG=y CROSS_PREFIX=aarch64-apple-darwin24.5-
             mv libquickjs.a /tmp/libquickjs_Darwin_arm64_Debug.a
             # Release
-            $MAKE clean
-            CFLAGS="$RELEASE_CFLAGS" $MAKE CONFIG_DEFAULT_AR=y CONFIG_CLANG=y CROSS_PREFIX=aarch64-apple-darwin24.5-
+            "$MAKE" clean
+            CFLAGS="$RELEASE_CFLAGS" "$MAKE" CONFIG_DEFAULT_AR=y CONFIG_CLANG=y CROSS_PREFIX=aarch64-apple-darwin24.5-
             mv libquickjs.a /tmp/libquickjs_Darwin_arm64_Release.a
             ;;
         linux_x86_64)
@@ -142,11 +142,11 @@ for platform in $platforms; do
                 exit 1
             fi
             # Debug
-            CFLAGS="$DEBUG_CFLAGS" $MAKE CONFIG_LTO=n
+            CFLAGS="$DEBUG_CFLAGS" "$MAKE" CONFIG_LTO=n
             mv libquickjs.a /tmp/libquickjs_Linux_x86_64_Debug.a
-            $MAKE clean
+            "$MAKE" clean
             # Release
-            CFLAGS="$RELEASE_CFLAGS" $MAKE CONFIG_LTO=y
+            CFLAGS="$RELEASE_CFLAGS" "$MAKE" CONFIG_LTO=y
             mv libquickjs.a /tmp/libquickjs_Linux_x86_64_Release.a
             ;;
         linux_arm64)
@@ -155,22 +155,22 @@ for platform in $platforms; do
                 exit 1
             fi
             # Debug
-            CFLAGS="$DEBUG_CFLAGS" $MAKE CONFIG_LTO=n CROSS_PREFIX=aarch64-linux-gnu-
+            CFLAGS="$DEBUG_CFLAGS" "$MAKE" CONFIG_LTO=n CROSS_PREFIX=aarch64-linux-gnu-
             mv libquickjs.a /tmp/libquickjs_Linux_arm64_Debug.a
             # Release
-            $MAKE clean
-            CFLAGS="$RELEASE_CFLAGS" $MAKE CONFIG_LTO=y CROSS_PREFIX=aarch64-linux-gnu-
+            "$MAKE" clean
+            CFLAGS="$RELEASE_CFLAGS" "$MAKE" CONFIG_LTO=y CROSS_PREFIX=aarch64-linux-gnu-
             mv libquickjs.a /tmp/libquickjs_Linux_arm64_Release.a
             ;;
         linux_x86_64_filc)
             # Debug
             # See https://github.com/pizlonator/pizlonated-quickjs/commit/258a4a291fd0f080614e5b345528478c31e51705#diff-45f1ae674139f993bf8a99c382c1ba4863272a6fec2f492d76d7ff1b2cfcfbe2R56-R5187 for diff the patch is based on
             git apply ../../fil-c-quickjs.patch
-            CFLAGS="$DEBUG_CFLAGS -static" LDFLAGS="-static" $MAKE CC="$FILC_CLANG" CONFIG_LTO= CONFIG_CLANG=y
+            CFLAGS="$DEBUG_CFLAGS -static" LDFLAGS="-static" "$MAKE" CC="$FILC_CLANG" CONFIG_LTO= CONFIG_CLANG=y
             mv libquickjs.a /tmp/libquickjs_Linux_x86_64_filc_Debug.a
             # Release
-            $MAKE clean
-            CFLAGS="$FILC_RELEASE_CFLAGS -static" LDFLAGS="-static" $MAKE CC="$FILC_CLANG" CONFIG_LTO= CONFIG_CLANG=y
+            "$MAKE" clean
+            CFLAGS="$FILC_RELEASE_CFLAGS -static" LDFLAGS="-static" "$MAKE" CC="$FILC_CLANG" CONFIG_LTO= CONFIG_CLANG=y
             git apply -R ../../fil-c-quickjs.patch
             mv libquickjs.a /tmp/libquickjs_Linux_x86_64_filc_Release.a
             ;;
