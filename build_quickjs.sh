@@ -117,13 +117,15 @@ for platform in $platforms; do
             mkdir pthreads-win32-include
             mkdir pthreads-win32-lib
             BASE_FTP='ftp://sourceware.org/pub/pthreads-win32/prebuilt-dll-2-9-1-release'
-            curl -fsSL -o pthreads-win32-include/pthread.h   "$BASE_FTP/include/pthread.h"
-            curl -fsSL -o pthreads-win32-include/sched.h     "$BASE_FTP/include/sched.h"
-            curl -fsSL -o pthreads-win32-include/semaphore.h "$BASE_FTP/include/semaphore.h"
-            curl -fsSL -o pthreads-win32-include/pthread.h   "$BASE_FTP/include/pthread.h"
-            curl -fsSL -o pthreads-win32-lib/pthreadVC2.dll  "$BASE_FTP/dll/x64/pthreadVC2.dll"
+            curl -fsSL --disable-epsv --ftp-method nocwd -o pthreads-win32-include/pthread.h   "$BASE_FTP/include/pthread.h"
+            curl -fsSL --disable-epsv --ftp-method nocwd -o pthreads-win32-include/sched.h     "$BASE_FTP/include/sched.h"
+            curl -fsSL --disable-epsv --ftp-method nocwd -o pthreads-win32-include/semaphore.h "$BASE_FTP/include/semaphore.h"
+            curl -fsSL --disable-epsv --ftp-method nocwd -o pthreads-win32-include/pthread.h   "$BASE_FTP/include/pthread.h"
+            curl -fsSL --disable-epsv --ftp-method nocwd -o pthreads-win32-lib/pthreadVC2.lib  "$BASE_FTP/lib/x64/pthreadVC2.lib"
+            # DLL in cwd next to executable
+            curl -fsSL --disable-epsv --ftp-method nocwd -o pthreadVC2.dll                     "$BASE_FTP/dll/x64/pthreadVC2.dll"
             /c/Program\ Files\ */GnuWin32/bin/make.exe clean
-            /c/Program\ Files\ */GnuWin32/bin/make.exe -d CC=cl HOST_CC=cl CFLAGS='/nologo /std:c17 /experimental:c11atomics -Ipthreads-win32-include -D_WINSOCKAPI_' LDFLAGS='/LIBPATH:pthreads-win32-lib pthreadVC2.dll'
+            /c/Program\ Files\ */GnuWin32/bin/make.exe -d CC=cl HOST_CC=cl CFLAGS='/nologo /std:c17 /experimental:c11atomics -Ipthreads-win32-include -D_WINSOCKAPI_' LDFLAGS='/LIBPATH:pthreads-win32-lib pthreadVC2.lib'
             ;;
         mac_arm64)
             if [ "$OS" = "Darwin" ] && [ "$ARCH" = "arm64" ]; then
