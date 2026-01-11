@@ -2,14 +2,30 @@
 
 set -e
 
+OS=$(uname)
+ARCH=$(uname -m)
+
 if [ -z "$MAKE" ]; then
     MAKE="make"
     if [ "GNU Make" != "$( ( make --version 2>/dev/null || true ) | head -n 1 | awk '{print $1,$2}' )" ]; then
         if [ "GNU Make" = "$( ( gmake --version 2>/dev/null || true ) | head -n 1 | awk '{print $1,$2}' )" ]; then
             MAKE=gmake
         else
-            echo "Cannot find GNU Make. Please install it as 'make' or 'gmake', or set the MAKE environment variable to point to it."
-            exit 1
+            foundmake=0
+            case "$OS$ARCH" in
+                *MINGW64*x86_64*)
+                    if [ "GNU Make" = "$( ( "/c/Program Files (x86)/GnuWin32/bin/make.exe" --version 2>/dev/null || true ) | head -n 1 | awk '{print $1,$2}' )" ]; then
+                        MAKE="/c/Program Files (x86)/GnuWin32/bin/make.exe"
+                        foundmake=1
+                    fi
+                    ;;
+                *)
+                    ;;
+            esac
+            if [ "$foundmake" = "0" ]; then
+                echo "Cannot find GNU Make. Please install it as 'make' or 'gmake', or set the MAKE environment variable to point to it."
+                exit 1
+            fi
         fi
     fi
 fi
@@ -47,8 +63,6 @@ DEBUG_CFLAGS="-DDUMP_LEAKS"
 RELEASE_CFLAGS="-O2"
 FILC_RELEASE_CFLAGS="-O2"
 
-OS=$(uname)
-ARCH=$(uname -m)
 if [ "$ARCH" = aarch64 ]; then
     ARCH=arm64
 elif [ "$ARCH" = amd64 ]; then
@@ -100,7 +114,11 @@ for platform in $platforms; do
         windows_x64_msvc)
             windows_x64_msvc=1
             git apply ../../draft-win-patch
-            /c/msys64/usr/bin/wget --recursive --no-parent --reject 'index.html*' --tries=3 --timeout=10 --ftp-user=anonymous --ftp-password=you@example.com --directory-prefix=./pthreads-win32-tmp ftp://sourceware.org/pub/pthreads-win32/dll-latest/
+            WGET=/c/msys64/usr/bin/wget.exe
+            if [ ! -f "$WGET" ]; then
+                WGET="/c/Program Files (x86)/GnuWin32/bin/wget.exe"
+            fi
+            "$WGET" --recursive --no-parent --reject 'index.html*' --tries=3 --timeout=10 --ftp-user=anonymous --ftp-password=you@example.com --directory-prefix=./pthreads-win32-tmp ftp://sourceware.org/pub/pthreads-win32/dll-latest/
             mv pthreads-win32-tmp/sourceware.org/pub/pthreads-win32/dll-latest/ ./pthreads-win32
             ls pthreads-win32/lib
             /c/Program\ Files\ */GnuWin32/bin/make.exe -d CC=cl HOST_CC=cl CFLAGS='/nologo /std:c17 /experimental:c11atomics -Ipthreads-win32/include -D_WINSOCKAPI_' LDFLAGS='/LIBPATH:pthreads-win32/lib/x64 pthreadVC2.lib'
