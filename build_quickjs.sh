@@ -114,18 +114,16 @@ for platform in $platforms; do
         windows_x64_msvc)
             windows_x64_msvc=1
             git apply ../../draft-win-patch
-            WGET=/c/msys64/usr/bin/wget.exe
-            if [ ! -f "$WGET" ] && ! ( which "$WGET" 2>/dev/null ) ; then
-                WGET="/c/Program Files (x86)/GnuWin32/bin/wget.exe"
-                if [ ! -f "$WGET" ]; then
-                    WGET=wget
-                fi
-            fi
-            "$WGET" --recursive --no-parent --reject 'index.html*' --tries=3 --timeout=10 --ftp-user=anonymous --ftp-password=you@example.com --directory-prefix=./pthreads-win32-tmp ftp://sourceware.org/pub/pthreads-win32/prebuilt-dll-2-9-1-release/
-            mv pthreads-win32-tmp/sourceware.org/pub/pthreads-win32/prebuilt-dll-2-9-1-release/ ./pthreads-win32
-            ls pthreads-win32/lib
+            mkdir pthreads-win32-include
+            mkdir pthreads-win32-lib
+            BASE_FTP='ftp://sourceware.org/pub/pthreads-win32/prebuilt-dll-2-9-1-release'
+            curl -fsSL -o pthreads-win32-include/pthread.h   "$BASE_FTP/include/pthread.h"
+            curl -fsSL -o pthreads-win32-include/sched.h     "$BASE_FTP/include/sched.h"
+            curl -fsSL -o pthreads-win32-include/semaphore.h "$BASE_FTP/include/semaphore.h"
+            curl -fsSL -o pthreads-win32-include/pthread.h   "$BASE_FTP/include/pthread.h"
+            curl -fsSL -o pthreads-win32-lib/pthreadVC2.dll  "$BASE_FTP/dll/x64/pthreadVC2.dll"
             /c/Program\ Files\ */GnuWin32/bin/make.exe clean
-            /c/Program\ Files\ */GnuWin32/bin/make.exe -d CC=cl HOST_CC=cl CFLAGS='/nologo /std:c17 /experimental:c11atomics -Ipthreads-win32/include -D_WINSOCKAPI_' LDFLAGS='/LIBPATH:pthreads-win32/dll/x64 pthreadVC2.dll'
+            /c/Program\ Files\ */GnuWin32/bin/make.exe -d CC=cl HOST_CC=cl CFLAGS='/nologo /std:c17 /experimental:c11atomics -Ipthreads-win32-include -D_WINSOCKAPI_' LDFLAGS='/LIBPATH:pthreads-win32-lib pthreadVC2.dll'
             ;;
         mac_arm64)
             if [ "$OS" = "Darwin" ] && [ "$ARCH" = "arm64" ]; then
