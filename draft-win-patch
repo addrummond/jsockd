@@ -1286,16 +1286,16 @@ index 92cc000..0e262d7 100644
  
  JS_BOOL JS_StrictEq(JSContext *ctx, JSValueConst op1, JSValueConst op2);
 diff --git a/run-test262.c b/run-test262.c
-index 100ed13..6557dca 100644
+index 100ed13..d776779 100644
 --- a/run-test262.c
 +++ b/run-test262.c
-@@ -29,16 +29,15 @@
+@@ -29,16 +29,14 @@
  #include <string.h>
  #include <assert.h>
  #include <ctype.h>
 -#include <unistd.h>
  #include <errno.h>
- #include <time.h>
+-#include <time.h>
 -#include <dirent.h>
 -#include <ftw.h>
  
@@ -1308,7 +1308,7 @@ index 100ed13..6557dca 100644
  /* enable test262 thread support to test SharedArrayBuffer and Atomics */
  #define CONFIG_AGENT
  
-@@ -2036,7 +2035,7 @@ void run_test_dir_list(namelist_t *lp, int start_index, int stop_index)
+@@ -2036,7 +2034,7 @@ void run_test_dir_list(namelist_t *lp, int start_index, int stop_index)
  
  void help(void)
  {
