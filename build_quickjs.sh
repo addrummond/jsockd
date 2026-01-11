@@ -125,7 +125,7 @@ for platform in $platforms; do
             mv pthreads-win32-tmp/sourceware.org/pub/pthreads-win32/prebuilt-dll-2-9-1-release/ ./pthreads-win32
             ls pthreads-win32/lib
             /c/Program\ Files\ */GnuWin32/bin/make.exe clean
-            /c/Program\ Files\ */GnuWin32/bin/make.exe -d CC=cl HOST_CC=cl CFLAGS='/nologo /std:c17 /experimental:c11atomics -Ipthreads-win32/include -D_WINSOCKAPI_' LDFLAGS='/LIBPATH:pthreads-win32/dll/x64 pthreadVC2.lib'
+            /c/Program\ Files\ */GnuWin32/bin/make.exe -d CC=cl HOST_CC=cl CFLAGS='/nologo /std:c17 /experimental:c11atomics -Ipthreads-win32/include -D_WINSOCKAPI_' LDFLAGS='/LIBPATH:pthreads-win32/dll/x64 pthreadVC2.dll'
             ;;
         mac_arm64)
             if [ "$OS" = "Darwin" ] && [ "$ARCH" = "arm64" ]; then
