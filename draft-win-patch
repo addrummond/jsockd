@@ -1286,17 +1286,20 @@ index 92cc000..0e262d7 100644
  
  JS_BOOL JS_StrictEq(JSContext *ctx, JSValueConst op1, JSValueConst op2);
 diff --git a/run-test262.c b/run-test262.c
-index 100ed13..32ac2b4 100644
+index 100ed13..a4970de 100644
 --- a/run-test262.c
 +++ b/run-test262.c
-@@ -29,7 +29,6 @@
+@@ -29,10 +29,8 @@
  #include <string.h>
  #include <assert.h>
  #include <ctype.h>
 -#include <unistd.h>
  #include <errno.h>
  #include <time.h>
- #include <dirent.h>
+-#include <dirent.h>
+ #include <ftw.h>
+ 
+ #include "cutils.h"
 diff --git a/unicode_gen.c b/unicode_gen.c
 index c793ba1..95230e1 100644
 --- a/unicode_gen.c
