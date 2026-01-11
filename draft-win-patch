@@ -508,7 +508,7 @@ index e55ca61..18f142a 100644
          char *arg = argv[optind] + 1;
          const char *longopt = "";
 diff --git a/quickjs-libc.c b/quickjs-libc.c
-index c24b6d5..ea38152 100644
+index c24b6d5..c463785 100644
 --- a/quickjs-libc.c
 +++ b/quickjs-libc.c
 @@ -1,5 +1,4 @@
@@ -893,7 +893,7 @@ index c24b6d5..ea38152 100644
  #if !defined(_WIN32)
      OS_FLAG(S_IFSOCK),
 diff --git a/quickjs.c b/quickjs.c
-index e30d393..4b2247c 100644
+index e30d393..866b469 100644
 --- a/quickjs.c
 +++ b/quickjs.c
 @@ -22,13 +22,17 @@
@@ -1285,6 +1285,18 @@ index 92cc000..0e262d7 100644
  }
  
  JS_BOOL JS_StrictEq(JSContext *ctx, JSValueConst op1, JSValueConst op2);
+diff --git a/run-test262.c b/run-test262.c
+index 100ed13..32ac2b4 100644
+--- a/run-test262.c
++++ b/run-test262.c
+@@ -29,7 +29,6 @@
+ #include <string.h>
+ #include <assert.h>
+ #include <ctype.h>
+-#include <unistd.h>
+ #include <errno.h>
+ #include <time.h>
+ #include <dirent.h>
 diff --git a/unicode_gen.c b/unicode_gen.c
 index c793ba1..95230e1 100644
 --- a/unicode_gen.c
