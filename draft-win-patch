@@ -1286,19 +1286,20 @@ index 92cc000..0e262d7 100644
  
  JS_BOOL JS_StrictEq(JSContext *ctx, JSValueConst op1, JSValueConst op2);
 diff --git a/run-test262.c b/run-test262.c
-index 100ed13..27cabc9 100644
+index 100ed13..2251564 100644
 --- a/run-test262.c
 +++ b/run-test262.c
-@@ -22,6 +22,8 @@
+@@ -22,6 +22,9 @@
   * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
   * THE SOFTWARE.
   */
-+ 
++
++#define _CRT_NO_TIME_T
 +#include <pthread.h>
  #include <stdlib.h>
  #include <stdio.h>
  #include <stdarg.h>
-@@ -29,16 +31,14 @@
+@@ -29,16 +32,14 @@
  #include <string.h>
  #include <assert.h>
  #include <ctype.h>
@@ -1317,7 +1318,7 @@ index 100ed13..27cabc9 100644
  /* enable test262 thread support to test SharedArrayBuffer and Atomics */
  #define CONFIG_AGENT
  
-@@ -435,8 +435,6 @@ static JSValue js_evalScript(JSContext *ctx, JSValue this_val,
+@@ -435,8 +436,6 @@ static JSValue js_evalScript(JSContext *ctx, JSValue this_val,
  
  #ifdef CONFIG_AGENT
  
@@ -1326,7 +1327,7 @@ index 100ed13..27cabc9 100644
  typedef struct {
      struct list_head link;
      pthread_t tid;
-@@ -2036,7 +2034,7 @@ void run_test_dir_list(namelist_t *lp, int start_index, int stop_index)
+@@ -2036,7 +2035,7 @@ void run_test_dir_list(namelist_t *lp, int start_index, int stop_index)
  
  void help(void)
  {
