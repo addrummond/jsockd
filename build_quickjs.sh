@@ -127,7 +127,7 @@ for platform in $platforms; do
             # TODO checksum
             curl -o msvcr100.dll https://people.torproject.org/~gk/mirrors/sources/msvcr100.dll
             /c/Program\ Files\ */GnuWin32/bin/make.exe clean
-            /c/Program\ Files\ */GnuWin32/bin/make.exe CONFIG_WIN32=y CC=cl HOST_CC=cl CFLAGS='/nologo /std:c17 /experimental:c11atomics -Ipthreads-win32-include -D_WINSOCKAPI_' LDFLAGS='/LIBPATH:pthreads-win32-lib pthreadVC2.lib'
+            /c/Program\ Files\ */GnuWin32/bin/make.exe -d CONFIG_WIN32=y CC=cl HOST_CC=cl CFLAGS='/nologo /std:c17 /experimental:c11atomics -Ipthreads-win32-include -D_WINSOCKAPI_' LDFLAGS='/LIBPATH:pthreads-win32-lib pthreadVC2.lib'
             ;;
         mac_arm64)
             if [ "$OS" = "Darwin" ] && [ "$ARCH" = "arm64" ]; then
