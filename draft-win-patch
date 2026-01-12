@@ -248,7 +248,7 @@ index 52ff164..bdda10a 100644
                                                        const char *fmt, ...)
  {
 diff --git a/cutils.h b/cutils.h
-index 094a8f1..ca39037 100644
+index 094a8f1..bb6ae82 100644
 --- a/cutils.h
 +++ b/cutils.h
 @@ -25,15 +25,23 @@
@@ -345,7 +345,7 @@ index 094a8f1..ca39037 100644
 +  else GetSystemTimeAsFileTime(&ft);
 +
 +  struct timespec ts;
-+  filetime_to_§timespec(&ft, &ts);
++  filetime_to_timespec(&ft, &ts);
 +  tv->tv_sec  = ts.tv_sec;
 +  tv->tv_usec = (long)(ts.tv_nsec / 1000);
 +  return 0;
