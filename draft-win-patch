@@ -1286,20 +1286,21 @@ index 92cc000..0e262d7 100644
  
  JS_BOOL JS_StrictEq(JSContext *ctx, JSValueConst op1, JSValueConst op2);
 diff --git a/run-test262.c b/run-test262.c
-index 100ed13..2251564 100644
+index 100ed13..b92c0f8 100644
 --- a/run-test262.c
 +++ b/run-test262.c
-@@ -22,6 +22,9 @@
+@@ -22,6 +22,10 @@
   * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
   * THE SOFTWARE.
   */
-+
++ 
++#include "cutils.h"
 +#define _CRT_NO_TIME_T
 +#include <pthread.h>
  #include <stdlib.h>
  #include <stdio.h>
  #include <stdarg.h>
-@@ -29,16 +32,14 @@
+@@ -29,16 +33,13 @@
  #include <string.h>
  #include <assert.h>
  #include <ctype.h>
@@ -1309,7 +1310,7 @@ index 100ed13..2251564 100644
 -#include <dirent.h>
 -#include <ftw.h>
  
- #include "cutils.h"
+-#include "cutils.h"
  #include "list.h"
  #include "quickjs-libc.h"
  
