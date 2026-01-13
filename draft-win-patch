@@ -1,7 +1,16 @@
 diff --git a/Makefile b/Makefile
-index dcbbf7e..92f3bf8 100644
+index dcbbf7e..6ffe5ec 100644
 --- a/Makefile
 +++ b/Makefile
+@@ -54,7 +54,7 @@ PREFIX?=/usr/local
+ # use UB sanitizer
+ #CONFIG_UBSAN=y
+ 
+-# TEST262 bootstrap config: commit id and shallow "since" parameter
++# TEST262 bootstrap config: commit id and shallow "sinte" parameter
+ TEST262_COMMIT?=d0994d64b07cb6c164dd9f345c94ed797a53d69f
+ TEST262_SINCE?=2025-09-01
+ 
 @@ -132,7 +132,6 @@ else
    HOST_CC=gcc
    CC=$(CROSS_PREFIX)gcc
@@ -10,8 +19,48 @@ index dcbbf7e..92f3bf8 100644
    ifdef CONFIG_LTO
      AR=$(CROSS_PREFIX)gcc-ar
    else
-@@ -258,22 +257,22 @@ $(OBJDIR):
- 	mkdir -p $(OBJDIR) $(OBJDIR)/examples $(OBJDIR)/tests
+@@ -206,7 +205,7 @@ endif
+ endif
+ endif
+ 
+-PROGS=qjs$(EXE) qjsc$(EXE) run-test262$(EXE)
++PROGS=qjs$(EXE) qjsc$(EXE)
+ 
+ ifneq ($(CROSS_PREFIX),)
+ QJSC_CC=gcc
+@@ -221,26 +220,6 @@ ifdef CONFIG_LTO
+ PROGS+=libquickjs.lto.a
+ endif
+ 
+-# examples
+-ifeq ($(CROSS_PREFIX),)
+-ifndef CONFIG_ASAN
+-ifndef CONFIG_MSAN
+-ifndef CONFIG_UBSAN
+-PROGS+=examples/hello examples/test_fib
+-# no -m32 option in qjsc
+-ifndef CONFIG_M32
+-ifndef CONFIG_WIN32
+-PROGS+=examples/hello_module
+-endif
+-endif
+-ifdef CONFIG_SHARED_LIBS
+-PROGS+=examples/fib.so examples/point.so
+-endif
+-endif
+-endif
+-endif
+-endif
+-
+ all: $(OBJDIR) $(OBJDIR)/quickjs.check.o $(OBJDIR)/qjs.check.o $(PROGS)
+ 
+ QJS_LIB_OBJS=$(OBJDIR)/quickjs.o $(OBJDIR)/dtoa.o $(OBJDIR)/libregexp.o $(OBJDIR)/libunicode.o $(OBJDIR)/cutils.o $(OBJDIR)/quickjs-libc.o
+@@ -255,25 +234,25 @@ endif
+ LIBS+=$(EXTRA_LIBS)
+ 
+ $(OBJDIR):
+-	mkdir -p $(OBJDIR) $(OBJDIR)/examples $(OBJDIR)/tests
++	mkdir -p $(OBJDIR)
  
  qjs$(EXE): $(QJS_OBJS)
 -	$(CC) $(LDFLAGS) $(LDEXPORT) -o $@ $^ $(LIBS)
@@ -39,7 +88,7 @@ index dcbbf7e..92f3bf8 100644
  
  libfuzzer: fuzz_eval fuzz_compile fuzz_regexp
  
-@@ -281,7 +280,7 @@ ifneq ($(CROSS_PREFIX),)
+@@ -281,7 +260,7 @@ ifneq ($(CROSS_PREFIX),)
  
  $(QJSC): $(OBJDIR)/qjsc.host.o \
      $(patsubst %.o, %.host.o, $(QJS_LIB_OBJS))
@@ -48,7 +97,7 @@ index dcbbf7e..92f3bf8 100644
  
  endif #CROSS_PREFIX
  
-@@ -322,42 +321,42 @@ libunicode-table.h: unicode_gen
+@@ -322,42 +301,42 @@ libunicode-table.h: unicode_gen
  endif
  
  run-test262$(EXE): $(OBJDIR)/run-test262.o $(QJS_LIB_OBJS)
@@ -103,7 +152,7 @@ index dcbbf7e..92f3bf8 100644
  
  clean:
  	rm -f repl.c out.c
-@@ -390,10 +389,10 @@ HELLO_OPTS=-fno-string-normalize -fno-map -fno-promise -fno-typedarray \
+@@ -390,10 +369,10 @@ HELLO_OPTS=-fno-string-normalize -fno-map -fno-promise -fno-typedarray \
             -fno-date -fno-module-loader
  
  hello.c: $(QJSC) $(HELLO_SRCS)
@@ -116,7 +165,7 @@ index dcbbf7e..92f3bf8 100644
  
  # example of static JS compilation with modules
  HELLO_MODULE_SRCS=examples/hello_module.js
-@@ -409,7 +408,7 @@ test_fib.c: $(QJSC) examples/test_fib.js
+@@ -409,7 +388,7 @@ test_fib.c: $(QJSC) examples/test_fib.js
  	$(QJSC) -e -M examples/fib.so,fib -m -o $@ examples/test_fib.js
  
  examples/test_fib: $(OBJDIR)/test_fib.o $(OBJDIR)/examples/fib.o libquickjs$(LTOEXT).a
@@ -125,7 +174,7 @@ index dcbbf7e..92f3bf8 100644
  
  examples/fib.so: $(OBJDIR)/examples/fib.pic.o
  	$(CC) $(LDFLAGS) -shared -o $@ $^
-@@ -536,10 +535,10 @@ tests/bjson.so: $(OBJDIR)/tests/bjson.pic.o
+@@ -536,10 +515,10 @@ tests/bjson.so: $(OBJDIR)/tests/bjson.pic.o
  BENCHMARKDIR=../quickjs-benchmarks
  
  run_sunspider_like: $(BENCHMARKDIR)/run_sunspider_like.c
