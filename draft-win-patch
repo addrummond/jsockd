@@ -1,5 +1,5 @@
 diff --git a/Makefile b/Makefile
-index dcbbf7e..6ffe5ec 100644
+index dcbbf7e..2673b05 100644
 --- a/Makefile
 +++ b/Makefile
 @@ -54,7 +54,7 @@ PREFIX?=/usr/local
@@ -97,6 +97,25 @@ index dcbbf7e..6ffe5ec 100644
  
  endif #CROSS_PREFIX
  
+@@ -301,15 +280,15 @@ LTOEXT=
+ endif
+ 
+ libquickjs$(LTOEXT).a: $(QJS_LIB_OBJS)
+-	$(AR) rcs $@ $^
++	$(AR) /OUT:$@ $^
+ 
+ ifdef CONFIG_LTO
+ libquickjs.a: $(patsubst %.o, %.nolto.o, $(QJS_LIB_OBJS))
+-	$(AR) rcs $@ $^
++	$(AR) /OUT:$@ $^
+ endif # CONFIG_LTO
+ 
+ libquickjs.fuzz.a: $(patsubst %.o, %.fuzz.o, $(QJS_LIB_OBJS))
+-	$(AR) rcs $@ $^
++	$(AR) /OUT:$@ $^
+ 
+ repl.c: $(QJSC) repl.js
+ 	$(QJSC) -s -c -o $@ -m repl.js
 @@ -322,42 +301,42 @@ libunicode-table.h: unicode_gen
  endif
  
