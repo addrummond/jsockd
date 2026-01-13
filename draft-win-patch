@@ -248,16 +248,14 @@ index 52ff164..bdda10a 100644
                                                        const char *fmt, ...)
  {
 diff --git a/cutils.h b/cutils.h
-index 094a8f1..71c7e17 100644
+index 094a8f1..238503a 100644
 --- a/cutils.h
 +++ b/cutils.h
-@@ -25,15 +25,25 @@
+@@ -25,15 +25,23 @@
  #ifndef CUTILS_H
  #define CUTILS_H
  
-+#ifndef CUTILS_NOTIME
 +#include <time.h>
-+#endif
 +#ifndef WINSOCK2_INCLUDED_
 +#include <winsock2.h>   // defines struct timeval, FD_SET, select(), etc.
 +#endif
@@ -282,7 +280,7 @@ index 094a8f1..71c7e17 100644
  
  #define xglue(x, y) x ## y
  #define glue(x, y) xglue(x, y)
-@@ -149,15 +159,15 @@ static inline int ctz64(uint64_t a)
+@@ -149,15 +157,15 @@ static inline int ctz64(uint64_t a)
      return __builtin_ctzll(a);
  }
  
@@ -301,7 +299,7 @@ index 094a8f1..71c7e17 100644
      uint16_t v;
  };
  
-@@ -316,7 +326,7 @@ static inline int dbuf_put_u64(DynBuf *s, uint64_t val)
+@@ -316,7 +324,7 @@ static inline int dbuf_put_u64(DynBuf *s, uint64_t val)
      }
  }
  
@@ -310,7 +308,7 @@ index 094a8f1..71c7e17 100644
                                                        const char *fmt, ...);
  void dbuf_free(DynBuf *s);
  static inline BOOL dbuf_error(DynBuf *s) {
-@@ -414,7 +424,7 @@ static inline uint16_t tofp16(double d)
+@@ -414,7 +422,7 @@ static inline uint16_t tofp16(double d)
      uint64_t a, addend;
      uint32_t v, sgn;
      int shift;
@@ -319,7 +317,7 @@ index 094a8f1..71c7e17 100644
      a = float64_as_uint64(d);
      sgn = a >> 63;
      a = a & 0x7fffffffffffffff;
-@@ -454,4 +464,76 @@ static inline int isfp16zero(uint16_t v)
+@@ -454,4 +462,76 @@ static inline int isfp16zero(uint16_t v)
      return (v & 0x7FFF) == 0;
  }
  
@@ -1297,22 +1295,21 @@ index 92cc000..0e262d7 100644
  
  JS_BOOL JS_StrictEq(JSContext *ctx, JSValueConst op1, JSValueConst op2);
 diff --git a/run-test262.c b/run-test262.c
-index 100ed13..62f55f7 100644
+index 100ed13..64b7f55 100644
 --- a/run-test262.c
 +++ b/run-test262.c
-@@ -22,6 +22,11 @@
+@@ -22,6 +22,10 @@
   * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
   * THE SOFTWARE.
   */
 +
-+#define CUTILS_NOTIME 
++#define _CRT_NO_TIME_T
 +#include "cutils.h"
-+//#define _CRT_NO_TIME_T
 +#include <pthread.h>
  #include <stdlib.h>
  #include <stdio.h>
  #include <stdarg.h>
-@@ -29,16 +34,13 @@
+@@ -29,16 +33,13 @@
  #include <string.h>
  #include <assert.h>
  #include <ctype.h>
@@ -1331,7 +1328,7 @@ index 100ed13..62f55f7 100644
  /* enable test262 thread support to test SharedArrayBuffer and Atomics */
  #define CONFIG_AGENT
  
-@@ -435,8 +437,6 @@ static JSValue js_evalScript(JSContext *ctx, JSValue this_val,
+@@ -435,8 +436,6 @@ static JSValue js_evalScript(JSContext *ctx, JSValue this_val,
  
  #ifdef CONFIG_AGENT
  
@@ -1340,7 +1337,7 @@ index 100ed13..62f55f7 100644
  typedef struct {
      struct list_head link;
      pthread_t tid;
-@@ -2036,7 +2036,7 @@ void run_test_dir_list(namelist_t *lp, int start_index, int stop_index)
+@@ -2036,7 +2035,7 @@ void run_test_dir_list(namelist_t *lp, int start_index, int stop_index)
  
  void help(void)
  {
