@@ -126,8 +126,10 @@ for platform in $platforms; do
             curl -fsSL --disable-epsv --ftp-method nocwd -o pthreadVC2.dll                     "$BASE_FTP/dll/x64/pthreadVC2.dll"
             # TODO checksum
             curl -o msvcr100.dll https://people.torproject.org/~gk/mirrors/sources/msvcr100.dll
-            "/c/Program\ Files\ */GnuWin32/bin/make.exe" clean
-            "/c/Program\ Files\ */GnuWin32/bin/make.exe" -d CONFIG_WIN32=y CC=cl HOST_CC=cl AR=lib CFLAGS='/nologo /std:c17 /experimental:c11atomics -Ipthreads-win32-include -D_WINSOCKAPI_ -DWIN32_LEAN_AND_MEAN' LDFLAGS='/LIBPATH:pthreads-win32-lib pthreadVC2.lib'
+            # shellcheck disable=SC2211
+            /c/Program\ Files\ */GnuWin32/bin/make.exe clean
+            # shellcheck disable=SC2211
+            /c/Program\ Files\ */GnuWin32/bin/make.exe -d CONFIG_WIN32=y CC=cl HOST_CC=cl AR=lib CFLAGS='/nologo /std:c17 /experimental:c11atomics -Ipthreads-win32-include -D_WINSOCKAPI_ -DWIN32_LEAN_AND_MEAN' LDFLAGS='/LIBPATH:pthreads-win32-lib pthreadVC2.lib'
             ;;
         mac_arm64)
             if [ "$OS" = "Darwin" ] && [ "$ARCH" = "arm64" ]; then
