@@ -145,8 +145,9 @@ jobs:
           set PATH="C:\msys64\usr\bin;%PATH%"
           cd ${{ github.workspace }}
           rem Download ProcDump for crash dump capture
-          wget https://download.sysinternals.com/files/Procdump.zip
-          tar -xzf Procdump.zip
+          "%LOCALAPPDATA%\Microsoft\WinGet\Links\wget.exe" https://download.sysinternals.com/files/Procdump.zip
+          set EXE="%programfiles%\git\bin\sh.exe"
+          %EXE% -c "tar -xzf Procdump.zip"
           rem Prepare diagnostics directories and files
           mkdir dumps 2>NUL
           set EXE="%programfiles%\git\bin\sh.exe"
