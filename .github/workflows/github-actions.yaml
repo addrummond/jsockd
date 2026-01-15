@@ -138,6 +138,7 @@ jobs:
           arch: x64
       - name: Set up tools
         shell: cmd
+        timeout-minutes: 5
         run: |
           # Try to disable Windows Error Reporting UI dialogs
           reg add "HKLM\SOFTWARE\Microsoft\Windows\Windows Error Reporting" /v DontShowUI /t REG_DWORD /d 1 /f
