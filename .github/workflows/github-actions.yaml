@@ -154,6 +154,7 @@ jobs:
           set CMD_ARGS=build_quickjs.sh windows_x64_msvc
           rem Run the build command under ProcDump to capture unhandled exceptions
           if exist "%CD%\procdump64.exe" (
+            procdump64.exe -accepteula
             procdump64.exe -e -ma -x "%CD%\dumps" %EXE% %CMD_ARGS%
           ) else (
             echo ProcDump not found, running without crash dump capture
