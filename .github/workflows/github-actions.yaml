@@ -147,7 +147,7 @@ jobs:
           rem Download ProcDump for crash dump capture
           "%LOCALAPPDATA%\Microsoft\WinGet\Links\wget.exe" https://download.sysinternals.com/files/Procdump.zip
           set EXE="%programfiles%\git\bin\sh.exe"
-          %EXE% -c "tar -xzf Procdump.zip"
+          %EXE% -c "unzip Procdump.zip"
           rem Prepare diagnostics directories and files
           mkdir dumps 2>NUL
           set EXE="%programfiles%\git\bin\sh.exe"
