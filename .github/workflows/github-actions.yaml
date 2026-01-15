@@ -147,21 +147,15 @@ jobs:
           rem Download ProcDump for crash dump capture
           "%LOCALAPPDATA%\Microsoft\WinGet\Links\wget.exe" https://download.sysinternals.com/files/Procdump.zip
           set EXE="%programfiles%\git\bin\sh.exe"
+          rem 63e9f73771301cb19be6dafdc010bca6dd42a06561c756c1d3726fa369105d06a1916e33d3b737dd2a6e8ab17ae26b1bfce061fdea520a5adaf5d41cb245c20b
           %EXE% -c "unzip Procdump.zip"
           rem Prepare diagnostics directories and files
           mkdir dumps 2>NUL
           set CMD_ARGS=build_quickjs.sh windows_x64_msvc
-          set OUT=%CD%\build_stdout.txt
-          set ERR=%CD%\build_stderr.txt
           rem Run the build command under ProcDump to capture unhandled exceptions
           if exist "%CD%\procdump64.exe" (
-            procdump64.exe -e -ma -x "%CD%\dumps" %EXE% %CMD_ARGS% 1> "%OUT%" 2> "%ERR%"
+            procdump64.exe -e -ma -x "%CD%\dumps" %EXE% %CMD_ARGS%
           ) else (
             echo ProcDump not found, running without crash dump capture
-            %EXE% %CMD_ARGS% 1> "%OUT%" 2> "%ERR%"
+            %EXE% %CMD_ARGS%
           )
-          rem Echo tail of logs to console for quick visibility
-          echo ==== build_stdout.txt (tail) ====
-          powershell -Command "Get-Content '%OUT%' -Tail 200 | ForEach-Object { $_ }"
-          echo ==== build_stderr.txt (tail) ====
-          powershell -Command "Get-Content '%ERR%' -Tail 200 | ForEach-Object { $_ }"
