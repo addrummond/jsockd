@@ -150,22 +150,18 @@ jobs:
           %EXE% -c "unzip Procdump.zip"
           rem Prepare diagnostics directories and files
           mkdir dumps 2>NUL
-          set EXE="%programfiles%\git\bin\sh.exe"
           set CMD_ARGS=build_quickjs.sh windows_x64_msvc
           set OUT=%CD%\build_stdout.txt
           set ERR=%CD%\build_stderr.txt
           rem Start SxS trace to catch activation context / loader errors
           sxstrace Trace -logfile:sxs.etl
           rem Run the build command under ProcDump to capture unhandled exceptions
-          if exist "%CD%\procdump\procdump.exe" (
-            procdump\procdump.exe -e -ma -x "%CD%\dumps" %EXE% %CMD_ARGS% 1> "%OUT%" 2> "%ERR%"
+          if exist "%CD%\procdump64.exe" (
+            procdump64.exe -e -ma -x "%CD%\dumps" %EXE% %CMD_ARGS% 1> "%OUT%" 2> "%ERR%"
           ) else (
             echo ProcDump not found, running without crash dump capture
             %EXE% %CMD_ARGS% 1> "%OUT%" 2> "%ERR%"
           )
-          rem Stop and parse SxS trace
-          sxstrace StopTrace
-          sxstrace Parse -logfile:sxs.etl -outfile:sxs.txt
           rem Echo tail of logs to console for quick visibility
           echo ==== build_stdout.txt (tail) ====
           powershell -Command "Get-Content '%OUT%' -Tail 200 | ForEach-Object { $_ }"
