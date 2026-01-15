@@ -153,8 +153,6 @@ jobs:
           set CMD_ARGS=build_quickjs.sh windows_x64_msvc
           set OUT=%CD%\build_stdout.txt
           set ERR=%CD%\build_stderr.txt
-          rem Start SxS trace to catch activation context / loader errors
-          sxstrace Trace -logfile:sxs.etl
           rem Run the build command under ProcDump to capture unhandled exceptions
           if exist "%CD%\procdump64.exe" (
             procdump64.exe -e -ma -x "%CD%\dumps" %EXE% %CMD_ARGS% 1> "%OUT%" 2> "%ERR%"
