@@ -136,16 +136,10 @@ jobs:
       - uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: x64
-      - name: Build libquickjs.a
+      - name: Build libquickjs.a and qjsc.exe
         shell: cmd
         timeout-minutes: 5
         run: |
-          # Try to disable Windows Error Reporting UI dialogs
-          reg add "HKLM\SOFTWARE\Microsoft\Windows\Windows Error Reporting" /v DontShowUI /t REG_DWORD /d 1 /f
-          reg add "HKLM\SOFTWARE\Microsoft\Windows\Windows Error Reporting" /v ForceQueue /t REG_DWORD /d 1 /f
-          reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\AeDebug" /v Auto /t REG_SZ /d 1 /f
-          reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\AeDebug" /v Debugger /t REG_SZ /d "" /f
-
           echo Y | winget install -e --id GnuWin32.Make
           echo Y | winget install -e --id JernejSimoncic.Wget
           set PATH="C:\msys64\usr\bin;%PATH%"
