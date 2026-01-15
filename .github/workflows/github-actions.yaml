@@ -136,7 +136,7 @@ jobs:
       - uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: x64
-      - name: Set up tools
+      - name: Build libquickjs.a
         shell: cmd
         timeout-minutes: 5
         run: |
