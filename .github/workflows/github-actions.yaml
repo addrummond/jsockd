@@ -152,6 +152,16 @@ jobs:
           rem Prepare diagnostics directories and files
           mkdir dumps 2>NUL
           set CMD_ARGS=build_quickjs.sh windows_x64_msvc
+          rem Guarded SxS trace: prefer System32, fall back to Sysnative; skip if unavailable
+          set "SXS_EXE=%SystemRoot%\System32\sxstrace.exe"
+          if not exist "%SXS_EXE%" set "SXS_EXE=%SystemRoot%\Sysnative\sxstrace.exe"
+          set "DO_SXS=1"
+          if not exist "%SXS_EXE%" set "DO_SXS="
+          if defined DO_SXS (
+            "%SXS_EXE%" Trace -logfile:sxs.etl
+          ) else (
+            echo sxstrace.exe not available; skipping Side-by-Side trace
+          )
           rem Run the build command under ProcDump to capture unhandled exceptions
           if exist "%CD%\procdump64.exe" (
             procdump64.exe -accepteula
@@ -160,3 +170,19 @@ jobs:
             echo ProcDump not found, running without crash dump capture
             %EXE% %CMD_ARGS%
           )
+          rem Stop and parse SxS trace if we started it
+          if defined DO_SXS (
+            "%SXS_EXE%" StopTrace
+            "%SXS_EXE%" Parse -logfile:sxs.etl -outfile:sxs.txt
+            echo ==== Parsed SxS trace ====
+            type sxs.txt
+          )
+      - name: Upload Windows build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build-diagnostics
+          path: |
+            sxs.etl
+            sxs.txt
+            dumps/*.dmp
