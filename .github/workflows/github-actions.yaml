@@ -158,7 +158,7 @@ jobs:
           set "DO_SXS=1"
           if not exist "%SXS_EXE%" set "DO_SXS="
           if defined DO_SXS (
-            "%SXS_EXE%" Trace -logfile:sxs.etl
+            start /b "" "%SXS_EXE%" Trace -logfile:sxs.etl
           ) else (
             echo sxstrace.exe not available; skipping Side-by-Side trace
           )
