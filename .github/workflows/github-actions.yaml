@@ -140,7 +140,6 @@ jobs:
         shell: cmd
         timeout-minutes: 10
         run: |
-          reg add HKCU\Software\Microsoft\Windows\Windows Error Reporting /v DontShowUI /t REG_DWORD /d 1 /f
           echo Y | winget install -e --id GnuWin32.Make
           echo Y | winget install -e --id JernejSimoncic.Wget
           set PATH="C:\msys64\usr\bin;%PATH%"
