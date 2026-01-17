@@ -136,8 +136,9 @@ for platform in $platforms; do
             # shellcheck disable=SC2211
             touch run-test262
             touch run-test262-debug
-            echo "*** RUNNING make ***"
-            /c/Program\ Files\ */GnuWin32/bin/make.exe CC=../../win-build-utils/fakecl.sh HOST_CC=../../win-build-utils/fakecl.sh AR=.../../win-build-utils/fakear.sh CFLAGS='/std:c17 /experimental:c11atomics -Ipthreads-win32-include -D_WINSOCKAPI_ -DWIN32_LEAN_AND_MEAN' LDFLAGS='/LIBPATH:pthreads-win32-lib pthreadVC2.lib'
+            echo "*** RUNNING make ***"DFLAGS='/LIBPATH:pthreads-win32-lib pthreadVC2.lib'
+            export CL_LDFLAGS='/LIBPATH:pthreads-win32-lib pthreadVC2.lib'
+            /c/Program\ Files\ */GnuWin32/bin/make.exe CC=../../win-build-utils/fakecl.sh HOST_CC=../../win-build-utils/fakecl.sh AR=.../../win-build-utils/fakear.sh CFLAGS='/std:c17 /experimental:c11atomics -Ipthreads-win32-include -D_WINSOCKAPI_ -DWIN32_LEAN_AND_MEAN'
             echo "*** BUILD COMPLETE ***"
             ;;
         mac_arm64)
