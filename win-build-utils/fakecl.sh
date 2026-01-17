@@ -190,7 +190,7 @@ if [ "$mode_compile" -eq 1 ]; then
   # /Fo for object output; if multiple sources and single -o given, cl writes multiple .obj ignoring /Fo file form
   fo=""
   if [ -n "$outfile" ]; then
-    fo="/Fo:$outfile"
+    fo="/Fo\"$outfile\""
   fi
   set -x
   exec cl $cflags $incflags $defflags $undefs $other_cl ${fo:+"$fo"} $srcs
