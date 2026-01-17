@@ -118,16 +118,18 @@ for platform in $platforms; do
             mkdir pthreads-win32-lib
             echo "*** DOWNLOADING pthreads-win32 ***"
             BASE_FTP='ftp://sourceware.org/pub/pthreads-win32/prebuilt-dll-2-9-1-release'
-            curl -fsSL --disable-epsv --ftp-method nocwd -o pthreads-win32-include/pthread.h   "$BASE_FTP/include/pthread.h"
-            curl -fsSL --disable-epsv --ftp-method nocwd -o pthreads-win32-include/sched.h     "$BASE_FTP/include/sched.h"
-            curl -fsSL --disable-epsv --ftp-method nocwd -o pthreads-win32-include/semaphore.h "$BASE_FTP/include/semaphore.h"
-            curl -fsSL --disable-epsv --ftp-method nocwd -o pthreads-win32-include/pthread.h   "$BASE_FTP/include/pthread.h"
-            curl -fsSL --disable-epsv --ftp-method nocwd -o pthreads-win32-lib/pthreadVC2.lib  "$BASE_FTP/lib/x64/pthreadVC2.lib"
+            curl -fSL --disable-epsv --ftp-method nocwd -o pthreads-win32-include/pthread.h   "$BASE_FTP/include/pthread.h"
+            curl -fSL --disable-epsv --ftp-method nocwd -o pthreads-win32-include/sched.h     "$BASE_FTP/include/sched.h"
+            curl -fSL --disable-epsv --ftp-method nocwd -o pthreads-win32-include/semaphore.h "$BASE_FTP/include/semaphore.h"
+            curl -fSL --disable-epsv --ftp-method nocwd -o pthreads-win32-include/pthread.h   "$BASE_FTP/include/pthread.h"
+            curl -fSL --disable-epsv --ftp-method nocwd -o pthreads-win32-lib/pthreadVC2.lib  "$BASE_FTP/lib/x64/pthreadVC2.lib"
             # DLLs in cwd next to executable
-            curl -fsSL --disable-epsv --ftp-method nocwd -o pthreadVC2.dll                     "$BASE_FTP/dll/x64/pthreadVC2.dll"
+            curl -fSL --disable-epsv --ftp-method nocwd -o pthreadVC2.dll                     "$BASE_FTP/dll/x64/pthreadVC2.dll"
             echo "*** DOWNLOADING msvcr100.dll ***"
             # TODO checksum
             curl -o msvcr100.dll https://people.torproject.org/~gk/mirrors/sources/msvcr100.dll
+            echo "Listing downloaded files"
+            ls -l pthreads-win32-include pthreads-win32-lib *.dll
             # shellcheck disable=SC2211
             echo "*** RUNNING make clean ***"
             /c/Program\ Files\ */GnuWin32/bin/make.exe clean

@@ -1,5 +1,5 @@
 diff --git a/Makefile b/Makefile
-index dcbbf7e..81c04cd 100644
+index dcbbf7e..c2bba55 100644
 --- a/Makefile
 +++ b/Makefile
 @@ -54,7 +54,7 @@ PREFIX?=/usr/local
@@ -115,7 +115,7 @@ index dcbbf7e..81c04cd 100644
 +	$(AR) /OUT:$@ $^
  
  repl.c: $(QJSC) repl.js
-+	"${ProgramFilesx86}\Windows Kits\10\Debuggers\x64\cdb.ex" -c "g;q" $(QJSC)
++	"${ProgramFilesx86}\Windows Kits\10\Debuggers\x64\cdb.exe" -c "g;q" $(QJSC)
  	$(QJSC) -s -c -o $@ -m repl.js
  
  ifneq ($(wildcard unicode/UnicodeData.txt),)
