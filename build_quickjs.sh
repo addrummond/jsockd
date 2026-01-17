@@ -112,7 +112,7 @@ for platform in $platforms; do
             mv libquickjs.a "/tmp/libquickjs_${OS}_${ARCH}_Release.a"
             ;;
         windows_x64_msvc)
-            if [ -z "SKIP_SETUP" ]; then
+            if [ -z "$SKIP_SETUP" ]; then
                 windows_x64_msvc=1
                 git apply ../../draft-win-patch
                 mkdir pthreads-win32-include
