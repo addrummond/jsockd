@@ -6,7 +6,7 @@
 # - Requires cl.exe and link.exe (MSVC) in PATH.
 # - Strips unknown gcc flags safely.
 # - Handles -c compilation and linking for exe or dll (-shared).
-# - Translates -I, -D, -U, -O*, -g, -o, -L/-l, -shared.
+# - Translates -I, -D, -U, -O*, -o, -L/-l, -shared.
 # - Ignores: -fPIC, -Wall/-Wextra/-Werror, -std=*, -pedantic, -pipe, -M*, -fno-*, -fvisibility=*, etc.
 
 set -eu
@@ -106,10 +106,6 @@ while [ "$#" -gt 0 ]; do
         -MF|-MT|-MQ) [ "$#" -gt 0 ] && shift ;;
       esac
       ;;
-    -pthread)
-      # map to cl/MT lib selection: simplest is add pthreadVC2.lib if present; otherwise ignore
-      append libs pthreadVC2.lib
-      ;;
     -static)
       # cl/link does static linking differently; ignore or add /MT if you specifically want static CRT
       append cflags /MT
@@ -200,7 +196,6 @@ if [ "$mode_shared" -eq 1 ]; then
 else
   # EXE
   if [ -n "$outfile" ]; then
-    case "$outfile" in /*|\\*) ;; *) outfile=".\\$outfile" ;; esac
     fe="/Fe$outfile"
   fi
   ldkind="exe"
@@ -220,4 +215,4 @@ linkargs="$other_link"
 
 # Execute cl for compile+link
 set -x
-exec cl $cflags $incflags $defflags $undefs $other_cl $fe $srcs $objs_arg $linksep $linkargs $CL_LDFLAGS
+exec cl /nologo $cflags $incflags $defflags $undefs $other_cl $fe $srcs $objs_arg $linksep $linkargs $CL_LDFLAGS
