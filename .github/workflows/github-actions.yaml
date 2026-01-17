@@ -166,7 +166,7 @@ jobs:
           rem Run the build command under ProcDump to capture unhandled exceptions
           if exist "%CD%\procdump64.exe" (
             procdump64.exe -accepteula
-            procdump64.exe -h -l -t -e -ma -x -at 60 "%CD%\dumps" %EXE% %CMD_ARGS%
+            procdump64.exe -h -l -t -e -ma -at 60 -x "%CD%\dumps" %EXE% %CMD_ARGS%
           ) else (
             echo ProcDump not found, running without crash dump capture
             %EXE% %CMD_ARGS%
@@ -177,16 +177,6 @@ jobs:
             "%SXS_EXE%" Parse -logfile:sxs.etl -outfile:sxs.txt
             echo ==== Parsed SxS trace ====
             type sxs.txt
-          )
-          rem Run qjsc.exe --help under ProcDump with increasing DLL-load dump count up to 10
-          if exist "%CD%\.scratch\qjsc.exe" (
-            for /L %%N in (1,1,10) do (
-              echo ==== ProcDump DLL-load loop iteration %%N ====
-              procdump64.exe -accepteula
-              procdump64.exe -ld -n %%N -at 30 -x "%CD%\dumps" "%CD%\.scratch\qjsc.exe"--help
-            )
-          ) else (
-            echo qjsc.exe not found; skipping ProcDump DLL-load loop
           )
       - name: Upload Windows build diagnostics
         if: always()
