@@ -190,28 +190,7 @@ if [ "$mode_compile" -eq 1 ]; then
   # /Fo for object output; if multiple sources and single -o given, cl writes multiple .obj ignoring /Fo file form
   fo=""
   if [ -n "$outfile" ]; then
-    case "$outfile" in
-      *.obj) fo="/Fo$outfile" ;;
-      *) # treat as directory if ends with slash, else map to obj name by first src
-         # cl supports /Fo<dir> to place objects in a directory (ending with backslash)
-         # We try directory if exists
-         if [ -d "$outfile" ]; then
-           fo="/Fo$outfile\\"
-         else
-           base="$(basename "$outfile")"
-           case "$base" in
-             *.obj) fo="/Fo$outfile" ;;
-             *)
-               # derive obj name from first source
-               first_src="${srcs%% *}"
-               baseobj="$(basename "$first_src")"
-               baseobj="${baseobj%.*}.obj"
-               fo="/Fo$baseobj"
-               ;;
-           esac
-         fi
-         ;;
-    esac
+    fo="/Fo$outfile"
   fi
   set -x
   exec cl $cflags $incflags $defflags $undefs $other_cl ${fo:+"$fo"} $srcs
