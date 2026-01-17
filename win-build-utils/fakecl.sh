@@ -182,8 +182,6 @@ if [ -z "$srcs" ] && [ -z "$objs" ]; then
   exit 2
 fi
 
-# Build compile flags
-append cflags /nologo
 # Default to C17 if available; comment out if your toolset lacks /std:c17
 # append cflags /std:c17
 
@@ -255,4 +253,4 @@ echo "<About to execute>: $cflags $incflags $defflags $undefs $other_cl ${fe:+"$
 
 # Execute cl for compile+link
 set -x
-exec cl $cflags $incflags $defflags $undefs $other_cl ${fe:+"$fe"} $srcs $objs_arg $linksep $linkargs
+exec cl /nologo $cflags $incflags $defflags $undefs $other_cl ${fe:+"$fe"} $srcs $objs_arg $linksep $linkargs
