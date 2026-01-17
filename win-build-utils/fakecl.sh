@@ -72,17 +72,17 @@ while [ "$#" -gt 0 ]; do
     -I*)
       val="${arg#-I}"
       if [ -z "$val" ] && [ "$#" -gt 0 ]; then val="$1"; shift; fi
-      [ -n "$val" ] && append incflags "/I$val"
+      [ -n "$val" ] && append incflags "/I $val"
       ;;
     -D*)
       val="${arg#-D}"
       if [ -z "$val" ] && [ "$#" -gt 0 ]; then val="$1"; shift; fi
-      [ -n "$val" ] && append defflags "/D$val"
+      [ -n "$val" ] && append defflags "/D $val"
       ;;
     -U*)
       val="${arg#-U}"
       if [ -z "$val" ] && [ "$#" -gt 0 ]; then val="$1"; shift; fi
-      [ -n "$val" ] && append undefs "/U$val"
+      [ -n "$val" ] && append undefs "/U $val"
       ;;
     -L*)
       val="${arg#-L}"
