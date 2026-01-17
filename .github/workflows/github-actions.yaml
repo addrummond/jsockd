@@ -166,7 +166,7 @@ jobs:
           rem Run the build command under ProcDump to capture unhandled exceptions
           if exist "%CD%\procdump64.exe" (
             procdump64.exe -accepteula
-            procdump64.exe -h -t -e -ma -x "%CD%\dumps" %EXE% %CMD_ARGS%
+            procdump64.exe -h -l -t -e -ma -x "%CD%\dumps" %EXE% %CMD_ARGS%
           ) else (
             echo ProcDump not found, running without crash dump capture
             %EXE% %CMD_ARGS%
