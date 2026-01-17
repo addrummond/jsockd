@@ -143,7 +143,7 @@ jobs:
           reg add "HKCU\Software\Microsoft\Windows\Windows Error Reporting" /v DontShowUI /t REG_DWORD /d 1 /f
           echo Y | winget install -e --id GnuWin32.Make
           echo Y | winget install -e --id JernejSimoncic.Wget
-          echo Y | winget install -e --id Microsoft.WindowsSDK10.0.22000
+          echo Y | winget install -e --id "Microsoft.WindowsSDK10.0.22000"
           rem for easier access from POSIX shell
           set "ProgramFilesx86=%ProgramFiles(x86)%"
           set PATH="C:\msys64\usr\bin;%PATH%"
