@@ -130,6 +130,8 @@ for platform in $platforms; do
             curl -o msvcr100.dll https://people.torproject.org/~gk/mirrors/sources/msvcr100.dll
             echo "Listing downloaded files"
             ls -l pthreads-win32-include pthreads-win32-lib *.dll
+            # Unblock all DLLs in current working directory (clears MOTW to avoid loader prompts/scans)
+            powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-ChildItem -Path . -Filter '*.dll' | Unblock-File"
             # shellcheck disable=SC2211
             echo "*** RUNNING make clean ***"
             /c/Program\ Files\ */GnuWin32/bin/make.exe clean
