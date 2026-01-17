@@ -135,7 +135,7 @@ for platform in $platforms; do
             export CL_LDFLAGS='/LIBPATH:pthreads-win32-lib pthreadVC2.lib'
             echo "*** RUNNING make with selected targets ***"
             # shellcheck disable=SC2211
-            /c/Program\ Files\ */GnuWin32/bin/make.exe .obj .obj/quickjs-libc.o .obj/quickjs.check.o .obj/qjs.check.o .obj/qjsc.o ./qjsc ./host-qjsc libquickjs.a CC=../../win-build-utils/fakecl.sh HOST_CC=../../win-build-utils/fakecl.sh AR=.../../win-build-utils/fakear.sh CFLAGS='/O2 /std:c17 /experimental:c11atomics -Ipthreads-win32-include -D_WINSOCKAPI_ -DWIN32_LEAN_AND_MEAN'
+            /c/Program\ Files\ */GnuWin32/bin/make.exe qjsc host-qjsc libquickjs.a CC=../../win-build-utils/fakecl.sh HOST_CC=../../win-build-utils/fakecl.sh AR=.../../win-build-utils/fakear.sh CFLAGS='/O2 /std:c17 /experimental:c11atomics -Ipthreads-win32-include -D_WINSOCKAPI_ -DWIN32_LEAN_AND_MEAN'
             echo "*** BUILD COMPLETE ***"
             ;;
         mac_arm64)
