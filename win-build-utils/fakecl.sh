@@ -190,6 +190,7 @@ if [ "$mode_compile" -eq 1 ]; then
   # /Fo for object output; if multiple sources and single -o given, cl writes multiple .obj ignoring /Fo file form
   fo=""
   if [ -n "$outfile" ]; then
+    case "$outfile" in /*|\\*) ;; *) outfile=".\$outfile" ;; esac
     fo="/Fo$outfile"
   fi
   set -x
