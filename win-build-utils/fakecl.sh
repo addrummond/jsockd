@@ -49,12 +49,6 @@ map_opt() {
   esac
 }
 
-# Map debug info
-map_debug() {
-  # cl: /Zi for PDB, /Z7 for object-embedded (older style)
-  append cflags /Zi
-}
-
 # Parse args
 i=1
 while [ "$#" -gt 0 ]; do
@@ -88,9 +82,6 @@ while [ "$#" -gt 0 ]; do
       ;;
     -O*)
       map_opt "$arg"
-      ;;
-    -g)
-      map_debug
       ;;
     # Language and warnings (strip or map minimally)
     -Wall|-Wextra|-Werror|-Wno-*)
@@ -180,9 +171,6 @@ if [ -z "$srcs" ] && [ -z "$objs" ]; then
   exit 2
 fi
 
-# Alex D - handle some weird quoting issues
-outfile=$(eval echo "$outfile")
-
 # Default to C17 if available; comment out if your toolset lacks /std:c17
 # append cflags /std:c17
 
@@ -227,9 +215,9 @@ fi
 # Final link flags (via /link separator)
 linksep="/link"
 linkargs="$other_link"
-[ -n "$libdirs" ] && linkargs="$libdirs ${linkargs:+$linkargs}"
-[ -n "$libs" ] && linkargs="$linkargs ${libs:+$libs}"
+[ -n "$libdirs" ] && linkargs="$libdirs $linkargs"
+[ -n "$libs" ] && linkargs="$linkargs $libs"
 
 # Execute cl for compile+link
 set -x
-exec cl /nologo $cflags $incflags $defflags $undefs $other_cl $fe $srcs $objs_arg $linksep $linkargs $CL_LDFLAGS
+exec cl $cflags $incflags $defflags $undefs $other_cl $fe $srcs $objs_arg $linksep $linkargs $CL_LDFLAGS
