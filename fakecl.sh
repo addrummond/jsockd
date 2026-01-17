@@ -261,6 +261,8 @@ linkargs="$other_link"
 [ -n "$libdirs" ] && linkargs="$libdirs ${linkargs:+$linkargs}"
 [ -n "$libs" ] && linkargs="$linkargs ${libs:+$libs}"
 
+echo "<About to execute>: $cflags $incflags $defflags $undefs $other_cl ${fe:+"$fe"} $srcs $objs_arg $linksep $linkargs"
+
 # Execute cl for compile+link
 set -x
 exec cl $cflags $incflags $defflags $undefs $other_cl ${fe:+"$fe"} $srcs $objs_arg $linksep $linkargs
