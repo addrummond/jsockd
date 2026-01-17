@@ -112,6 +112,9 @@ while [ "$#" -gt 0 ]; do
       ;;
     -static-libgcc|-static-libstdc++)
       : ;;
+    -g)
+      # ignore
+      ;;
     -Wl,*)
       # linker flags: parse minimal /SUBSYSTEM or /NODEFAULTLIB if needed
       lflags="${arg#-Wl,}"
