@@ -231,4 +231,4 @@ linkargs="$other_link"
 
 # Execute cl for compile+link
 set -x
-exec cl /nologo $cflags $incflags $defflags $undefs $other_cl $fe $srcs $objs_arg $linksep $linkargs
+exec cmd "cl /nologo $cflags $incflags $defflags $undefs $other_cl $fe $srcs $objs_arg $linksep $linkargs"
