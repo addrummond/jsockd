@@ -112,26 +112,24 @@ for platform in $platforms; do
             mv libquickjs.a "/tmp/libquickjs_${OS}_${ARCH}_Release.a"
             ;;
         windows_x64_msvc)
-            if [ -z "$SKIP_SETUP" ]; then
-                windows_x64_msvc=1
-                git apply ../../draft-win-patch
-                mkdir pthreads-win32-include
-                mkdir pthreads-win32-lib
-                echo "*** DOWNLOADING pthreads-win32 ***"
-                BASE_FTP='ftp://sourceware.org/pub/pthreads-win32/prebuilt-dll-2-9-1-release'
-                curl -fSL --disable-epsv --ftp-method nocwd -o pthreads-win32-include/pthread.h   "$BASE_FTP/include/pthread.h"
-                curl -fSL --disable-epsv --ftp-method nocwd -o pthreads-win32-include/sched.h     "$BASE_FTP/include/sched.h"
-                curl -fSL --disable-epsv --ftp-method nocwd -o pthreads-win32-include/semaphore.h "$BASE_FTP/include/semaphore.h"
-                curl -fSL --disable-epsv --ftp-method nocwd -o pthreads-win32-include/pthread.h   "$BASE_FTP/include/pthread.h"
-                curl -fSL --disable-epsv --ftp-method nocwd -o pthreads-win32-lib/pthreadVC2.lib  "$BASE_FTP/lib/x64/pthreadVC2.lib"
-                # DLLs in cwd next to executable
-                curl -fSL --disable-epsv --ftp-method nocwd -o pthreadVC2.dll                     "$BASE_FTP/dll/x64/pthreadVC2.dll"
-                cp "/c/Windows/System32/msvcr100.dll" ./
-                echo "Listing downloaded files"
-                ls -l pthreads-win32-include pthreads-win32-lib *.dll
-                # Unblock all DLLs in current working directory (clears MOTW to avoid loader prompts/scans)
-                powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-ChildItem -Path . -Filter '*.dll' | Unblock-File"
-            fi
+            windows_x64_msvc=1
+            git apply ../../draft-win-patch
+            mkdir pthreads-win32-include
+            mkdir pthreads-win32-lib
+            echo "*** DOWNLOADING pthreads-win32 ***"
+            BASE_FTP='ftp://sourceware.org/pub/pthreads-win32/prebuilt-dll-2-9-1-release'
+            curl -fSL --disable-epsv --ftp-method nocwd -o pthreads-win32-include/pthread.h   "$BASE_FTP/include/pthread.h"
+            curl -fSL --disable-epsv --ftp-method nocwd -o pthreads-win32-include/sched.h     "$BASE_FTP/include/sched.h"
+            curl -fSL --disable-epsv --ftp-method nocwd -o pthreads-win32-include/semaphore.h "$BASE_FTP/include/semaphore.h"
+            curl -fSL --disable-epsv --ftp-method nocwd -o pthreads-win32-include/pthread.h   "$BASE_FTP/include/pthread.h"
+            curl -fSL --disable-epsv --ftp-method nocwd -o pthreads-win32-lib/pthreadVC2.lib  "$BASE_FTP/lib/x64/pthreadVC2.lib"
+            # DLLs in cwd next to executable
+            curl -fSL --disable-epsv --ftp-method nocwd -o pthreadVC2.dll                     "$BASE_FTP/dll/x64/pthreadVC2.dll"
+            cp "/c/Windows/System32/msvcr100.dll" ./
+            echo "Listing downloaded files"
+            ls -l pthreads-win32-include pthreads-win32-lib *.dll
+            # Unblock all DLLs in current working directory (clears MOTW to avoid loader prompts/scans)
+            powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-ChildItem -Path . -Filter '*.dll' | Unblock-File"
             # shellcheck disable=SC2211
             echo "*** RUNNING make clean ***"
             /c/Program\ Files\ */GnuWin32/bin/make.exe clean
