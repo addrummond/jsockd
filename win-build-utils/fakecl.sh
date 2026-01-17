@@ -254,4 +254,5 @@ linkargs="$other_link"
 echo "<About to execute>: $cflags $incflags $defflags $undefs $other_cl ${fe:+"$fe"} $srcs $objs_arg $linksep $linkargs"
 
 # Execute cl for compile+link
-cl $cflags $incflags $defflags $undefs $other_cl ${fe:+"$fe"} $srcs $objs_arg $linksep $linkargs
+set -x
+exec cl $cflags $incflags $defflags $undefs $other_cl ${fe:+"$fe"} $srcs $objs_arg $linksep $linkargs
