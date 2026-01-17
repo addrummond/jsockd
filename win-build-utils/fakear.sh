@@ -79,12 +79,14 @@ case "$op" in
     fi
     # Use members as-is
     log "lib /OUT:$libfile $members"
+    set -x
     exec cmd "/c lib /NOLOGO /OUT:\"$libfile\" $members"
     ;;
 
   t)
     # List archive contents: lib /LIST libfile
     log "lib /LIST $libfile"
+    set -x
     exec cmd "/c lib /NOLOGO /LIST \"$libfile\""
     ;;
 
@@ -101,6 +103,7 @@ case "$op" in
     done
     # MSVC lib rewrites the archive; provide /OUT explicitly
     log "lib $remargs /OUT:$libfile $libfile"
+    set -x
     exec cmd "/c lib /NOLOGO $remargs /OUT:\"$libfile\" \"$libfile\""
     ;;
 
@@ -115,6 +118,7 @@ case "$op" in
       append exargs "/EXTRACT:$m"
     done
     log "lib $exargs $libfile"
+    set -x
     exec cmd "/c lib /NOLOGO $exargs \"$libfile\""
     ;;
 
