@@ -53,8 +53,6 @@ map_opt() {
 map_debug() {
   # cl: /Zi for PDB, /Z7 for object-embedded (older style)
   append cflags /Zi
-  # Favor fast link PDB to reduce link time
-  append other_link /DEBUG:FASTLINK
 }
 
 # Parse args
@@ -181,6 +179,9 @@ if [ -z "$srcs" ] && [ -z "$objs" ]; then
   echo "error: no input files" >&2
   exit 2
 fi
+
+# Alex D - handle some weird quoting issues
+outfile=$(eval echo "$outfile")
 
 # Default to C17 if available; comment out if your toolset lacks /std:c17
 # append cflags /std:c17
