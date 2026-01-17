@@ -190,7 +190,7 @@ if [ "$mode_compile" -eq 1 ]; then
   # /Fo for object output; if multiple sources and single -o given, cl writes multiple .obj ignoring /Fo file form
   fo=""
   if [ -n "$outfile" ]; then
-    case "$outfile" in /*|\\*) ;; *) outfile=".\$outfile" ;; esac
+    case "$outfile" in /*|\\*) ;; *) outfile=".\\$outfile" ;; esac
     fo="/Fo$outfile"
   fi
   set -x
@@ -206,14 +206,14 @@ if [ "$mode_shared" -eq 1 ]; then
   # DLL: /LD and /Fe for DLL name (cl accepts .dll target name)
   append cflags /LD
   if [ -n "$outfile" ]; then
-    case "$outfile" in /*|\\*) ;; *) outfile=".\$outfile" ;; esac
+    case "$outfile" in /*|\\*) ;; *) outfile=".\\$outfile" ;; esac
     fe="/Fe$outfile"
   fi
   ldkind="dll"
 else
   # EXE
   if [ -n "$outfile" ]; then
-    case "$outfile" in /*|\\*) ;; *) outfile=".\$outfile" ;; esac
+    case "$outfile" in /*|\\*) ;; *) outfile=".\\$outfile" ;; esac
     fe="/Fe$outfile"
   fi
   ldkind="exe"
