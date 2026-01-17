@@ -135,7 +135,7 @@ for platform in $platforms; do
             # remove unwanted targets from Makefile
             sed 's/^\(PROGS=.*\) run-test262\$(EXE)\(.*\)$/\1\2/' Makefile > output.mk && mv output.mk Makefile
             echo "*** RUNNING make ***"
-            WPWD=$(cygpath -w "$PWD")
+            WPWD=$(cygpath -w $(dirname $(dirname "$PWD")))
             # shellcheck disable=SC2211
             /c/Program\ Files\ */GnuWin32/bin/make.exe CC=../../win-build-utils/fakecl.sh HOST_CC=../../win-build-utils/fakecl.sh AR=../../win-build-utils/fakear.sh CFLAGS="/FI $WPWD\\builtins.h /O2 /std:c17 /experimental:c11atomics -Ipthreads-win32-include -D_WINSOCKAPI_ -DWIN32_LEAN_AND_MEAN"
             echo "*** BUILD COMPLETE ***"
