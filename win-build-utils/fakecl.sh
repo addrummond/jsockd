@@ -69,16 +69,6 @@ while [ "$#" -gt 0 ]; do
       [ "$#" -gt 0 ] || { echo "error: -o requires an argument" >&2; exit 2; }
       outfile="$1"; shift
       ;;
-    -I*)
-      val="${arg#-I}"
-      if [ -z "$val" ] && [ "$#" -gt 0 ]; then val="$1"; shift; fi
-      [ -n "$val" ] && append incflags "/I $val"
-      ;;
-    -D*)
-      val="${arg#-D}"
-      if [ -z "$val" ] && [ "$#" -gt 0 ]; then val="$1"; shift; fi
-      [ -n "$val" ] && append defflags "/D $val"
-      ;;
     -U*)
       val="${arg#-U}"
       if [ -z "$val" ] && [ "$#" -gt 0 ]; then val="$1"; shift; fi
