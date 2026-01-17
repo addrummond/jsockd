@@ -74,9 +74,9 @@ while [ "$#" -gt 0 ]; do
     -l*)
       val="${arg#-l}"
       if [ -z "$val" ] && [ "$#" -gt 0 ]; then val="$1"; shift; fi
-      # Turn -lfoo into foo.lib unless it already ends with .lib, or it's -lm
+      # Turn -lfoo into foo.lib unless it already ends with .lib, or it's -lm or -lpthread
       case "$val" in
-        m) ;;
+        m|pthread) ;;
         *.lib) append libs "$val" ;;
         *) append libs "$val.lib" ;;
       esac
