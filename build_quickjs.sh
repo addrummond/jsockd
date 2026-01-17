@@ -125,7 +125,7 @@ for platform in $platforms; do
             curl -fSL --disable-epsv --ftp-method nocwd -o pthreads-win32-lib/pthreadVC2.lib  "$BASE_FTP/lib/x64/pthreadVC2.lib"
             # DLLs in cwd next to executable
             curl -fSL --disable-epsv --ftp-method nocwd -o pthreadVC2.dll                     "$BASE_FTP/dll/x64/pthreadVC2.dll"
-            cp "$SystemRoot/System32/msvcr100.dll" ./
+            cp "/c/Windows/System32/msvcr100.dll" ./
             echo "Listing downloaded files"
             ls -l pthreads-win32-include pthreads-win32-lib *.dll
             # Unblock all DLLs in current working directory (clears MOTW to avoid loader prompts/scans)
