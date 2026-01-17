@@ -114,9 +114,6 @@ for platform in $platforms; do
         windows_x64_msvc)
             windows_x64_msvc=1
             git apply ../../draft-win-patch
-            cp ../../fakecl.sh ./
-            cp ../../fakear.sh ./
-            chmod +x ../../fakecl.sh ../../fakear.sh
             mkdir pthreads-win32-include
             mkdir pthreads-win32-lib
             echo "*** DOWNLOADING pthreads-win32 ***"
@@ -140,7 +137,7 @@ for platform in $platforms; do
             touch run-test262
             touch run-test262-debug
             echo "*** RUNNING make ***"
-            /c/Program\ Files\ */GnuWin32/bin/make.exe CC=./fakecl.sh HOST_CC=./fakecl.sh AR=./fakear.sh CFLAGS='/nologo /std:c17 /experimental:c11atomics -Ipthreads-win32-include -D_WINSOCKAPI_ -DWIN32_LEAN_AND_MEAN' LDFLAGS='/LIBPATH:pthreads-win32-lib pthreadVC2.lib'
+            /c/Program\ Files\ */GnuWin32/bin/make.exe CC=../../win-build-utils/fakecl.sh HOST_CC=../../win-build-utils/fakecl.sh AR=.../../win-build-utils/fakear.sh CFLAGS='/nologo /std:c17 /experimental:c11atomics -Ipthreads-win32-include -D_WINSOCKAPI_ -DWIN32_LEAN_AND_MEAN' LDFLAGS='/LIBPATH:pthreads-win32-lib pthreadVC2.lib'
             echo "*** BUILD COMPLETE ***"
             ;;
         mac_arm64)
