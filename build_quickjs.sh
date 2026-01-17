@@ -132,12 +132,10 @@ for platform in $platforms; do
             powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-ChildItem -Path . -Filter '*.dll' | Unblock-File"
             echo "*** RUNNING make clean ***"
             # shellcheck disable=SC2211
-            /c/Program\ Files\ */GnuWin32/bin/make.exe clean
-            unwanted_targets="run-test262 run-test262.exe run-test262.o run-test262-debug"
-            touch $unwanted_targets
             export CL_LDFLAGS='/LIBPATH:pthreads-win32-lib pthreadVC2.lib'
+            echo "*** RUNNING make with selected targets ***"
             # shellcheck disable=SC2211
-            /c/Program\ Files\ */GnuWin32/bin/make.exe -o $unwanted_targets CC=../../win-build-utils/fakecl.sh HOST_CC=../../win-build-utils/fakecl.sh AR=.../../win-build-utils/fakear.sh CFLAGS='/O2 /std:c17 /experimental:c11atomics -Ipthreads-win32-include -D_WINSOCKAPI_ -DWIN32_LEAN_AND_MEAN'
+            /c/Program\ Files\ */GnuWin32/bin/make.exe .obj .obj/quickjs.check.o .obj/qjs.check.o qjsc libquickjs.a CC=../../win-build-utils/fakecl.sh HOST_CC=../../win-build-utils/fakecl.sh AR=.../../win-build-utils/fakear.sh CFLAGS='/O2 /std:c17 /experimental:c11atomics -Ipthreads-win32-include -D_WINSOCKAPI_ -DWIN32_LEAN_AND_MEAN'
             echo "*** BUILD COMPLETE ***"
             ;;
         mac_arm64)
