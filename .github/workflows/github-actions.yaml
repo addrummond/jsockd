@@ -179,11 +179,11 @@ jobs:
             type sxs.txt
           )
           rem Run qjsc.exe --help under ProcDump with increasing DLL-load dump count up to 10
-          if exist "%CD%\quickjs\build\windows_x64_msvc\qjsc.exe" (
+          if exist "%CD%\.scratch\qjsc.exe" (
             for /L %%N in (1,1,10) do (
               echo ==== ProcDump DLL-load loop iteration %%N ====
               procdump64.exe -accepteula
-              procdump64.exe -ld -n %%N -at 30 -x "%CD%\dumps" "%CD%\quickjs\build\windows_x64_msvc\qjsc.exe" --help
+              procdump64.exe -ld -n %%N -at 30 -x "%CD%\dumps" "%CD%\.scratch\qjsc.exe"--help
             )
           ) else (
             echo qjsc.exe not found; skipping ProcDump DLL-load loop
