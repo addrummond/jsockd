@@ -190,8 +190,8 @@ if [ "$mode_compile" -eq 1 ]; then
   # /Fo for object output; if multiple sources and single -o given, cl writes multiple .obj ignoring /Fo file form
   fo=""
   if [ -n "$outfile" ]; then
-    case "$outfile" in /*|\\*) ;; *) outfile=".\\$outfile" ;; esac
-    fo="/Fo$outfile"
+    case "$outfile" in /*|\\*) ;; *) outfile="$outfile" ;; esac
+    fo="/Fo:$outfile"
   fi
   set -x
   exec cl $cflags $incflags $defflags $undefs $other_cl ${fo:+"$fo"} $srcs
@@ -207,14 +207,14 @@ if [ "$mode_shared" -eq 1 ]; then
   append cflags /LD
   if [ -n "$outfile" ]; then
     case "$outfile" in /*|\\*) ;; *) outfile=".\\$outfile" ;; esac
-    fe="/Fe$outfile"
+    fe="/Fe:$outfile"
   fi
   ldkind="dll"
 else
   # EXE
   if [ -n "$outfile" ]; then
     case "$outfile" in /*|\\*) ;; *) outfile=".\\$outfile" ;; esac
-    fe="/Fe$outfile"
+    fe="/Fe:$outfile"
   fi
   ldkind="exe"
 fi
