@@ -193,7 +193,7 @@ if [ "$mode_compile" -eq 1 ]; then
     fo="/Fo$outfile"
   fi
   set -x
-  exec cl /nologo $cflags $incflags $defflags $undefs $other_cl $fo $srcs
+  exec cl /nologo -c $cflags $incflags $defflags $undefs $other_cl $fo $srcs
 fi
 
 # Linking path: produce EXE or DLL
