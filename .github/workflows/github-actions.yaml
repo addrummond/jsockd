@@ -128,7 +128,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.TOKEN }}
         run: ./ci.sh github_actions_create_release $(basename "${{ github.ref }}")
   windows:
-    runs-on: windows-latest
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v6
         with:
