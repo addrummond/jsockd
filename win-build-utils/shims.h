@@ -1,9 +1,9 @@
 #pragma once
 
+#include <time.h>
 #ifndef WINSOCK2_INCLUDED_
 #include <winsock2.h>   // defines struct timeval, FD_SET, select(), etc.
 #endif
-#include <sys/time.h>
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
