@@ -14,6 +14,7 @@
 #define force_inline
 #define no_inline
 #define __maybe_unused
+#define __exception
 
 #ifndef CLOCK_REALTIME
 #define CLOCK_REALTIME 0
