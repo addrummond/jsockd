@@ -20,6 +20,7 @@
 #define no_inline __declspec(noinline)
 #define __maybe_unused
 #define __exception
+#define __builtin_except(e,_) (e)
 
 #ifndef CLOCK_REALTIME
 #define CLOCK_REALTIME 0
