@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdint.h>
 #include <time.h>
 #ifndef WINSOCK2_INCLUDED_
 #include <winsock2.h>   // defines struct timeval, FD_SET, select(), etc.
