@@ -1,5 +1,10 @@
 #pragma once
 
+#ifdef _TIME_T_DEFINED
+#define _CRT_NO_TIME_T
+#endif
+#include <time.h>
+
 #include <stdint.h>
 #ifndef WINSOCK2_INCLUDED_
 #include <winsock2.h>   // defines struct timeval, FD_SET, select(), etc.
