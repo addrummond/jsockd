@@ -1,634 +1,77 @@
-commit 6666e251a803042c24f3635c0b6fce2cb5565942
-Author: Alex Drummond <a.d.drummond@gmail.com>
-Date:   Mon Jan 19 19:15:48 2026 +0000
-
-    patch commit
-
-diff --git a/qjs.c b/qjs.c
-index 0224f7c..01c3c50 100644
---- a/qjs.c
-+++ b/qjs.c
-@@ -290,8 +290,8 @@ static size_t get_suffixed_size(const char *str)
- 
- void help(void)
- {
--    printf("QuickJS version " CONFIG_VERSION "\n"
--           "usage: " PROG_NAME " [options] [file [args]]\n"
-+    printf("QuickJS version \n"
-+           "usage: [options] [file [args]]\n"
-            "-h  --help         list options\n"
-            "-e  --eval EXPR    evaluate EXPR\n"
-            "-i  --interactive  go to interactive mode\n"
-diff --git a/qjsc.c b/qjsc.c
-index e55ca61..4798381 100644
---- a/qjsc.c
-+++ b/qjsc.c
-@@ -392,8 +392,8 @@ static const char main_c_template2[] =
- 
- void help(void)
- {
--    printf("QuickJS Compiler version " CONFIG_VERSION "\n"
--           "usage: " PROG_NAME " [options] [files]\n"
-+    printf("QuickJS Compiler version " "\n"
-+           "usage: " " [options] [files]\n"
-            "\n"
-            "options are:\n"
-            "-c          only output bytecode to a C file\n"
-@@ -603,7 +603,7 @@ int main(int argc, char **argv)
-     namelist_add(&cmodule_list, "std", "std", 0);
-     namelist_add(&cmodule_list, "os", "os", 0);
- 
--    optind = 1;
-+    int optind = 1;
-     while (optind < argc && *argv[optind] == '-') {
-         char *arg = argv[optind] + 1;
-         const char *longopt = "";
 diff --git a/quickjs-libc.c b/quickjs-libc.c
-index c24b6d5..60eba23 100644
+index c24b6d5..b17ee41 100644
 --- a/quickjs-libc.c
 +++ b/quickjs-libc.c
-@@ -932,15 +932,14 @@ static void js_std_file_finalizer(JSRuntime *rt, JSValue val)
-     JSSTDFile *s = JS_GetOpaque(val, js_std_file_class_id);
-     if (s) {
-         if (s->f && s->close_in_finalizer) {
--            if (s->is_popen)
--                pclose(s->f);
--            else
--                fclose(s->f);
-+            fclose(s->f);
-         }
-         js_free_rt(rt, s);
-     }
- }
+@@ -4297,8 +4297,14 @@ JSValue js_std_await(JSContext *ctx, JSValue obj)
+             if (err == 0) {
+                 js_std_promise_rejection_check(ctx);
  
-+typedef SSIZE_T ssize_t;
-+
- static ssize_t js_get_errno(ssize_t ret)
- {
-     if (ret == -1)
-@@ -1036,42 +1035,6 @@ static JSValue js_std_open(JSContext *ctx, JSValueConst this_val,
-     return JS_EXCEPTION;
- }
- 
--static JSValue js_std_popen(JSContext *ctx, JSValueConst this_val,
--                            int argc, JSValueConst *argv)
--{
--    const char *filename, *mode = NULL;
--    FILE *f;
--    int err;
--
--    filename = JS_ToCString(ctx, argv[0]);
--    if (!filename)
--        goto fail;
--    mode = JS_ToCString(ctx, argv[1]);
--    if (!mode)
--        goto fail;
--    if (mode[strspn(mode, "rw")] != '\0') {
--        JS_ThrowTypeError(ctx, "invalid file mode");
--        goto fail;
--    }
--
--    f = popen(filename, mode);
--    if (!f)
--        err = errno;
--    else
--        err = 0;
--    if (argc >= 3)
--        js_set_error_object(ctx, argv[2], err);
--    JS_FreeCString(ctx, filename);
--    JS_FreeCString(ctx, mode);
--    if (!f)
--        return JS_NULL;
--    return js_new_std_file(ctx, f, TRUE, TRUE);
-- fail:
--    JS_FreeCString(ctx, filename);
--    JS_FreeCString(ctx, mode);
--    return JS_EXCEPTION;
--}
--
- static JSValue js_std_fdopen(JSContext *ctx, JSValueConst this_val,
-                              int argc, JSValueConst *argv)
- {
-@@ -1176,10 +1139,7 @@ static JSValue js_std_file_close(JSContext *ctx, JSValueConst this_val,
-         return JS_EXCEPTION;
-     if (!s->f)
-         return JS_ThrowTypeError(ctx, "invalid file handle");
--    if (s->is_popen)
--        err = js_get_errno(pclose(s->f));
--    else
--        err = js_get_errno(fclose(s->f));
-+    err = js_get_errno(fclose(s->f));
-     s->f = NULL;
-     return JS_NewInt32(ctx, err);
- }
-@@ -1459,162 +1419,6 @@ static int http_get_status(const char *buf)
-     return atoi(p);
- }
- 
--static JSValue js_std_urlGet(JSContext *ctx, JSValueConst this_val,
--                             int argc, JSValueConst *argv)
--{
--    const char *url;
--    DynBuf cmd_buf;
--    DynBuf data_buf_s, *data_buf = &data_buf_s;
--    DynBuf header_buf_s, *header_buf = &header_buf_s;
--    char *buf;
--    size_t i, len;
--    int status;
--    JSValue response = JS_UNDEFINED, ret_obj;
--    JSValueConst options_obj;
--    FILE *f;
--    BOOL binary_flag, full_flag;
--
--    url = JS_ToCString(ctx, argv[0]);
--    if (!url)
--        return JS_EXCEPTION;
--
--    binary_flag = FALSE;
--    full_flag = FALSE;
--
--    if (argc >= 2) {
--        options_obj = argv[1];
--
--        if (get_bool_option(ctx, &binary_flag, options_obj, "binary"))
--            goto fail_obj;
--
--        if (get_bool_option(ctx, &full_flag, options_obj, "full")) {
--        fail_obj:
--            JS_FreeCString(ctx, url);
--            return JS_EXCEPTION;
--        }
--    }
--
--    js_std_dbuf_init(ctx, &cmd_buf);
--    dbuf_printf(&cmd_buf, "%s '", URL_GET_PROGRAM);
--    for(i = 0; url[i] != '\0'; i++) {
--        unsigned char c = url[i];
--        switch (c) {
--        case '\'':
--            /* shell single quoted string does not support \' */
--            dbuf_putstr(&cmd_buf, "'\\''");
--            break;
--        case '[': case ']': case '{': case '}': case '\\':
--            /* prevent interpretation by curl as range or set specification */
--            dbuf_putc(&cmd_buf, '\\');
--            /* FALLTHROUGH */
--        default:
--            dbuf_putc(&cmd_buf, c);
--            break;
--        }
--    }
--    JS_FreeCString(ctx, url);
--    dbuf_putstr(&cmd_buf, "'");
--    dbuf_putc(&cmd_buf, '\0');
--    if (dbuf_error(&cmd_buf)) {
--        dbuf_free(&cmd_buf);
--        return JS_EXCEPTION;
--    }
--    //    printf("%s\n", (char *)cmd_buf.buf);
--    f = popen((char *)cmd_buf.buf, "r");
--    dbuf_free(&cmd_buf);
--    if (!f) {
--        return JS_ThrowTypeError(ctx, "could not start curl");
--    }
--
--    js_std_dbuf_init(ctx, data_buf);
--    js_std_dbuf_init(ctx, header_buf);
--
--    buf = js_malloc(ctx, URL_GET_BUF_SIZE);
--    if (!buf)
--        goto fail;
--
--    /* get the HTTP status */
--    if (http_get_header_line(f, buf, URL_GET_BUF_SIZE, NULL) < 0) {
--        status = 0;
--        goto bad_header;
--    }
--    status = http_get_status(buf);
--    if (!full_flag && !(status >= 200 && status <= 299)) {
--        goto bad_header;
--    }
--
--    /* wait until there is an empty line */
--    for(;;) {
--        if (http_get_header_line(f, buf, URL_GET_BUF_SIZE, header_buf) < 0) {
--        bad_header:
--            response = JS_NULL;
--            goto done;
--        }
--        if (!strcmp(buf, "\r\n"))
--            break;
--    }
--    if (dbuf_error(header_buf))
--        goto fail;
--    header_buf->size -= 2; /* remove the trailing CRLF */
--
--    /* download the data */
--    for(;;) {
--        len = fread(buf, 1, URL_GET_BUF_SIZE, f);
--        if (len == 0)
--            break;
--        dbuf_put(data_buf, (uint8_t *)buf, len);
--    }
--    if (dbuf_error(data_buf))
--        goto fail;
--    if (binary_flag) {
--        response = JS_NewArrayBufferCopy(ctx,
--                                         data_buf->buf, data_buf->size);
--    } else {
--        response = JS_NewStringLen(ctx, (char *)data_buf->buf, data_buf->size);
--    }
--    if (JS_IsException(response))
--        goto fail;
-- done:
--    js_free(ctx, buf);
--    buf = NULL;
--    pclose(f);
--    f = NULL;
--    dbuf_free(data_buf);
--    data_buf = NULL;
--
--    if (full_flag) {
--        ret_obj = JS_NewObject(ctx);
--        if (JS_IsException(ret_obj))
--            goto fail;
--        JS_DefinePropertyValueStr(ctx, ret_obj, "response",
--                                  response,
--                                  JS_PROP_C_W_E);
--        if (!JS_IsNull(response)) {
--            JS_DefinePropertyValueStr(ctx, ret_obj, "responseHeaders",
--                                      JS_NewStringLen(ctx, (char *)header_buf->buf,
--                                                      header_buf->size),
--                                      JS_PROP_C_W_E);
--            JS_DefinePropertyValueStr(ctx, ret_obj, "status",
--                                      JS_NewInt32(ctx, status),
--                                      JS_PROP_C_W_E);
--        }
--    } else {
--        ret_obj = response;
--    }
--    dbuf_free(header_buf);
--    return ret_obj;
-- fail:
--    if (f)
--        pclose(f);
--    js_free(ctx, buf);
--    if (data_buf)
--        dbuf_free(data_buf);
--    if (header_buf)
--        dbuf_free(header_buf);
--    JS_FreeValue(ctx, response);
--    return JS_EXCEPTION;
--}
--
- static JSClassDef js_std_file_class = {
-     "FILE",
-     .finalizer = js_std_file_finalizer,
-@@ -1646,14 +1450,12 @@ static const JSCFunctionListEntry js_std_funcs[] = {
-     JS_CFUNC_DEF("setenv", 1, js_std_setenv ),
-     JS_CFUNC_DEF("unsetenv", 1, js_std_unsetenv ),
-     JS_CFUNC_DEF("getenviron", 1, js_std_getenviron ),
--    JS_CFUNC_DEF("urlGet", 1, js_std_urlGet ),
-     JS_CFUNC_DEF("loadFile", 1, js_std_loadFile ),
-     JS_CFUNC_DEF("strerror", 1, js_std_strerror ),
-     JS_CFUNC_DEF("parseExtJSON", 1, js_std_parseExtJSON ),
- 
-     /* FILE I/O */
-     JS_CFUNC_DEF("open", 2, js_std_open ),
--    JS_CFUNC_DEF("popen", 2, js_std_popen ),
-     JS_CFUNC_DEF("fdopen", 2, js_std_fdopen ),
-     JS_CFUNC_DEF("tmpfile", 0, js_std_tmpfile ),
-     JS_CFUNC_MAGIC_DEF("puts", 1, js_std_file_puts, 0 ),
-@@ -1938,18 +1740,7 @@ static JSValue js_os_remove(JSContext *ctx, JSValueConst this_val,
-     filename = JS_ToCString(ctx, argv[0]);
-     if (!filename)
-         return JS_EXCEPTION;
--#if defined(_WIN32)
--    {
--        struct stat st;
--        if (stat(filename, &st) == 0 && S_ISDIR(st.st_mode)) {
--            ret = rmdir(filename);
--        } else {
--            ret = unlink(filename);
--        }
--    }
--#else
-     ret = remove(filename);
--#endif
-     ret = js_get_errno(ret);
-     JS_FreeCString(ctx, filename);
-     return JS_NewInt32(ctx, ret);
-@@ -2699,50 +2490,6 @@ static JSValue js_os_mkdir(JSContext *ctx, JSValueConst this_val,
-     return JS_NewInt32(ctx, ret);
- }
- 
--/* return [array, errorcode] */
--static JSValue js_os_readdir(JSContext *ctx, JSValueConst this_val,
--                             int argc, JSValueConst *argv)
--{
--    const char *path;
--    DIR *f;
--    struct dirent *d;
--    JSValue obj;
--    int err;
--    uint32_t len;
--
--    path = JS_ToCString(ctx, argv[0]);
--    if (!path)
--        return JS_EXCEPTION;
--    obj = JS_NewArray(ctx);
--    if (JS_IsException(obj)) {
--        JS_FreeCString(ctx, path);
--        return JS_EXCEPTION;
--    }
--    f = opendir(path);
--    if (!f)
--        err = errno;
--    else
--        err = 0;
--    JS_FreeCString(ctx, path);
--    if (!f)
--        goto done;
--    len = 0;
--    for(;;) {
--        errno = 0;
--        d = readdir(f);
--        if (!d) {
--            err = errno;
--            break;
--        }
--        JS_DefinePropertyValueUint32(ctx, obj, len++,
--                                     JS_NewString(ctx, d->d_name),
--                                     JS_PROP_C_W_E);
--    }
--    closedir(f);
-- done:
--    return make_obj_error(ctx, obj, err);
--}
--
- #if !defined(_WIN32)
- static int64_t timespec_to_ms(const struct timespec *tv)
- {
-@@ -3939,13 +3686,10 @@ static const JSCFunctionListEntry js_os_funcs[] = {
-     JS_CFUNC_DEF("getcwd", 0, js_os_getcwd ),
-     JS_CFUNC_DEF("chdir", 0, js_os_chdir ),
-     JS_CFUNC_DEF("mkdir", 1, js_os_mkdir ),
--    JS_CFUNC_DEF("readdir", 1, js_os_readdir ),
-     /* st_mode constants */
-     OS_FLAG(S_IFMT),
--    OS_FLAG(S_IFIFO),
-     OS_FLAG(S_IFCHR),
-     OS_FLAG(S_IFDIR),
--    OS_FLAG(S_IFBLK),
-     OS_FLAG(S_IFREG),
- #if !defined(_WIN32)
-     OS_FLAG(S_IFSOCK),
+-                if (os_poll_func)
+-                    os_poll_func(ctx);
++                // Alex D: Attempt to guard agasint an infinite loop that I caused by
++                // setting globalThis.setTimeout = () => {}. This infinite loop is
++                // nasty because it's immune to JS_SetInterrupt. User code shouldn't
++                // be able to lock the interpreter like this (however dumb it is).
++                if (! os_poll_func || os_poll_func(ctx)) {
++                    JS_FreeValue(ctx, obj);
++                    return JS_EXCEPTION;
++                }
+             }
+         } else {
+             /* not a promise */
 diff --git a/quickjs.c b/quickjs.c
-index e30d393..d88059c 100644
+index f86379f..5f88229 100644
 --- a/quickjs.c
 +++ b/quickjs.c
-@@ -47,6 +47,10 @@
- #include "libunicode.h"
- #include "dtoa.h"
+@@ -308,6 +308,8 @@ struct JSRuntime {
+     int shape_hash_count; /* number of hashed shapes */
+     JSShape **shape_hash;
+     void *user_opaque;
++    // Alex D: quickjs-libc makes use of user_opaque, but we need an opaque for our own purposes
++    void *user_opaque2;
+ };
  
-+#include <winsock2.h>   // defines struct timeval, FD_SET, select(), etc.
+ struct JSClass {
+@@ -1714,6 +1716,16 @@ void JS_SetRuntimeOpaque(JSRuntime *rt, void *opaque)
+     rt->user_opaque = opaque;
+ }
+ 
++void *JS_GetRuntimeOpaque2(JSRuntime *rt)
++{
++    return rt->user_opaque2;
++}
 +
-+#pragma comment(lib, "Ws2_32.lib")  // MSVC: auto-link winsock library
++void JS_SetRuntimeOpaque2(JSRuntime *rt, void *opaque)
++{
++    rt->user_opaque2 = opaque;
++}
 +
- #define OPTIMIZE         1
- #define SHORT_OPCODES    1
- #if defined(EMSCRIPTEN)
-@@ -54,6 +58,7 @@
- #else
- #define DIRECT_DISPATCH  1
- #endif
-+#define DIRECT_DISPATCH 0
- 
- #if defined(__APPLE__)
- #define MALLOC_OVERHEAD  0
-@@ -76,6 +81,7 @@
- /* enable stack limitation */
- #define CONFIG_STACK_CHECK
- #endif
-+#undef CONFIG_STACK_CHECK
- 
- 
- /* dump object free */
-@@ -112,6 +118,8 @@
- //#define FORCE_GC_AT_MALLOC
- 
- #ifdef CONFIG_ATOMICS
-+#define _TIMESPEC_DEFINED
-+#undef PTW32_STATIC_LIB
- #include <pthread.h>
- #include <stdatomic.h>
- #include <errno.h>
-@@ -6807,8 +6815,6 @@ void JS_ComputeMemoryUsage(JSRuntime *rt, JSMemoryUsage *s)
- 
- void JS_DumpMemoryUsage(FILE *fp, const JSMemoryUsage *s, JSRuntime *rt)
+ /* default memory allocation functions with memory limitation */
+ static size_t js_def_malloc_usable_size(const void *ptr)
  {
--    fprintf(fp, "QuickJS memory usage -- " CONFIG_VERSION " version, %d-bit, malloc limit: %"PRId64"\n\n",
--            (int)sizeof(void *) * 8, s->malloc_limit);
- #if 1
-     if (rt) {
-         static const struct {
-@@ -7972,7 +7978,7 @@ static int JS_DefinePrivateField(JSContext *ctx, JSValueConst obj,
-         JS_ThrowTypeErrorNotASymbol(ctx);
-         goto fail;
+@@ -2032,9 +2044,11 @@ void JS_FreeRuntime(JSRuntime *rt)
+         if (count != 0)
+             printf("Secondary object leaks: %d\n", count);
      }
--    prop = js_symbol_to_atom(ctx, (JSValue)name);
-+    prop = js_symbol_to_atom(ctx, name);
-     p = JS_VALUE_GET_OBJ(obj);
-     prs = find_own_property(&pr, p, prop);
-     if (prs) {
-@@ -8003,7 +8009,7 @@ static JSValue JS_GetPrivateField(JSContext *ctx, JSValueConst obj,
-     /* safety check */
-     if (unlikely(JS_VALUE_GET_TAG(name) != JS_TAG_SYMBOL))
-         return JS_ThrowTypeErrorNotASymbol(ctx);
--    prop = js_symbol_to_atom(ctx, (JSValue)name);
-+    prop = js_symbol_to_atom(ctx, name);
-     p = JS_VALUE_GET_OBJ(obj);
-     prs = find_own_property(&pr, p, prop);
-     if (!prs) {
-@@ -8030,7 +8036,7 @@ static int JS_SetPrivateField(JSContext *ctx, JSValueConst obj,
-         JS_ThrowTypeErrorNotASymbol(ctx);
-         goto fail;
-     }
--    prop = js_symbol_to_atom(ctx, (JSValue)name);
-+    prop = js_symbol_to_atom(ctx, name);
-     p = JS_VALUE_GET_OBJ(obj);
-     prs = find_own_property(&pr, p, prop);
-     if (!prs) {
-@@ -8129,7 +8135,7 @@ static int JS_CheckBrand(JSContext *ctx, JSValueConst obj, JSValueConst func)
-         return -1;
-     }
-     p = JS_VALUE_GET_OBJ(obj);
--    prs = find_own_property(&pr, p, js_symbol_to_atom(ctx, (JSValue)brand));
-+    prs = find_own_property(&pr, p, js_symbol_to_atom(ctx, brand));
-     return (prs != NULL);
- }
+-#endif
++#else
++    // Alex D: These assertions cause an early exit which then makes Valgrind less useful, as tons of stuff is left unfreed.
+     assert(list_empty(&rt->gc_obj_list));
+     assert(list_empty(&rt->weakref_list));
++#endif
  
-@@ -9952,7 +9958,7 @@ int JS_DefineProperty(JSContext *ctx, JSValueConst this_obj,
-                 return -1;
-             }
-             /* this code relies on the fact that Uint32 are never allocated */
--            val = (JSValueConst)JS_NewUint32(ctx, array_length);
-+            val = JS_NewUint32(ctx, array_length);
-             /* prs may have been modified */
-             prs = find_own_property(&pr, p, prop);
-             assert(prs != NULL);
-@@ -12405,7 +12411,8 @@ static JSValue js_atof(JSContext *ctx, const char *str, const char **pp,
-         if (!(flags & ATOD_INT_ONLY) &&
-             (atod_type == ATOD_TYPE_FLOAT64) &&
-             strstart(p, "Infinity", &p)) {
--            double d = 1.0 / 0.0;
-+	    double zero = 0.0;
-+            double d = 1.0 / zero;
-             if (is_neg)
-                 d = -d;
-             val = JS_NewFloat64(ctx, d);
-@@ -17200,7 +17207,7 @@ static JSValue js_call_c_function(JSContext *ctx, JSValueConst func_obj,
-     rt->current_stack_frame = sf;
-     ctx = p->u.cfunc.realm; /* change the current realm */
-     sf->js_mode = 0;
--    sf->cur_func = (JSValue)func_obj;
-+    sf->cur_func = func_obj;
-     sf->arg_count = argc;
-     arg_buf = argv;
- 
-@@ -17446,7 +17453,7 @@ static JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
-     sf->js_mode = b->js_mode;
-     arg_buf = argv;
-     sf->arg_count = argc;
--    sf->cur_func = (JSValue)func_obj;
-+    sf->cur_func = func_obj;
-     var_refs = p->u.func.var_refs;
- 
-     local_buf = alloca(alloca_size);
-@@ -22816,7 +22823,8 @@ static int json_parse_number(JSParseState *s, const uint8_t **pp)
-     if (!is_digit(*p)) {
-         if (s->ext_json) {
-             if (strstart((const char *)p, "Infinity", (const char **)&p)) {
--                d = 1.0 / 0.0;
-+		double zero = 0;
-+                d = 1.0 / zero;
-                 if (*p_start == '-')
-                     d = -d;
-                 goto done;
-@@ -42567,8 +42575,8 @@ static int64_t JS_FlattenIntoArray(JSContext *ctx, JSValueConst target,
-         if (!JS_IsUndefined(mapperFunction)) {
-             JSValueConst args[3] = { element, JS_NewInt64(ctx, sourceIndex), source };
-             element = JS_Call(ctx, mapperFunction, thisArg, 3, args);
--            JS_FreeValue(ctx, (JSValue)args[0]);
--            JS_FreeValue(ctx, (JSValue)args[1]);
-+            JS_FreeValue(ctx, args[0]);
-+            JS_FreeValue(ctx, args[1]);
-             if (JS_IsException(element))
-                 return -1;
-         }
-@@ -45179,7 +45187,7 @@ static JSValue js_string_match(JSContext *ctx, JSValueConst this_val,
-         str = js_new_string8(ctx, "g");
-         if (JS_IsException(str))
-             goto fail;
--        args[args_len++] = (JSValueConst)str;
-+        args[args_len++] = str;
-     }
-     rx = JS_CallConstructor(ctx, ctx->regexp_ctor, args_len, args);
-     JS_FreeValue(ctx, str);
-@@ -46268,7 +46276,8 @@ static JSValue js_math_min_max(JSContext *ctx, JSValueConst this_val,
-     uint32_t tag;
- 
-     if (unlikely(argc == 0)) {
--        return __JS_NewFloat64(ctx, is_max ? -1.0 / 0.0 : 1.0 / 0.0);
-+	double zero = 0;
-+        return __JS_NewFloat64(ctx, is_max ? -1.0 / zero : 1.0 / zero);
-     }
- 
-     tag = JS_VALUE_GET_TAG(argv[0]);
-@@ -50726,7 +50735,7 @@ static JSValue js_weakref_new(JSContext *ctx, JSValueConst val)
-     } else {
-         assert(JS_IsUndefined(val));
-     }
--    return (JSValue)val;
-+    return val;
- }
- 
- #define MAGIC_SET (1 << 0)
-@@ -50856,7 +50865,7 @@ static JSValue map_normalize_key(JSContext *ctx, JSValue key)
- 
- static JSValueConst map_normalize_key_const(JSContext *ctx, JSValueConst key)
- {
--    return (JSValueConst)map_normalize_key(ctx, (JSValue)key);
-+    return map_normalize_key(ctx, key);
- }
- 
- /* hash multipliers, same as the Linux kernel (see Knuth vol 3,
-@@ -51289,7 +51298,7 @@ static JSValue js_map_forEach(JSContext *ctx, JSValueConst this_val,
-                 args[0] = args[1];
-             else
-                 args[0] = JS_DupValue(ctx, mr->value);
--            args[2] = (JSValue)this_val;
-+            args[2] = this_val;
-             ret = JS_Call(ctx, func, this_arg, 3, (JSValueConst *)args);
-             JS_FreeValue(ctx, args[0]);
-             if (!magic)
-@@ -53006,7 +53015,7 @@ static JSValue js_promise_all(JSContext *ctx, JSValueConst this_val,
-                 goto fail_reject;
-             }
-             resolve_element_data[0] = JS_NewBool(ctx, FALSE);
--            resolve_element_data[1] = (JSValueConst)JS_NewInt32(ctx, index);
-+            resolve_element_data[1] = JS_NewInt32(ctx, index);
-             resolve_element_data[2] = values;
-             resolve_element_data[3] = resolving_funcs[is_promise_any];
-             resolve_element_data[4] = resolve_element_env;
-@@ -53427,7 +53436,7 @@ static JSValue js_async_from_sync_iterator_unwrap_func_create(JSContext *ctx,
- {
-     JSValueConst func_data[1];
- 
--    func_data[0] = (JSValueConst)JS_NewBool(ctx, done);
-+    func_data[0] = JS_NewBool(ctx, done);
-     return JS_NewCFunctionData(ctx, js_async_from_sync_iterator_unwrap,
-                                1, 0, 1, func_data);
- }
-@@ -57750,8 +57759,8 @@ static int js_TA_cmp_generic(const void *a, const void *b, void *opaque) {
-             cmp = (a_idx > b_idx) - (a_idx < b_idx);
-         }
-     done:
--        JS_FreeValue(ctx, (JSValue)argv[0]);
--        JS_FreeValue(ctx, (JSValue)argv[1]);
-+        JS_FreeValue(ctx, argv[0]);
-+        JS_FreeValue(ctx, argv[1]);
-     }
-     return cmp;
- }
+     /* free the classes */
+     for(i = 0; i < rt->class_count; i++) {
 diff --git a/quickjs.h b/quickjs.h
-index 92cc000..0e262d7 100644
+index 92cc000..d13a2ff 100644
 --- a/quickjs.h
 +++ b/quickjs.h
-@@ -64,6 +64,8 @@ typedef uint32_t JSAtom;
- #define JS_NAN_BOXING
- #endif
- 
-+#undef JS_NAN_BOXING
-+
- #if defined(__SIZEOF_INT128__) && (INTPTR_MAX >= INT64_MAX)
- #define JS_LIMB_BITS 64
- #else
-@@ -701,7 +703,7 @@ static inline JSValue JS_DupValue(JSContext *ctx, JSValueConst v)
-         JSRefCountHeader *p = (JSRefCountHeader *)JS_VALUE_GET_PTR(v);
-         p->ref_count++;
-     }
--    return (JSValue)v;
-+    return v;
- }
- 
- static inline JSValue JS_DupValueRT(JSRuntime *rt, JSValueConst v)
-@@ -710,7 +712,7 @@ static inline JSValue JS_DupValueRT(JSRuntime *rt, JSValueConst v)
-         JSRefCountHeader *p = (JSRefCountHeader *)JS_VALUE_GET_PTR(v);
-         p->ref_count++;
-     }
--    return (JSValue)v;
-+    return v;
- }
- 
- JS_BOOL JS_StrictEq(JSContext *ctx, JSValueConst op1, JSValueConst op2);
+@@ -377,6 +377,8 @@ JSRuntime *JS_NewRuntime2(const JSMallocFunctions *mf, void *opaque);
+ void JS_FreeRuntime(JSRuntime *rt);
+ void *JS_GetRuntimeOpaque(JSRuntime *rt);
+ void JS_SetRuntimeOpaque(JSRuntime *rt, void *opaque);
++void *JS_GetRuntimeOpaque2(JSRuntime *rt);
++void JS_SetRuntimeOpaque2(JSRuntime *rt, void *opaque);
+ typedef void JS_MarkFunc(JSRuntime *rt, JSGCObjectHeader *gp);
+ void JS_MarkValue(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func);
+ void JS_RunGC(JSRuntime *rt);
