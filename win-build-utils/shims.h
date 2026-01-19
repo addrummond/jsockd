@@ -30,8 +30,6 @@
 #define CLOCK_MONOTONIC 1
 #endif
 
-#ifndef SHIM_FUNCS__
-#define SHIM_FUNCS__
 static void filetime_to_timespec(const FILETIME* ft, struct timespec* ts) {
   uint64_t t100 = ((uint64_t)ft->dwHighDateTime << 32) | ft->dwLowDateTime;
   /* Difference between Windows epoch (1601) and Unix epoch (1970) in 100ns units */
@@ -96,5 +94,3 @@ static int clock_gettime(int clk_id, struct timespec* ts) {
   ts->tv_sec = 0; ts->tv_nsec = 0;
   return -1;
 }
-
-#endif // SHIM_FUNCS__
