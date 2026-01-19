@@ -62,19 +62,9 @@ static inline int msvc_ctz_u64(unsigned long long x) {
   }
 #endif
 }
+
 /* Map GCC-style builtins to the MSVC-compatible implementations. */
-#ifndef __has_builtin
-  #define __has_builtin(x) 0
-#endif
-#if !__has_builtin(__builtin_clz)
-  #define __builtin_clz  msvc_clz_u32
-#endif
-#if !__has_builtin(__builtin_ctz)
-  #define __builtin_ctz  msvc_ctz_u32
-#endif
-#if !__has_builtin(__builtin_clzll)
-  #define __builtin_clzll msvc_clz_u64
-#endif
-#if !__has_builtin(__builtin_ctzll)
-  #define __builtin_ctzll msvc_ctz_u64
-#endif
+#define __builtin_clz msvc_clz_u32
+#define __builtin_ctz msvc_ctz_u32
+#define __builtin_clzll msvc_clz_u64
+#define __builtin_ctzll msvc_ctz_u64
