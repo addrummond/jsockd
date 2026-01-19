@@ -20,7 +20,7 @@
 #define no_inline __declspec(noinline)
 #define __maybe_unused
 #define __exception
-#define __builtin_except(e,_) (e)
+#define __builtin_expect(e,_) (e)
 
 #ifndef CLOCK_REALTIME
 #define CLOCK_REALTIME 0
@@ -31,7 +31,7 @@
 
 #ifndef SHIM_FUNCS__
 #define SHIM_FUNCS__
-static inline void filetime_to_timespec(const FILETIME* ft, struct timespec* ts) {
+static void filetime_to_timespec(const FILETIME* ft, struct timespec* ts) {
   uint64_t t100 = ((uint64_t)ft->dwHighDateTime << 32) | ft->dwLowDateTime;
   /* Difference between Windows epoch (1601) and Unix epoch (1970) in 100ns units */
   const uint64_t EPOCH_DIFF_100NS = 116444736000000000ULL;
@@ -42,7 +42,7 @@ static inline void filetime_to_timespec(const FILETIME* ft, struct timespec* ts)
 }
 
 /* gettimeofday replacement: tz is ignored (as on many platforms) */
-static inline int gettimeofday(struct timeval* tv, void* tz_unused) {
+static int gettimeofday(struct timeval* tv, void* tz_unused) {
   if (!tv) return -1;
   FILETIME ft;
   /* Prefer precise clock on Win8+ if available */
@@ -63,7 +63,7 @@ static inline int gettimeofday(struct timeval* tv, void* tz_unused) {
   return 0;
 }
 
-static inline int clock_gettime(int clk_id, struct timespec* ts) {
+static int clock_gettime(int clk_id, struct timespec* ts) {
   if (!ts) return -1;
 
   if (clk_id == CLOCK_REALTIME) {
