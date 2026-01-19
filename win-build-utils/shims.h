@@ -1,5 +1,6 @@
 #pragma once
 
+#include <time.h>
 #include <sys/time.h>
 #ifndef WINSOCK2_INCLUDED_
 #include <winsock2.h>   // defines struct timeval, FD_SET, select(), etc.
@@ -34,7 +35,7 @@ static inline void filetime_to_timespec(const FILETIME* ft, struct timespec* ts)
 }
 
 /* gettimeofday replacement: tz is ignored (as on many platforms) */
-static int gettimeofday(struct timeval* tv, void* tz_unused) {
+static inline int gettimeofday(struct timeval* tv, void* tz_unused) {
   if (!tv) return -1;
   FILETIME ft;
   /* Prefer precise clock on Win8+ if available */
