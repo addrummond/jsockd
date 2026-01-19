@@ -114,6 +114,7 @@ for platform in $platforms; do
         windows_x64_msvc)
             windows_x64_msvc=1
             git apply ../../draft-win-patch
+            echo "*** Patch applied ***"
             mkdir pthreads-win32-include
             mkdir pthreads-win32-lib
             echo "*** DOWNLOADING pthreads-win32 ***"
@@ -127,7 +128,7 @@ for platform in $platforms; do
             curl -fSL --disable-epsv --ftp-method nocwd -o pthreadVC2.dll                     "$BASE_FTP/dll/x64/pthreadVC2.dll"
             cp "/c/Windows/System32/msvcr100.dll" ./
             echo "Listing downloaded files"
-            ls -l pthreads-win32-include pthreads-win32-lib *.dll
+            ls -l pthreads-win32-include pthreads-win32-lib *.d ll
             # Unblock all DLLs in current working directory (clears MOTW to avoid loader prompts/scans)
             powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-ChildItem -Path . -Filter '*.dll' | Unblock-File"
             # Get time.h and put it in a 'sys' folder we can add to the include path
