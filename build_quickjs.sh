@@ -133,7 +133,7 @@ for platform in $platforms; do
             powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-ChildItem -Path . -Filter '*.dll' | Unblock-File"
             # Get time.h and put it in a 'sys' folder we can add to the include path
             mkdir -p fakesys/sys
-            find /c/Program\ Files \(x86\) -name 'time.h' -type f -exec cp {} ./fakesys/sys/time.h \;
+            find "/c/Program Files (x86)" -name 'time.h' -type f -exec cp {} ./fakesys/sys/time.h \;
             touch fakesys/unistd.h fakesys/dirent.h fakesys/utime.h
             export CL_LDFLAGS='/LIBPATH:pthreads-win32-lib pthreadVC2.lib'
             # remove unwanted targets from Makefile
