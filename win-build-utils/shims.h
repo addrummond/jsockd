@@ -4,6 +4,7 @@
 #define _CRT_NO_TIME_T
 #endif
 #include <time.h>
+#include <sys/utime.h>
 
 #include <stdint.h>
 #ifndef WINSOCK2_INCLUDED_
