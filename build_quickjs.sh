@@ -133,6 +133,7 @@ for platform in $platforms; do
             # Get time.h and put it in a 'sys' folder we can add to the include path
             mkdir -p fakesys/sys
             find /c/Program\ Files \(x86\) -name 'time.h' -type f -exec cp {} ./fakesys/sys/time.h \;
+            touch fakesys/unistd.h fakesys/dirent.h fakesys/utime.h
             echo "*** RUNNING make clean ***"
             # shellcheck disable=SC2211
             /c/Program\ Files\ */GnuWin32/bin/make.exe clean
