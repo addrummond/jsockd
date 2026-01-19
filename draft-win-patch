@@ -1,3 +1,259 @@
+diff --git a/builtins.h b/builtins.h
+new file mode 100644
+index 0000000..e52276d
+--- /dev/null
++++ b/builtins.h
+@@ -0,0 +1,90 @@
++#pragma once
++
++#if defined(_MSC_VER) && !defined(__clang__)
++  #include <intrin.h>
++
++  /* Optional: make sure the compiler treats these as intrinsics */
++  #pragma intrinsic(_BitScanForward)
++  #pragma intrinsic(_BitScanReverse)
++  #if defined(_M_X64) || defined(_M_AMD64) || defined(_M_ARM64)
++    #pragma intrinsic(_BitScanForward64)
++    #pragma intrinsic(_BitScanReverse64)
++  #endif
++
++  /* Count leading zeros (32-bit). Returns 32 when x == 0. */
++  static inline int msvc_clz_u32(unsigned int x) {
++    if (x == 0) return 32;
++    unsigned long idx; /* 0..31 */
++    _BitScanReverse(&idx, x);
++    return 31 - (int)idx;
++  }
++
++  /* Count trailing zeros (32-bit). Returns 32 when x == 0. */
++  static inline int msvc_ctz_u32(unsigned int x) {
++    if (x == 0) return 32;
++    unsigned long idx; /* 0..31 */
++    _BitScanForward(&idx, x);
++    return (int)idx;
++  }
++
++  /* Count leading zeros (64-bit). Returns 64 when x == 0. */
++  static inline int msvc_clz_u64(unsigned long long x) {
++    if (x == 0) return 64;
++  #if defined(_M_X64) || defined(_M_AMD64) || defined(_M_ARM64)
++    unsigned long idx; /* 0..63 */
++    _BitScanReverse64(&idx, x);
++    return 63 - (int)idx;
++  #else
++    unsigned long idx;
++    unsigned int hi = (unsigned int)(x >> 32);
++    if (hi != 0) {
++      _BitScanReverse(&idx, hi);
++      return 31 - (int)idx; /* highest bit in top 32 => clz = 31 - idx */
++    } else {
++      unsigned int lo = (unsigned int)(x & 0xFFFFFFFFu);
++      _BitScanReverse(&idx, lo);
++      return 63 - (int)idx; /* 32 + (31 - idx) == 63 - idx */
++    }
++  #endif
++  }
++
++  /* Count trailing zeros (64-bit). Returns 64 when x == 0. */
++  static inline int msvc_ctz_u64(unsigned long long x) {
++    if (x == 0) return 64;
++  #if defined(_M_X64) || defined(_M_AMD64) || defined(_M_ARM64)
++    unsigned long idx; /* 0..63 */
++    _BitScanForward64(&idx, x);
++    return (int)idx;
++  #else
++    unsigned long idx;
++    unsigned int lo = (unsigned int)(x & 0xFFFFFFFFu);
++    if (lo != 0) {
++      _BitScanForward(&idx, lo);
++      return (int)idx;
++    } else {
++      unsigned int hi = (unsigned int)(x >> 32);
++      _BitScanForward(&idx, hi);
++      return (int)idx + 32;
++    }
++  #endif
++  }
++
++  /* Map GCC-style builtins to the MSVC-compatible implementations. */
++  #ifndef __has_builtin
++    #define __has_builtin(x) 0
++  #endif
++
++  #if !__has_builtin(__builtin_clz)
++    #define __builtin_clz  msvc_clz_u32
++  #endif
++  #if !__has_builtin(__builtin_ctz)
++    #define __builtin_ctz  msvc_ctz_u32
++  #endif
++  #if !__has_builtin(__builtin_clzll)
++    #define __builtin_clzll msvc_clz_u64
++  #endif
++  #if !__has_builtin(__builtin_ctzll)
++    #define __builtin_ctzll msvc_ctz_u64
++  #endif
++
++#endif /* _MSC_VER && !__clang__ */
+diff --git a/cutils.c b/cutils.c
+index 52ff164..bdda10a 100644
+--- a/cutils.c
++++ b/cutils.c
+@@ -174,6 +174,8 @@ int dbuf_putstr(DynBuf *s, const char *str)
+     return dbuf_put(s, (const uint8_t *)str, strlen(str));
+ }
+ 
++#define __attribute__(...)
++
+ int __attribute__((format(printf, 2, 3))) dbuf_printf(DynBuf *s,
+                                                       const char *fmt, ...)
+ {
+diff --git a/cutils.h b/cutils.h
+index 094a8f1..238503a 100644
+--- a/cutils.h
++++ b/cutils.h
+@@ -25,15 +25,23 @@
+ #ifndef CUTILS_H
+ #define CUTILS_H
+ 
++#include <time.h>
++#ifndef WINSOCK2_INCLUDED_
++#include <winsock2.h>   // defines struct timeval, FD_SET, select(), etc.
++#endif
++#define WIN32_LEAN_AND_MEAN
++#include <windows.h>
++
++#include "builtins.h"
+ #include <stdlib.h>
+ #include <string.h>
+ #include <inttypes.h>
+ 
+-#define likely(x)       __builtin_expect(!!(x), 1)
+-#define unlikely(x)     __builtin_expect(!!(x), 0)
+-#define force_inline inline __attribute__((always_inline))
+-#define no_inline __attribute__((noinline))
+-#define __maybe_unused __attribute__((unused))
++#define likely(x)      (x)
++#define unlikely(x)     (x)
++#define force_inline
++#define no_inline
++#define __maybe_unused
+ 
+ #define xglue(x, y) x ## y
+ #define glue(x, y) xglue(x, y)
+@@ -149,15 +157,15 @@ static inline int ctz64(uint64_t a)
+     return __builtin_ctzll(a);
+ }
+ 
+-struct __attribute__((packed)) packed_u64 {
++struct packed_u64 {
+     uint64_t v;
+ };
+ 
+-struct __attribute__((packed)) packed_u32 {
++struct packed_u32 {
+     uint32_t v;
+ };
+ 
+-struct __attribute__((packed)) packed_u16 {
++struct packed_u16 {
+     uint16_t v;
+ };
+ 
+@@ -316,7 +324,7 @@ static inline int dbuf_put_u64(DynBuf *s, uint64_t val)
+     }
+ }
+ 
+-int __attribute__((format(printf, 2, 3))) dbuf_printf(DynBuf *s,
++int dbuf_printf(DynBuf *s,
+                                                       const char *fmt, ...);
+ void dbuf_free(DynBuf *s);
+ static inline BOOL dbuf_error(DynBuf *s) {
+@@ -414,7 +422,7 @@ static inline uint16_t tofp16(double d)
+     uint64_t a, addend;
+     uint32_t v, sgn;
+     int shift;
+-    
++
+     a = float64_as_uint64(d);
+     sgn = a >> 63;
+     a = a & 0x7fffffffffffffff;
+@@ -454,4 +462,76 @@ static inline int isfp16zero(uint16_t v)
+     return (v & 0x7FFF) == 0;
+ }
+ 
++#ifndef CLOCK_REALTIME
++#define CLOCK_REALTIME 0
++#endif
++#ifndef CLOCK_MONOTONIC
++#define CLOCK_MONOTONIC 1
++#endif
++
++static inline void filetime_to_timespec(const FILETIME* ft, struct timespec* ts) {
++  uint64_t t100 = ((uint64_t)ft->dwHighDateTime << 32) | ft->dwLowDateTime;
++  /* Difference between Windows epoch (1601) and Unix epoch (1970) in 100ns units */
++  const uint64_t EPOCH_DIFF_100NS = 116444736000000000ULL;
++  if (t100 < EPOCH_DIFF_100NS) { ts->tv_sec = 0; ts->tv_nsec = 0; return; }
++  t100 -= EPOCH_DIFF_100NS;
++  ts->tv_sec  = (long)(t100 / 10000000ULL);           /* 10^7 100ns ticks per second */
++  ts->tv_nsec = (long)((t100 % 10000000ULL) * 100ULL);/* remainder * 100 -> nanoseconds */
++}
++
++/* gettimeofday replacement: tz is ignored (as on many platforms) */
++static int gettimeofday(struct timeval* tv, void* tz_unused) {
++  if (!tv) return -1;
++  FILETIME ft;
++  /* Prefer precise clock on Win8+ if available */
++  static BOOL (WINAPI *pGetPrecise)(LPFILETIME) = NULL;
++  static int init = 0;
++  if (!init) {
++    HMODULE h = GetModuleHandleW(L"kernel32.dll");
++    if (h) pGetPrecise = (BOOL (WINAPI *)(LPFILETIME))GetProcAddress(h, "GetSystemTimePreciseAsFileTime");
++    init = 1;
++  }
++  if (pGetPrecise) pGetPrecise(&ft);
++  else GetSystemTimeAsFileTime(&ft);
++
++  struct timespec ts;
++  filetime_to_timespec(&ft, &ts);
++  tv->tv_sec  = ts.tv_sec;
++  tv->tv_usec = (long)(ts.tv_nsec / 1000);
++  return 0;
++}
++
++static inline int clock_gettime(int clk_id, struct timespec* ts) {
++  if (!ts) return -1;
++
++  if (clk_id == CLOCK_REALTIME) {
++    FILETIME ft;
++    static BOOL (WINAPI *pGetPrecise)(LPFILETIME) = NULL;
++    static int init = 0;
++    if (!init) {
++      HMODULE h = GetModuleHandleW(L"kernel32.dll");
++      if (h) pGetPrecise = (BOOL (WINAPI *)(LPFILETIME))GetProcAddress(h, "GetSystemTimePreciseAsFileTime");
++      init = 1;
++    }
++    if (pGetPrecise) pGetPrecise(&ft);
++    else GetSystemTimeAsFileTime(&ft);
++    filetime_to_timespec(&ft, ts);
++    return 0;
++  }
++
++  if (clk_id == CLOCK_MONOTONIC) {
++    LARGE_INTEGER freq, counter;
++    if (!QueryPerformanceFrequency(&freq) || !QueryPerformanceCounter(&counter)) {
++      ts->tv_sec = 0; ts->tv_nsec = 0; return -1;
++    }
++    ts->tv_sec  = (long)(counter.QuadPart / freq.QuadPart);
++    ts->tv_nsec = (long)((counter.QuadPart % freq.QuadPart) * 1000000000ULL / freq.QuadPart);
++    return 0;
++  }
++
++  /* Unsupported clock id */
++  ts->tv_sec = 0; ts->tv_nsec = 0;
++  return -1;
++}
++
+ #endif  /* CUTILS_H */
 diff --git a/dtoa.c b/dtoa.c
 index ac1be8d..60d3116 100644
 --- a/dtoa.c
@@ -10,11 +266,11 @@ index ac1be8d..60d3116 100644
 +#include <time.h>
  #include <math.h>
  #include <setjmp.h>
-
+ 
 @@ -183,6 +183,9 @@ static limb_t mp_shl(limb_t *tab_r, const limb_t *tab, mp_size_t n,
      return l;
  }
-
+ 
 +#define no_inline
 +#define __maybe_unused
 +
@@ -28,7 +284,7 @@ index c387f00..df88c15 100644
 @@ -193,6 +193,8 @@ static void lre_print_char(int c, BOOL is_range)
      }
  }
-
+ 
 +#define __maybe_unused
 +
  static __maybe_unused void re_string_list_dump(const char *str, const REStringList *s)
@@ -37,7 +293,7 @@ index c387f00..df88c15 100644
 @@ -670,6 +672,8 @@ static void re_emit_op_u16(REParseState *s, int op, uint32_t val)
      dbuf_put_u16(&s->byte_code, val);
  }
-
+ 
 +#define __attribute__(...)
 +
  static int __attribute__((format(printf, 2, 3))) re_parse_error(REParseState *s, const char *fmt, ...)
@@ -48,9 +304,9 @@ index 0c510cc..bb7a87c 100644
 --- a/libunicode.c
 +++ b/libunicode.c
 @@ -378,6 +378,8 @@ BOOL lre_is_case_ignorable(uint32_t c)
-
+ 
  /* character range */
-
+ 
 +#define __maybe_unused
 +
  static __maybe_unused void cr_dump(CharRange *cr)
@@ -71,14 +327,14 @@ index 0224f7c..bd955a3 100644
 @@ -43,6 +42,8 @@
  #include "cutils.h"
  #include "quickjs-libc.h"
-
+ 
 +#define __attribute__(...)
 +
  extern const uint8_t qjsc_repl[];
  extern const uint32_t qjsc_repl_size;
-
+ 
 @@ -290,8 +291,8 @@ static size_t get_suffixed_size(const char *str)
-
+ 
  void help(void)
  {
 -    printf("QuickJS version " CONFIG_VERSION "\n"
@@ -101,7 +357,7 @@ index e55ca61..18f142a 100644
  #if !defined(_WIN32)
  #include <sys/wait.h>
 @@ -392,8 +391,8 @@ static const char main_c_template2[] =
-
+ 
  void help(void)
  {
 -    printf("QuickJS Compiler version " CONFIG_VERSION "\n"
@@ -114,7 +370,7 @@ index e55ca61..18f142a 100644
 @@ -603,7 +602,7 @@ int main(int argc, char **argv)
      namelist_add(&cmodule_list, "std", "std", 0);
      namelist_add(&cmodule_list, "os", "os", 0);
-
+ 
 -    optind = 1;
 +    int optind = 1;
      while (optind < argc && *argv[optind] == '-') {
@@ -163,7 +419,7 @@ index c24b6d5..c463785 100644
  #include <termios.h>
 @@ -68,6 +67,7 @@ typedef sig_t sighandler_t;
  #define USE_WORKER
-
+ 
  #ifdef USE_WORKER
 +#undef PTW32_STATIC_LIB
  #include <pthread.h>
@@ -182,7 +438,7 @@ index c24b6d5..c463785 100644
          js_free_rt(rt, s);
      }
  }
-
+ 
 +typedef SSIZE_T ssize_t;
 +
  static ssize_t js_get_errno(ssize_t ret)
@@ -191,7 +447,7 @@ index c24b6d5..c463785 100644
 @@ -1036,42 +1035,6 @@ static JSValue js_std_open(JSContext *ctx, JSValueConst this_val,
      return JS_EXCEPTION;
  }
-
+ 
 -static JSValue js_std_popen(JSContext *ctx, JSValueConst this_val,
 -                            int argc, JSValueConst *argv)
 -{
@@ -246,7 +502,7 @@ index c24b6d5..c463785 100644
 @@ -1459,162 +1419,6 @@ static int http_get_status(const char *buf)
      return atoi(p);
  }
-
+ 
 -static JSValue js_std_urlGet(JSContext *ctx, JSValueConst this_val,
 -                             int argc, JSValueConst *argv)
 -{
@@ -414,7 +670,7 @@ index c24b6d5..c463785 100644
      JS_CFUNC_DEF("loadFile", 1, js_std_loadFile ),
      JS_CFUNC_DEF("strerror", 1, js_std_strerror ),
      JS_CFUNC_DEF("parseExtJSON", 1, js_std_parseExtJSON ),
-
+ 
      /* FILE I/O */
      JS_CFUNC_DEF("open", 2, js_std_open ),
 -    JS_CFUNC_DEF("popen", 2, js_std_popen ),
@@ -443,7 +699,7 @@ index c24b6d5..c463785 100644
 @@ -2699,50 +2490,6 @@ static JSValue js_os_mkdir(JSContext *ctx, JSValueConst this_val,
      return JS_NewInt32(ctx, ret);
  }
-
+ 
 -/* return [array, errorcode] */
 -static JSValue js_os_readdir(JSContext *ctx, JSValueConst this_val,
 -                             int argc, JSValueConst *argv)
@@ -531,7 +787,7 @@ index e30d393..866b469 100644
 @@ -47,6 +51,10 @@
  #include "libunicode.h"
  #include "dtoa.h"
-
+ 
 +#include <winsock2.h>   // defines struct timeval, FD_SET, select(), etc.
 +
 +#pragma comment(lib, "Ws2_32.lib")  // MSVC: auto-link winsock library
@@ -544,7 +800,7 @@ index e30d393..866b469 100644
  #define DIRECT_DISPATCH  1
  #endif
 +#define DIRECT_DISPATCH 0
-
+ 
  #if defined(__APPLE__)
  #define MALLOC_OVERHEAD  0
 @@ -76,6 +85,7 @@
@@ -552,12 +808,12 @@ index e30d393..866b469 100644
  #define CONFIG_STACK_CHECK
  #endif
 +#undef CONFIG_STACK_CHECK
-
-
+ 
+ 
  /* dump object free */
 @@ -112,6 +122,8 @@
  //#define FORCE_GC_AT_MALLOC
-
+ 
  #ifdef CONFIG_ATOMICS
 +#define _TIMESPEC_DEFINED
 +#undef PTW32_STATIC_LIB
@@ -567,10 +823,10 @@ index e30d393..866b469 100644
 @@ -216,7 +228,7 @@ typedef enum JSErrorEnum {
  /* rope depth at which we rebalance */
  #define JS_STRING_ROPE_MAX_DEPTH 60
-
+ 
 -#define __exception __attribute__((warn_unused_result))
 +#define __exception
-
+ 
  typedef struct JSShape JSShape;
  typedef struct JSString JSString;
 @@ -1111,7 +1123,8 @@ static __exception int JS_ToArrayLengthFree(JSContext *ctx, uint32_t *plen,
@@ -586,7 +842,7 @@ index e30d393..866b469 100644
 @@ -1484,6 +1497,7 @@ char *js_strdup(JSContext *ctx, const char *str)
      return js_strndup(ctx, str, strlen(str));
  }
-
+ 
 +#define no_inline
  static no_inline int js_realloc_array(JSContext *ctx, void **parray,
                                        int elem_size, int *psize, int req_size)
@@ -594,13 +850,13 @@ index e30d393..866b469 100644
 @@ -5696,6 +5710,7 @@ static void free_property(JSRuntime *rt, JSProperty *pr, int prop_flags)
      }
  }
-
+ 
 +#define force_inline
  static force_inline JSShapeProperty *find_own_property1(JSObject *p,
                                                          JSAtom atom)
  {
 @@ -6807,8 +6822,6 @@ void JS_ComputeMemoryUsage(JSRuntime *rt, JSMemoryUsage *s)
-
+ 
  void JS_DumpMemoryUsage(FILE *fp, const JSMemoryUsage *s, JSRuntime *rt)
  {
 -    fprintf(fp, "QuickJS memory usage -- " CONFIG_VERSION " version, %d-bit, malloc limit: %"PRId64"\n\n",
@@ -611,7 +867,7 @@ index e30d393..866b469 100644
 @@ -7257,7 +7270,7 @@ static JSValue JS_ThrowError(JSContext *ctx, JSErrorEnum error_num,
      return JS_ThrowError2(ctx, error_num, fmt, ap, add_backtrace);
  }
-
+ 
 -JSValue __attribute__((format(printf, 2, 3))) JS_ThrowSyntaxError(JSContext *ctx, const char *fmt, ...)
 +JSValue JS_ThrowSyntaxError(JSContext *ctx, const char *fmt, ...)
  {
@@ -620,7 +876,7 @@ index e30d393..866b469 100644
 @@ -7268,7 +7281,7 @@ JSValue __attribute__((format(printf, 2, 3))) JS_ThrowSyntaxError(JSContext *ctx
      return val;
  }
-
+ 
 -JSValue __attribute__((format(printf, 2, 3))) JS_ThrowTypeError(JSContext *ctx, const char *fmt, ...)
 +JSValue JS_ThrowTypeError(JSContext *ctx, const char *fmt, ...)
  {
@@ -629,15 +885,15 @@ index e30d393..866b469 100644
 @@ -7279,7 +7292,7 @@ JSValue __attribute__((format(printf, 2, 3))) JS_ThrowTypeError(JSContext *ctx,
      return val;
  }
-
+ 
 -static int __attribute__((format(printf, 3, 4))) JS_ThrowTypeErrorOrFalse(JSContext *ctx, int flags, const char *fmt, ...)
 +static int JS_ThrowTypeErrorOrFalse(JSContext *ctx, int flags, const char *fmt, ...)
  {
      va_list ap;
-
+ 
 @@ -7295,7 +7308,7 @@ static int __attribute__((format(printf, 3, 4))) JS_ThrowTypeErrorOrFalse(JSCont
  }
-
+ 
  /* never use it directly */
 -static JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowTypeErrorAtom(JSContext *ctx, JSAtom atom, const char *fmt, ...)
 +static JSValue __JS_ThrowTypeErrorAtom(JSContext *ctx, JSAtom atom, const char *fmt, ...)
@@ -646,7 +902,7 @@ index e30d393..866b469 100644
      return JS_ThrowTypeError(ctx, fmt,
 @@ -7303,7 +7316,7 @@ static JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowTypeErrorAtom(JSC
  }
-
+ 
  /* never use it directly */
 -static JSValue __attribute__((format(printf, 3, 4))) __JS_ThrowSyntaxErrorAtom(JSContext *ctx, JSAtom atom, const char *fmt, ...)
 +static JSValue __JS_ThrowSyntaxErrorAtom(JSContext *ctx, JSAtom atom, const char *fmt, ...)
@@ -656,7 +912,7 @@ index e30d393..866b469 100644
 @@ -7326,7 +7339,7 @@ static int JS_ThrowTypeErrorReadOnly(JSContext *ctx, int flags, JSAtom atom)
      }
  }
-
+ 
 -JSValue __attribute__((format(printf, 2, 3))) JS_ThrowReferenceError(JSContext *ctx, const char *fmt, ...)
 +JSValue JS_ThrowReferenceError(JSContext *ctx, const char *fmt, ...)
  {
@@ -665,7 +921,7 @@ index e30d393..866b469 100644
 @@ -7337,7 +7350,7 @@ JSValue __attribute__((format(printf, 2, 3))) JS_ThrowReferenceError(JSContext *
      return val;
  }
-
+ 
 -JSValue __attribute__((format(printf, 2, 3))) JS_ThrowRangeError(JSContext *ctx, const char *fmt, ...)
 +JSValue JS_ThrowRangeError(JSContext *ctx, const char *fmt, ...)
  {
@@ -674,7 +930,7 @@ index e30d393..866b469 100644
 @@ -7348,7 +7361,7 @@ JSValue __attribute__((format(printf, 2, 3))) JS_ThrowRangeError(JSContext *ctx,
      return val;
  }
-
+ 
 -JSValue __attribute__((format(printf, 2, 3))) JS_ThrowInternalError(JSContext *ctx, const char *fmt, ...)
 +JSValue JS_ThrowInternalError(JSContext *ctx, const char *fmt, ...)
  {
@@ -715,7 +971,7 @@ index e30d393..866b469 100644
 +    prs = find_own_property(&pr, p, js_symbol_to_atom(ctx, brand));
      return (prs != NULL);
  }
-
+ 
 @@ -9952,7 +9965,7 @@ int JS_DefineProperty(JSContext *ctx, JSValueConst this_obj,
                  return -1;
              }
@@ -738,7 +994,7 @@ index e30d393..866b469 100644
 @@ -13288,7 +13302,7 @@ static void js_puts(JSPrintValueState *s, const char *str)
      s->write_func(s->write_opaque, str, strlen(str));
  }
-
+ 
 -static void __attribute__((format(printf, 2, 3))) js_printf(JSPrintValueState *s, const char *fmt, ...)
 +static void js_printf(JSPrintValueState *s, const char *fmt, ...)
  {
@@ -752,7 +1008,7 @@ index e30d393..866b469 100644
 +    sf->cur_func = func_obj;
      sf->arg_count = argc;
      arg_buf = argv;
-
+ 
 @@ -17446,7 +17460,7 @@ static JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
      sf->js_mode = b->js_mode;
      arg_buf = argv;
@@ -760,7 +1016,7 @@ index e30d393..866b469 100644
 -    sf->cur_func = (JSValue)func_obj;
 +    sf->cur_func = func_obj;
      var_refs = p->u.func.var_refs;
-
+ 
      local_buf = alloca(alloca_size);
 @@ -22816,7 +22830,8 @@ static int json_parse_number(JSParseState *s, const uint8_t **pp)
      if (!is_digit(*p)) {
@@ -794,13 +1050,13 @@ index e30d393..866b469 100644
      JS_FreeValue(ctx, str);
 @@ -46268,7 +46283,8 @@ static JSValue js_math_min_max(JSContext *ctx, JSValueConst this_val,
      uint32_t tag;
-
+ 
      if (unlikely(argc == 0)) {
 -        return __JS_NewFloat64(ctx, is_max ? -1.0 / 0.0 : 1.0 / 0.0);
 +	double zero = 0;
 +        return __JS_NewFloat64(ctx, is_max ? -1.0 / zero : 1.0 / zero);
      }
-
+ 
      tag = JS_VALUE_GET_TAG(argv[0]);
 @@ -50726,7 +50742,7 @@ static JSValue js_weakref_new(JSContext *ctx, JSValueConst val)
      } else {
@@ -809,16 +1065,16 @@ index e30d393..866b469 100644
 -    return (JSValue)val;
 +    return val;
  }
-
+ 
  #define MAGIC_SET (1 << 0)
 @@ -50856,7 +50872,7 @@ static JSValue map_normalize_key(JSContext *ctx, JSValue key)
-
+ 
  static JSValueConst map_normalize_key_const(JSContext *ctx, JSValueConst key)
  {
 -    return (JSValueConst)map_normalize_key(ctx, (JSValue)key);
 +    return map_normalize_key(ctx, key);
  }
-
+ 
  /* hash multipliers, same as the Linux kernel (see Knuth vol 3,
 @@ -51289,7 +51305,7 @@ static JSValue js_map_forEach(JSContext *ctx, JSValueConst this_val,
                  args[0] = args[1];
@@ -841,7 +1097,7 @@ index e30d393..866b469 100644
 @@ -53427,7 +53443,7 @@ static JSValue js_async_from_sync_iterator_unwrap_func_create(JSContext *ctx,
  {
      JSValueConst func_data[1];
-
+ 
 -    func_data[0] = (JSValueConst)JS_NewBool(ctx, done);
 +    func_data[0] = JS_NewBool(ctx, done);
      return JS_NewCFunctionData(ctx, js_async_from_sync_iterator_unwrap,
@@ -874,7 +1130,7 @@ index 92cc000..0e262d7 100644
 @@ -64,6 +64,8 @@ typedef uint32_t JSAtom;
  #define JS_NAN_BOXING
  #endif
-
+ 
 +#undef JS_NAN_BOXING
 +
  #if defined(__SIZEOF_INT128__) && (INTPTR_MAX >= INT64_MAX)
@@ -887,7 +1143,7 @@ index 92cc000..0e262d7 100644
 -    return (JSValue)v;
 +    return v;
  }
-
+ 
  static inline JSValue JS_DupValueRT(JSRuntime *rt, JSValueConst v)
 @@ -710,7 +712,7 @@ static inline JSValue JS_DupValueRT(JSRuntime *rt, JSValueConst v)
          JSRefCountHeader *p = (JSRefCountHeader *)JS_VALUE_GET_PTR(v);
@@ -896,7 +1152,7 @@ index 92cc000..0e262d7 100644
 -    return (JSValue)v;
 +    return v;
  }
-
+ 
  JS_BOOL JS_StrictEq(JSContext *ctx, JSValueConst op1, JSValueConst op2);
 diff --git a/run-test262.c b/run-test262.c
 index 100ed13..64b7f55 100644
@@ -922,27 +1178,27 @@ index 100ed13..64b7f55 100644
 -#include <time.h>
 -#include <dirent.h>
 -#include <ftw.h>
-
+ 
 -#include "cutils.h"
  #include "list.h"
  #include "quickjs-libc.h"
-
+ 
 +#define __attribute__(...)
 +
  /* enable test262 thread support to test SharedArrayBuffer and Atomics */
  #define CONFIG_AGENT
-
+ 
 @@ -435,8 +436,6 @@ static JSValue js_evalScript(JSContext *ctx, JSValue this_val,
-
+ 
  #ifdef CONFIG_AGENT
-
+ 
 -#include <pthread.h>
 -
  typedef struct {
      struct list_head link;
      pthread_t tid;
 @@ -2036,7 +2035,7 @@ void run_test_dir_list(namelist_t *lp, int start_index, int stop_index)
-
+ 
  void help(void)
  {
 -    printf("run-test262 version " CONFIG_VERSION "\n"
@@ -957,7 +1213,7 @@ index c793ba1..95230e1 100644
 @@ -189,6 +189,8 @@ static void re_string_list_init(REStringList *s)
      s->hash_table = NULL;
  }
-
+ 
 +#define __maybe_unused
 +
  static  __maybe_unused void re_string_list_free(REStringList *s)
