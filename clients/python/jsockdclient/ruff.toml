@@ -1,0 +1,125 @@
+# Ruff configuration for jsockdclient
+# This file configures code style, import sorting, and quality gates via Ruff.
+# See: https://docs.astral.sh/ruff/configuration/
+
+line-length = 100
+target-version = "py310"
+
+[format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+docstring-code-format = true
+docstring-code-line-length = 100
+
+[lint]
+# Baseline rules plus modernizations, bugbear, annotations, perf, pytest, etc.
+select = [
+  "E",    # pycodestyle errors
+  "W",    # pycodestyle warnings
+  "F",    # pyflakes
+  "I",    # isort (import sorting)
+  "N",    # pep8-naming
+  "UP",   # pyupgrade (modern Python features)
+  "B",    # flake8-bugbear
+  "A",    # flake8-builtins (avoid shadowing builtins)
+  "C4",   # flake8-comprehensions
+  "ISC",  # flake8-implicit-str-concat
+  "ICN",  # flake8-import-conventions
+  "PIE",  # flake8-pie
+  "PL",   # pylint (selected safe subset implemented by Ruff)
+  "PT",   # flake8-pytest-style
+  "PTH",  # flake8-use-pathlib
+  "RET",  # flake8-return
+  "RUF",  # Ruff-specific rules
+  "SIM",  # flake8-simplify
+  "T20",  # flake8-print
+  "TCH",  # flake8-type-checking (move heavy imports under TYPE_CHECKING)
+  "ARG",  # flake8-unused-arguments
+  "ANN",  # flake8-annotations (type-hint style)
+  "TRY",  # tryceratops (exception handling best practices)
+  "Q",    # flake8-quotes (enforce quotes consistently)
+  "ERA",  # eradicate (commented-out code)
+]
+# Reasonable ignores for practicality:
+ignore = [
+  "ANN101", # Missing type annotation for self in method
+  "ANN102", # Missing type annotation for cls in classmethod
+  "ANN401", # Dynamically typed expressions (Any) - allow in limited cases
+  "PLR2004", # Magic value comparison - allow constants in small code
+]
+
+# Allow Ruff to apply autofixes wherever possible.
+fix = true
+unsafe-fixes = false
+
+[lint.isort]
+known-first-party = ["jsockdclient"]
+combine-as-imports = true
+force-sort-within-sections = true
+split-on-trailing-comma = true
+
+[lint.pydocstyle]
+# Enable if you want docstring enforcement; off by default to keep noise low.
+# convention = "google"
+
+[lint.per-file-ignores]
+# Allow prints and relaxed annotations in tests.
+"tests/**.py" = ["T20", "ANN"]
+# Allow unused imports in __init__ for package exports.
+"**/__init__.py" = ["F401"]
+
+[lint.flake8-annotations]
+# Require typing only for public APIs if you enable this.
+suppress-none-returning = true
+allow-star-arg-any = true
+mypy-init-return = true
+
+# Exclude common virtualenv / build directories.
+exclude = [
+  ".git",
+  ".hg",
+  ".mypy_cache",
+  ".pytest_cache",
+  ".ruff_cache",
+  ".venv",
+  "venv",
+  "build",
+  "dist",
+]
+
+################################################################################
+# mypy configuration (TOML)
+#
+# Note:
+# - mypy reads configuration from pyproject.toml ([tool.mypy]) or from INI files
+#   (mypy.ini, setup.cfg). It does NOT read settings from ruff.toml.
+# - You can copy this section into your pyproject.toml under [tool.mypy], or
+#   point mypy to pyproject.toml via its default discovery.
+################################################################################
+
+[tool.mypy]
+python_version = "3.10"
+files = ["src/jsockdclient", "tests"]
+
+# Strictness toggles for better type safety in library code
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_untyped_calls = true
+no_implicit_optional = true
+warn_return_any = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unused_configs = true
+strict_equality = true
+check_untyped_defs = true
+
+# When using third-party libs without types, prefer installing stubs instead of ignoring.
+ignore_missing_imports = false
+
+# Per-module/test overrides (optional)
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+check_untyped_defs = true
+warn_return_any = true

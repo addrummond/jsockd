@@ -1,0 +1,11 @@
+JSockD Python Client — License
+
+This directory is part of the JSockD repository and is licensed under the same terms
+as the root project. For the complete license text, see the top-level LICENSE file:
+
+../../../../LICENSE
+
+If you are distributing this subpackage independently, ensure that you include a copy
+of the repository’s LICENSE file alongside this code.
+
+Copyright (c) The JSockD authors and contributors.
