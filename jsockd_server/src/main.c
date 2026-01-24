@@ -1,5 +1,6 @@
 #ifndef _REENTRANT
 #define _REENTRANT
+#include <limits.h>
 #endif
 
 #include "backtrace.h"
@@ -45,17 +46,24 @@
 
 // Testing scenarios with collisions is less labor intensive if we use a smaller
 // number of bits in the debug build.
-#define CACHED_FUNCTION_HASH_BITS                                              \
+#define CACHED_FUNCTION_MAX_HASH_BITS                                          \
   (CMAKE_BUILD_TYPE_IS_DEBUG ? CACHED_FUNCTIONS_HASH_BITS_DEBUG                \
                              : CACHED_FUNCTIONS_HASH_BITS_RELEASE)
+#ifdef CMAKE_BUILD_TYPE_DEBUG
+#define CACHED_FUNCTION_HASH_BITS                                              \
+  MIN(CACHED_FUNCTIONS_HASH_BITS_DEBUG, g_debug_hash_bits_override)
+#else
+#define CACHED_FUNCTION_HASH_BITS CACHED_FUNCTIONS_HASH_BITS_RELEASE
+#endif
 #define CACHED_FUNCTIONS_N_BUCKETS                                             \
   HASH_CACHE_BUCKET_ARRAY_SIZE_FROM_HASH_BITS(CACHED_FUNCTION_HASH_BITS)
 
 static atomic_bool g_global_init_complete;
 
-// 16-byte align may be required for use of native 128-bit atomic instructions.
+// 16-byte align may be required for use of native
+// 128-bit atomic instructions.
 _Alignas(16) static CachedFunctionBucket
-    g_cached_function_buckets[CACHED_FUNCTIONS_N_BUCKETS];
+    g_cached_function_buckets[CACHED_FUNCTION_MAX_HASH_BITS];
 static atomic_int g_n_cached_functions;
 
 static void cleanup_unused_hash_cache_bucket(HashCacheBucket *b) {
@@ -104,7 +112,8 @@ static void init_socket_state(SocketState *ss,
 static void cleanup_socket_state(SocketState *socket_state) {
   if (!socket_state)
     return;
-  // We're about to exit, so we don't need to check for errors.
+  // We're about to exit, so we don't need to check
+  // for errors.
   if (socket_state->streamfd != -1)
     close(socket_state->streamfd);
   if (socket_state->sockfd != -1)
@@ -112,23 +121,28 @@ static void cleanup_socket_state(SocketState *socket_state) {
   unlink(socket_state->unix_socket_filename);
 }
 
-// In debug builds we keep track of how many new thread states we've created vs.
-// how many we've cleaned up and freed. This can give useful additional context
-// for Valgrind errors.
+// In debug builds we keep track of how many new
+// thread states we've created vs. how many we've
+// cleaned up and freed. This can give useful
+// additional context for Valgrind errors.
 #ifdef CMAKE_BUILD_TYPE_DEBUG
 static atomic_int g_new_thread_state_count;
 #define debug_inc_new_thread_state_count()                                     \
   do {                                                                         \
     atomic_fetch_add_explicit(&g_new_thread_state_count, 1,                    \
                               memory_order_relaxed);                           \
-    jsockd_logf(LOG_DEBUG, "g_new_thread_state_count incremented at %i\n",     \
+    jsockd_logf(LOG_DEBUG,                                                     \
+                "g_new_thread_state_count "                                    \
+                "incremented at %i\n",                                         \
                 __LINE__);                                                     \
   } while (0)
 #define debug_dec_new_thread_state_count()                                     \
   do {                                                                         \
     atomic_fetch_add_explicit(&g_new_thread_state_count, -1,                   \
                               memory_order_relaxed);                           \
-    jsockd_logf(LOG_DEBUG, "g_new_thread_state_count decremented at %i\n",     \
+    jsockd_logf(LOG_DEBUG,                                                     \
+                "g_new_thread_state_count "                                    \
+                "decremented at %i\n",                                         \
                 __LINE__);                                                     \
   } while (0)
 #else
@@ -170,7 +184,9 @@ static int initialize_and_listen_on_unix_socket(SocketState *socket_state) {
   }
 
   if (0 != socket_fchmod(socket_state->sockfd, 0600)) {
-    jsockd_logf(LOG_ERROR, "Error setting permissions 0600 on socket %s: %s\n",
+    jsockd_logf(LOG_ERROR,
+                "Error setting permissions 0600 on "
+                "socket %s: %s\n",
                 socket_state->unix_socket_filename, strerror(errno));
     return -1;
   }
@@ -179,8 +195,10 @@ static int initialize_and_listen_on_unix_socket(SocketState *socket_state) {
   if (sizeof(socket_state->addr.sun_path) <
       strlen(socket_state->unix_socket_filename) + 1 /* zeroterm */) {
     jsockd_logf(LOG_ERROR,
-                "Error: UNIX socket filename %s is too long (UNIX limitation, "
-                "not JSockD; max length on this system is %zu)\n",
+                "Error: UNIX socket filename %s is "
+                "too long (UNIX limitation, "
+                "not JSockD; max length on this "
+                "system is %zu)\n",
                 socket_state->unix_socket_filename,
                 sizeof(socket_state->addr.sun_path) - 1);
 
@@ -207,14 +225,16 @@ static int initialize_and_listen_on_unix_socket(SocketState *socket_state) {
     return -1;
   }
 
-  // On Mac the call to socket_fchmod above is a no-op, so call chmod on the
-  // UNIX socket filename. This is theoretically less good, because there's a
-  // tiny window where the socket file exists but is not yet chmodded.
+  // On Mac the call to socket_fchmod above is a
+  // no-op, so call chmod on the UNIX socket
+  // filename. This is theoretically less good,
+  // because there's a tiny window where the socket
+  // file exists but is not yet chmodded.
   if (0 != chmod(socket_state->unix_socket_filename, 0600)) {
-    jsockd_logf(
-        LOG_ERROR,
-        "Error setting permissions 0600 on socket %s via filename: %s\n",
-        socket_state->unix_socket_filename, strerror(errno));
+    jsockd_logf(LOG_ERROR,
+                "Error setting permissions 0600 on "
+                "socket %s via filename: %s\n",
+                socket_state->unix_socket_filename, strerror(errno));
     return -1;
   }
 
@@ -246,7 +266,8 @@ static void command_loop(ThreadState *ts,
   }
 
   if (0 != wait_group_inc(&g_thread_ready_wait_group, 1)) {
-    jsockd_log(LOG_ERROR, "Error incrementing thread ready wait group\n");
+    jsockd_log(LOG_ERROR, "Error incrementing thread ready "
+                          "wait group\n");
     ts->exit_status = -1;
     goto error_no_inc;
   }
@@ -303,7 +324,8 @@ static void command_loop(ThreadState *ts,
     }
 
     if (ts->rt == NULL) {
-      jsockd_log(LOG_DEBUG, "Re-initializing shut down thread state\n");
+      jsockd_log(LOG_DEBUG, "Re-initializing shut "
+                            "down thread state\n");
       assert(REPLACEMENT_THREAD_STATE_NONE ==
              atomic_load_explicit(&ts->replacement_thread_state,
                                   memory_order_acquire));
@@ -330,21 +352,22 @@ static void command_loop(ThreadState *ts,
   }
 
 error:
-  // Increment the wait group to indicate that this thread is ready, so that
-  // all threads can be joined in main. The other threads will notice that
-  // g_interrupted_or_error has been set to true, and thus exit gracefully
-  // in due course.
+  // Increment the wait group to indicate that this
+  // thread is ready, so that all threads can be
+  // joined in main. The other threads will notice
+  // that g_interrupted_or_error has been set to
+  // true, and thus exit gracefully in due course.
   if (0 != wait_group_inc(&g_thread_ready_wait_group, 1))
-    jsockd_log(
-        LOG_ERROR,
-        "Error incrementing thread ready wait group in error condition\n");
+    jsockd_log(LOG_ERROR, "Error incrementing thread ready "
+                          "wait group in "
+                          "error condition\n");
 error_no_inc:
   if (ts->socket_state->streamfd >= 0)
     close(ts->socket_state->streamfd);
   if (ts->socket_state->sockfd >= 0)
     close(ts->socket_state->sockfd);
-  // indicate they're closed so we don't try to close them again in the main
-  // teardown
+  // indicate they're closed so we don't try to close
+  // them again in the main teardown
   ts->socket_state->streamfd = -1;
   ts->socket_state->sockfd = -1;
 
@@ -366,8 +389,9 @@ static const uint8_t *compile_buf(JSContext *ctx, const char *buf, int buf_len,
   JS_FreeValue(ctx, val);
   jsockd_logf(LOG_DEBUG, "Compiled bytecode size: %zu\n", *bytecode_size);
 
-  // We want to preserve the bytecode across runtime contexts, but js_free
-  // requires a context for some refcounting. So copy this over to some
+  // We want to preserve the bytecode across runtime
+  // contexts, but js_free requires a context for
+  // some refcounting. So copy this over to some
   // malloc'd memory.
   const uint8_t *malloc_bytecode = malloc(*bytecode_size);
   jsockd_logf(LOG_DEBUG, "Mallocing bytecode %p (size=%zu)\n", malloc_bytecode,
@@ -382,8 +406,8 @@ static JSValue func_from_bytecode(JSContext *ctx, const uint8_t *bytecode,
                                   int len) {
   JSValue val = JS_ReadObject(ctx, bytecode, len, JS_READ_OBJ_BYTECODE);
   if (JS_IsException(val)) {
-    jsockd_log(LOG_DEBUG,
-               "Exception returned when reading bytecode via JS_ReadObject\n");
+    jsockd_log(LOG_DEBUG, "Exception returned when reading "
+                          "bytecode via JS_ReadObject\n");
     if (CMAKE_BUILD_TYPE_IS_DEBUG)
       log_error_with_prefix("Error reading bytecode:\n", ctx, val);
     return val;
@@ -391,7 +415,8 @@ static JSValue func_from_bytecode(JSContext *ctx, const uint8_t *bytecode,
   JSValue evald = JS_EvalFunction(ctx, val); // this call frees val
   evald = js_std_await(ctx, evald);
   if (JS_VALUE_GET_TAG(evald) != JS_TAG_OBJECT) {
-    jsockd_log(LOG_DEBUG, "JS_EvalFunction did not return an object\n");
+    jsockd_log(LOG_DEBUG, "JS_EvalFunction did not "
+                          "return an object\n");
     if (CMAKE_BUILD_TYPE_IS_DEBUG && JS_IsException(evald))
       log_error_with_prefix("Error evaluating bytecode function:\n", ctx,
                             evald);
@@ -416,14 +441,16 @@ static void cleanup_old_runtime(ThreadState *ts) {
                         memory_order_release);
 }
 
-// called only when destroying a thread state before program exit
+// called only when destroying a thread state before
+// program exit
 static void destroy_thread_state(ThreadState *ts) {
   // We know that any running instance of
   // reset_thread_state_cleanup_old_runtime_thread or
-  // reset_thread_state_thread has now been joined, so if we're in one of the
-  // following states, that means that a new thread state was created but we
-  // never got round to using it and then initiating cleanup of the old one
-  // before exiting.
+  // reset_thread_state_thread has now been joined,
+  // so if we're in one of the following states, that
+  // means that a new thread state was created but we
+  // never got round to using it and then initiating
+  // cleanup of the old one before exiting.
   int rts =
       atomic_load_explicit(&ts->replacement_thread_state, memory_order_acquire);
   if (rts == REPLACEMENT_THREAD_STATE_INIT_COMPLETE ||
@@ -444,7 +471,8 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
                                      int len) {
   if (len > MESSAGE_UUID_MAX_BYTES) {
     jsockd_logf(LOG_WARN,
-                "Error: message UUID has length %i and will be truncated to "
+                "Error: message UUID has length %i "
+                "and will be truncated to "
                 "first %i bytes\n",
                 len, MESSAGE_UUID_MAX_BYTES);
     len = MESSAGE_UUID_MAX_BYTES;
@@ -453,11 +481,12 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
   int rts =
       atomic_load_explicit(&ts->replacement_thread_state, memory_order_acquire);
 
-  // Check to see if the thread state has been reinitialized (following a
-  // memory increase).
+  // Check to see if the thread state has been
+  // reinitialized (following a memory increase).
   if (rts == REPLACEMENT_THREAD_STATE_INIT_COMPLETE) {
-    // Join the thread that initialized the replacement thread state to
-    // reclaim pthread resources.
+    // Join the thread that initialized the
+    // replacement thread state to reclaim pthread
+    // resources.
     if (0 != pthread_join(ts->replacement_thread, NULL)) {
       jsockd_logf(LOG_ERROR, "pthread_join failed: %s\n", strerror(errno));
       return -1;
@@ -497,8 +526,8 @@ static int handle_line_1_message_uid(ThreadState *ts, const char *line,
   }
 
   strncpy(ts->current_uuid, line, len);
-  ts->current_uuid[len] =
-      '\0'; // strncpy does not zeroterm if line is longer than 'len'
+  ts->current_uuid[len] = '\0'; // strncpy does not zeroterm if line is
+                                // longer than 'len'
   ts->current_uuid_len = len;
   ts->line_n++;
   return 0;
@@ -510,7 +539,8 @@ static int handle_line_2_query(ThreadState *ts, const char *line, int len) {
 
 #ifdef CMAKE_BUILD_TYPE_DEBUG
   jsockd_logf(LOG_DEBUG,
-              "Computed UID: " HASH_CACHE_UID_FORMAT_SPECIFIER
+              "Computed "
+              "UID: " HASH_CACHE_UID_FORMAT_SPECIFIER
               " [bits=%i, bucket=%zu] for %.*s\n",
               HASH_CACHE_UID_FORMAT_ARGS(uid), CACHED_FUNCTION_HASH_BITS,
               get_cache_bucket(uid, CACHED_FUNCTION_HASH_BITS), len, line);
@@ -563,7 +593,8 @@ static void *reset_thread_state_thread(void *data) {
   debug_inc_new_thread_state_count();
   if (0 != init_thread_state((ThreadState *)ts->my_replacement,
                              ts->socket_state, ts->thread_index)) {
-    jsockd_log(LOG_ERROR, "Error initializing replacement thread state\n");
+    jsockd_log(LOG_ERROR, "Error initializing replacement "
+                          "thread state\n");
     atomic_store_explicit(&g_interrupted_or_error, true, memory_order_release);
     ts->exit_status = 1;
     return NULL;
@@ -620,26 +651,30 @@ static int handle_line_3_parameter_helper(ThreadState *ts, const char *line,
     writev_to_stream(
         ts,
         {.iov_base = (void *)ts->current_uuid, .iov_len = ts->current_uuid_len},
-        STRCONST_IOVEC(" exception \"error compiling command\"\n"));
+        STRCONST_IOVEC(" exception \"error "
+                       "compiling command\"\n"));
     return ts->socket_state->stream_io_err;
   }
 
   if (0 != clock_gettime(MONOTONIC_CLOCK, &ts->last_js_execution_start)) {
-    jsockd_log(LOG_ERROR,
-               "Error getting time in handle_line_3_parameter [1]\n");
+    jsockd_log(LOG_ERROR, "Error getting time in "
+                          "handle_line_3_parameter [1]\n");
     return -1;
   }
 
   JSValue parsed_arg = JS_ParseJSON(ts->ctx, line, len, "<input>");
   if (JS_IsException(parsed_arg)) {
-    jsockd_logf(LOG_DEBUG, "Error parsing JSON argument <<END\n%.*s\nEND\n",
+    jsockd_logf(LOG_DEBUG,
+                "Error parsing JSON argument "
+                "<<END\n%.*s\nEND\n",
                 len, line);
     log_error_with_prefix("JSON parse exception:\n", ts->ctx, parsed_arg);
     JS_FreeValue(ts->ctx, parsed_arg);
     writev_to_stream(
         ts,
         {.iov_base = (void *)ts->current_uuid, .iov_len = ts->current_uuid_len},
-        STRCONST_IOVEC(" exception \"JSON input parse error\"\n"));
+        STRCONST_IOVEC(" exception \"JSON input "
+                       "parse error\"\n"));
     return ts->socket_state->stream_io_err;
   }
 
@@ -685,7 +720,8 @@ static int handle_line_3_parameter_helper(ThreadState *ts, const char *line,
     JS_FreeValue(ts->ctx, parsed_arg);
     JS_FreeValue(ts->ctx, ret);
     JS_FreeValue(ts->ctx, stringified);
-    log_error_with_prefix("Error attempting to JSON serialize return value:\n",
+    log_error_with_prefix("Error attempting to JSON serialize return "
+                          "value:\n",
                           ts->ctx, stringified);
     writev_to_stream(
         ts,
@@ -702,7 +738,8 @@ static int handle_line_3_parameter_helper(ThreadState *ts, const char *line,
     writev_to_stream(
         ts,
         {.iov_base = (void *)ts->current_uuid, .iov_len = ts->current_uuid_len},
-        STRCONST_IOVEC(" exception \"unserializable return value\"\n"));
+        STRCONST_IOVEC(" exception \"unserializable "
+                       "return value\"\n"));
     return ts->socket_state->stream_io_err;
   }
 
@@ -711,8 +748,8 @@ static int handle_line_3_parameter_helper(ThreadState *ts, const char *line,
     JS_FreeValue(ts->ctx, parsed_arg);
     JS_FreeValue(ts->ctx, ret);
     JS_FreeValue(ts->ctx, stringified);
-    jsockd_log(LOG_ERROR,
-               "Error getting time in handle_line_3_parameter [2]\n");
+    jsockd_log(LOG_ERROR, "Error getting time in "
+                          "handle_line_3_parameter [2]\n");
     return -1;
   }
 
@@ -755,15 +792,20 @@ static int handle_line_3_parameter_helper(ThreadState *ts, const char *line,
       if (manually_trigger_thread_state_reset(ts) ||
           ts->memory_increase_count > MEMORY_INCREASE_MAX_COUNT) {
         jsockd_logf(LOG_ERROR,
-                    "Memory usage has increased over the last %i commands. "
+                    "Memory usage has increased "
+                    "over the last %i commands. "
                     "Resetting interpreter state.\n",
                     MEMORY_INCREASE_MAX_COUNT * MEMORY_CHECK_INTERVAL);
         // To avoid latency, we do the following:
-        //   (i)   create a new thread state in a background thread,
-        //   (ii)  swap the old and new thread states the next time we're in
-        //         the line_1 handler and the new thread state has finished
+        //   (i)   create a new thread state in a
+        //   background thread, (ii)  swap the old
+        //   and new thread states the next time
+        //   we're in
+        //         the line_1 handler and the new
+        //         thread state has finished
         //         initializing, and then
-        //   (iii) clean up the old thread state in a background thread.
+        //   (iii) clean up the old thread state in a
+        //   background thread.
         atomic_store_explicit(&ts->replacement_thread_state,
                               REPLACEMENT_THREAD_STATE_INIT,
                               memory_order_release);
@@ -804,14 +846,17 @@ static int line_handler(const char *line, size_t len, ThreadState *ts,
               ts->socket_state->unix_socket_filename, line);
 
   if (0 != clock_gettime(MONOTONIC_CLOCK, &ts->last_active_time)) {
-    jsockd_logf(LOG_ERROR, "Error getting time in line_handler thread %i: %s\n",
+    jsockd_logf(LOG_ERROR,
+                "Error getting time in line_handler "
+                "thread %i: %s\n",
                 ts->thread_index, strerror(errno));
     return -1;
   }
 
-  // Allow the truncation logic to be triggered by a special '?truncated'
-  // line in debug builds so that we don't have to generate large inputs
-  // in the Valgrind tests.
+  // Allow the truncation logic to be triggered by a
+  // special '?truncated' line in debug builds so
+  // that we don't have to generate large inputs in
+  // the Valgrind tests.
   if (truncated || (CMAKE_BUILD_TYPE_IS_DEBUG && !strcmp(line, "?truncated")))
     ts->truncated = true;
 
@@ -821,13 +866,14 @@ static int line_handler(const char *line, size_t len, ThreadState *ts,
       ts->line_n = 0;
       JS_FreeValue(ts->ctx, ts->compiled_query);
       ts->compiled_query = JS_UNDEFINED;
-      writev_to_stream(
-          ts,
-          {.iov_base = (void *)ts->current_uuid,
-           .iov_len = ts->current_uuid_len},
-          STRCONST_IOVEC(" exception \"jsockd command was too long\"\n"));
+      writev_to_stream(ts,
+                       {.iov_base = (void *)ts->current_uuid,
+                        .iov_len = ts->current_uuid_len},
+                       STRCONST_IOVEC(" exception \"jsockd command was too "
+                                      "long\"\n"));
     } else {
-      // we'll signal an error once the client has sent the third line
+      // we'll signal an error once the client has
+      // sent the third line
       ts->line_n++;
     }
     return 0;
@@ -848,7 +894,8 @@ static int line_handler(const char *line, size_t len, ThreadState *ts,
     return 0;
   }
   if (!strcmp("?exectime", line)) {
-    char exec_time_buf[21]; // 20 digits for int64_t, + 1 for zeroterm
+    char exec_time_buf[21]; // 20 digits for int64_t,
+                            // + 1 for zeroterm
     int exec_time_len = snprintf(
         exec_time_buf, sizeof(exec_time_buf) / sizeof(exec_time_buf[0]),
         "%" PRId64, ts->last_command_exec_time_ns);
@@ -891,7 +938,8 @@ static int line_handler(const char *line, size_t len, ThreadState *ts,
     return handle_line_3_parameter(ts, line, len);
   default: {
     assert(ts->line_n >= 0 && ts->line_n <= 2);
-    return -1; // won't get here, but avoids compiler warning
+    return -1; // won't get here, but avoids compiler
+               // warning
   }
   }
 }
@@ -902,7 +950,9 @@ static void tick_handler(ThreadState *ts) {
     return;
   struct timespec now;
   if (0 != clock_gettime(MONOTONIC_CLOCK, &now)) {
-    jsockd_logf(LOG_ERROR, "Error getting time in tick_handler thread %i: %s\n",
+    jsockd_logf(LOG_ERROR,
+                "Error getting time in tick_handler "
+                "thread %i: %s\n",
                 ts->thread_index, strerror(errno));
     return;
   }
@@ -939,7 +989,8 @@ static const uint8_t *load_module_bytecode(const char *filename,
   }
   if (*out_size < VERSION_STRING_SIZE + ED25519_SIGNATURE_SIZE + 1) {
     jsockd_logf(LOG_ERROR | LOG_INTERACTIVE,
-                "Module bytecode file is only %zu bytes. Too small!",
+                "Module bytecode file is only %zu "
+                "bytes. Too small!",
                 *out_size);
     munmap_or_warn((void *)module_bytecode, *out_size);
     return NULL;
@@ -968,10 +1019,11 @@ static const uint8_t *load_module_bytecode(const char *filename,
       if (version_string[i] < 32 || version_string[i] > 126)
         version_string[i] = '?';
     }
-    jsockd_logf(
-        LOG_ERROR | LOG_INTERACTIVE,
-        "Module bytecode version string '%s' does not match expected '%s'\n",
-        version_string, STRINGIFY(VERSION));
+    jsockd_logf(LOG_ERROR | LOG_INTERACTIVE,
+                "Module bytecode version string "
+                "'%s' does not match "
+                "expected '%s'\n",
+                version_string, STRINGIFY(VERSION));
     munmap_or_warn((void *)module_bytecode, *out_size);
     return NULL;
   }
@@ -987,15 +1039,18 @@ static const uint8_t *load_module_bytecode(const char *filename,
       pubkey_bytes, sizeof(pubkey_bytes) / sizeof(pubkey_bytes[0]), pubkey);
   if (decoded_size != ED25519_PUBLIC_KEY_SIZE) {
     jsockd_logf(LOG_ERROR | LOG_INTERACTIVE,
-                "Error decoding public key hex from environment variable "
-                "JSOCKD_BYTECODE_MODULE_PUBLIC_KEY; decoded size=%zu\n",
+                "Error decoding public key hex from "
+                "environment variable "
+                "JSOCKD_BYTECODE_MODULE_PUBLIC_KEY; "
+                "decoded size=%zu\n",
                 decoded_size);
     munmap_or_warn((void *)module_bytecode, *out_size);
     return NULL;
   }
   if (!verify_bytecode(module_bytecode, *out_size, pubkey_bytes)) {
     jsockd_logf(LOG_ERROR | LOG_INTERACTIVE,
-                "Error verifying bytecode module %s with public key %s\n",
+                "Error verifying bytecode module %s "
+                "with public key %s\n",
                 filename, pubkey);
     munmap_or_warn((void *)module_bytecode, *out_size);
     return NULL;
@@ -1010,8 +1065,9 @@ static void global_cleanup(void) {
   for (size_t i = 0; i < CACHED_FUNCTIONS_N_BUCKETS; ++i)
     free((void *)g_cached_function_buckets[i].payload.bytecode);
 
-  // These can fail, but we're calling this when we're about to exit, so
-  // there is no useful error handling to be done.
+  // These can fail, but we're calling this when
+  // we're about to exit, so there is no useful error
+  // handling to be done.
   wait_group_destroy(&g_thread_ready_wait_group);
 
   if (g_module_bytecode_size != 0 && g_module_bytecode)
@@ -1082,11 +1138,13 @@ static int eval(void) {
   ThreadState *ts = &g_thread_states[0];
   if (0 != init_thread_state(ts, NULL, 0)) {
     jsockd_log(LOG_ERROR | LOG_INTERACTIVE,
-               "Internal error initializing QuickJS runtime");
+               "Internal error initializing QuickJS "
+               "runtime");
     exit_status = EXIT_FAILURE;
     goto cleanup;
   }
-  // Haven't really figured out exactly why we need this, to be honest ¯\_(ツ)_/
+  // Haven't really figured out exactly why we need
+  // this, to be honest ¯\_(ツ)_/
   JS_DupValue(ts->ctx, ts->compiled_module);
 
   size_t eval_input_size = 0;
@@ -1147,6 +1205,30 @@ int main(int argc, char **argv) {
   if (0 != parse_cmd_args(argc, argv, log_to_stderr, &g_cmd_args)) {
     return EXIT_FAILURE;
   }
+
+  // For debugging, it is useful to be able to set
+  // the number of hash bits very low to force a
+  // large number of collisions.
+#ifdef CMAKE_BUILD_TYPE_DEBUG
+  const char *hash_bits_override = getenv("JSOCKD_DEBUG_HASH_BITS_OVERRIDE");
+  if (hash_bits_override != NULL && hash_bits_override[0] != '\0') {
+    char *endptr;
+    long v = strtol(hash_bits_override, &endptr, 10);
+    if (*endptr != '\0' || v < 1 || v > 64 ||
+        v > CACHED_FUNCTIONS_HASH_BITS_DEBUG || v > INT_MAX) {
+      jsockd_logf(LOG_ERROR | LOG_INTERACTIVE,
+                  "Invalid JSOCKD_DEBUG_HASH_BITS_OVERRIDE "
+                  "value: %s\n",
+                  hash_bits_override);
+      return EXIT_FAILURE;
+    }
+    g_debug_hash_bits_override = (int)v;
+    jsockd_logf(LOG_INFO | LOG_INTERACTIVE,
+                "Overriding cached function hash "
+                "bits to %i\n",
+                g_debug_hash_bits_override);
+  }
+#endif
 
   if (g_cmd_args.version) {
     printf("jsockd %s", STRINGIFY(VERSION));
@@ -1233,7 +1315,8 @@ int main(int argc, char **argv) {
     if (0 != pthread_attr_setstacksize(&attr, QUICKS_THREAD_STACK_SIZE)) {
       jsockd_logf(LOG_ERROR, "pthread_attr_setstacksize failed: %s\n",
                   strerror(errno));
-      pthread_attr_destroy(&attr); // can fail, but no point in checking
+      pthread_attr_destroy(&attr); // can fail, but no point in
+                                   // checking
       goto thread_init_error;
     }
     if (0 != pthread_create(&g_threads[thread_init_n], &attr,
@@ -1241,7 +1324,8 @@ int main(int argc, char **argv) {
                             &g_thread_states[thread_init_n])) {
       jsockd_logf(LOG_ERROR, "pthread_create failed; exiting: %s",
                   strerror(errno));
-      pthread_attr_destroy(&attr); // can fail, but no point in checking
+      pthread_attr_destroy(&attr); // can fail, but no point in
+                                   // checking
       goto thread_init_error;
     }
     pthread_attr_destroy(&attr); // can fail, but no point in checking
@@ -1250,10 +1334,11 @@ int main(int argc, char **argv) {
   // Wait for all threads to be ready
   if (0 != wait_group_timed_wait(&g_thread_ready_wait_group,
                                  10000000000 /* 10 sec in ns */)) {
-    jsockd_logf(
-        LOG_ERROR,
-        "Error waiting for threads to be ready, or timeout; n_remaining=%i\n",
-        wait_group_n_remaining(&g_thread_ready_wait_group));
+    jsockd_logf(LOG_ERROR,
+                "Error waiting for threads to be "
+                "ready, or timeout; "
+                "n_remaining=%i\n",
+                wait_group_n_remaining(&g_thread_ready_wait_group));
     goto thread_init_error;
   }
 
@@ -1270,9 +1355,13 @@ int main(int argc, char **argv) {
     int rts = atomic_load_explicit(&g_thread_states[i].replacement_thread_state,
                                    memory_order_acquire);
     if (rts != REPLACEMENT_THREAD_STATE_NONE) {
-      // As we've just joined the thread, we know it won't be concurrently
-      // updating replacement_thread.
-      jsockd_logf(LOG_DEBUG, "Joining replacement thread for thread %i\n", i);
+      // As we've just joined the thread, we know it
+      // won't be concurrently updating
+      // replacement_thread.
+      jsockd_logf(LOG_DEBUG,
+                  "Joining replacement thread for "
+                  "thread %i\n",
+                  i);
       pthread_join(g_thread_states[i].replacement_thread, NULL);
     }
   }
@@ -1294,8 +1383,8 @@ int main(int argc, char **argv) {
       atomic_load_explicit(&g_new_thread_state_count, memory_order_relaxed);
   jsockd_logf(LOG_DEBUG, "g_new_thread_state_count: %i\n", tsc);
   if (tsc != 0) {
-    jsockd_log(LOG_DEBUG,
-               "Something's up with g_new_thread_state_count (see above)\n");
+    jsockd_log(LOG_DEBUG, "Something's up with "
+                          "g_new_thread_state_count (see above)\n");
     return EXIT_FAILURE;
   }
 #endif
@@ -1329,5 +1418,6 @@ cleanup_on_error:
   return EXIT_FAILURE;
 }
 
-// supress the annoying warning that inttypes.h is not used directly
+// supress the annoying warning that inttypes.h is
+// not used directly
 static const char *supress_unused_header_warning UNUSED = PRId64;

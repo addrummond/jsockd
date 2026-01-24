@@ -31,3 +31,7 @@ WaitGroup g_thread_ready_wait_group;
 const char *g_log_prefix = NULL;
 
 bool g_interactive_logging_mode = false;
+
+#ifdef CMAKE_BUILD_TYPE_DEBUG
+int g_debug_hash_bits_override;
+#endif
