@@ -1,7 +1,3 @@
-#ifndef _REENTRANT
-#define _REENTRANT
-#endif
-
 #include "backtrace.h"
 #include "cmdargs.h"
 #include "config.h"
