@@ -84,7 +84,7 @@ case "$op" in
     # List archive contents: lib /LIST libfile
     log "lib /LIST $libfile"
     set -x
-    exec cmd "/c $LIB /NOLOGO /LIST $libfile"
+    exec cmd "/c \"$LIB\" /NOLOGO /LIST $libfile"
     ;;
 
   d)
@@ -101,7 +101,7 @@ case "$op" in
     # MSVC lib rewrites the archive; provide /OUT explicitly
     log "lib $remargs /OUT:$libfile $libfile"
     set -x
-    exec cmd "/c $LIB /NOLOGO $remargs /OUT:$libfile $libfile"
+    exec cmd "/c \"$LIB\" /NOLOGO $remargs /OUT:$libfile $libfile"
     ;;
 
   x)
@@ -116,7 +116,7 @@ case "$op" in
     done
     log "lib $exargs $libfile"
     set -x
-    exec cmd "/c $LIB /NOLOGO $exargs $libfile"
+    exec cmd "/c \"$LIB\" /NOLOGO $exargs $libfile"
     ;;
 
   *)

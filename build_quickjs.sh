@@ -141,7 +141,7 @@ for platform in $platforms; do
             WPWD=$(cygpath -w $(dirname $(dirname "$PWD")))
             echo "*** RUNNING make ***"
             # shellcheck disable=SC2211
-            "$MAKE" CC=../../win-build-utils/fakecl.sh HOST_CC=../../win-build-utils/fakecl.sh AR=../../win-build-utils/fakear.sh CFLAGS="/FI $WPWD\\win-build-utils\\shims.h /FI $WPWD\\win-build-utils\\builtins.h /O2 /std:c17 /experimental:c11atomics -Ipthreads-win32-include -Ifakesys -D_WINSOCKAPI_ -DWIN32_LEAN_AND_MEAN -DHAVE_STRUCT_TIMESPEC"
+            "$MAKE" LIB="C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64\lib.exe" CL="C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64\cl.exe" CC=../../win-build-utils/fakecl.sh HOST_CC=../../win-build-utils/fakecl.sh AR=../../win-build-utils/fakear.sh CFLAGS="/FI $WPWD\\win-build-utils\\shims.h /FI $WPWD\\win-build-utils\\builtins.h /O2 /std:c17 /experimental:c11atomics -Ipthreads-win32-include -Ifakesys -D_WINSOCKAPI_ -DWIN32_LEAN_AND_MEAN -DHAVE_STRUCT_TIMESPEC"
             echo "*** BUILD COMPLETE ***"
             ;;
         mac_arm64)
