@@ -47,7 +47,9 @@
                              : CACHED_FUNCTIONS_HASH_BITS_RELEASE)
 #ifdef CMAKE_BUILD_TYPE_DEBUG
 #define CACHED_FUNCTION_HASH_BITS                                              \
-  (g_debug_hash_bits_override == 0 ? CACHED_FUNCTIONS_HASH_BITS_DEBUG : MIN(CACHED_FUNCTIONS_HASH_BITS_DEBUG, g_debug_hash_bits_override)
+  (g_debug_hash_bits_override == 0                                             \
+       ? CACHED_FUNCTIONS_HASH_BITS_DEBUG                                      \
+       : MIN(CACHED_FUNCTIONS_HASH_BITS_DEBUG, g_debug_hash_bits_override))
 #else
 #define CACHED_FUNCTION_HASH_BITS CACHED_FUNCTIONS_HASH_BITS_RELEASE
 #endif
