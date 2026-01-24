@@ -1,6 +1,5 @@
 #ifndef _REENTRANT
 #define _REENTRANT
-#include <limits.h>
 #endif
 
 #include "backtrace.h"
