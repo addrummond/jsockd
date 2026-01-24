@@ -53,8 +53,6 @@
 #define CACHED_FUNCTIONS_N_BUCKETS                                             \
   HASH_CACHE_BUCKET_ARRAY_SIZE_FROM_HASH_BITS(CACHED_FUNCTION_MAX_HASH_BITS)
 
-static atomic_bool g_global_init_complete;
-
 // 16-byte align may be required for use of native
 // 128-bit atomic instructions.
 _Alignas(16) static CachedFunctionBucket
@@ -1282,7 +1280,6 @@ int main(int argc, char **argv) {
                      g_module_bytecode_size + ED25519_SIGNATURE_SIZE);
     goto cleanup_on_error;
   }
-  atomic_init(&g_global_init_complete, true);
 
   int thread_init_n = 0;
   for (thread_init_n = 0; thread_init_n < n_threads; ++thread_init_n) {
