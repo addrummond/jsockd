@@ -40,7 +40,7 @@ extern const char *g_log_prefix;
 extern bool g_interactive_logging_mode;
 
 #ifdef CMAKE_BUILD_TYPE_DEBUG
-extern int g_debug_hash_bits_override;
+extern int g_debug_hash_bits;
 #endif
 
 #endif

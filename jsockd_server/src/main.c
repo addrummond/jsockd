@@ -46,10 +46,7 @@
   (CMAKE_BUILD_TYPE_IS_DEBUG ? CACHED_FUNCTIONS_HASH_BITS_DEBUG                \
                              : CACHED_FUNCTIONS_HASH_BITS_RELEASE)
 #ifdef CMAKE_BUILD_TYPE_DEBUG
-#define CACHED_FUNCTION_HASH_BITS                                              \
-  (g_debug_hash_bits_override == 0                                             \
-       ? CACHED_FUNCTIONS_HASH_BITS_DEBUG                                      \
-       : MIN(CACHED_FUNCTIONS_HASH_BITS_DEBUG, g_debug_hash_bits_override))
+#define CACHED_FUNCTION_HASH_BITS g_debug_hash_bits
 #else
 #define CACHED_FUNCTION_HASH_BITS CACHED_FUNCTIONS_HASH_BITS_RELEASE
 #endif
@@ -1220,11 +1217,11 @@ int main(int argc, char **argv) {
                   hash_bits_override);
       return EXIT_FAILURE;
     }
-    g_debug_hash_bits_override = (int)v;
+    g_debug_hash_bits = (int)v;
     jsockd_logf(LOG_INFO | LOG_INTERACTIVE,
                 "Overriding cached function hash "
                 "bits to %i\n",
-                g_debug_hash_bits_override);
+                g_debug_hash_bits);
   }
 #endif
 
