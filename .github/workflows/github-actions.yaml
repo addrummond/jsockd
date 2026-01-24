@@ -155,9 +155,6 @@ jobs:
           set "ProgramFilesx86=%ProgramFiles(x86)%"
           set PATH="C:\msys64\usr\bin;%PATH%"
           cd ${{ github.workspace }}
-          echo "Locating cl and lib:"
-          %SystemRoot%\System32\where.exe cl
-          %SystemRoot%\System32\where.exe lib
           %EXE% build_quickjs.sh windows_x64_msvc
       - name: Upload Windows build diagnostics
         if: always()
