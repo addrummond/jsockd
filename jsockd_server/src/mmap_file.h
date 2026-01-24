@@ -1,10 +1,6 @@
 #ifndef MMAP_FILE_H
 #define MMAP_FILE_H
 
-#ifndef _REENTRANT
-#define _REENTRANT
-#endif
-
 #include <stdint.h>
 #include <stdlib.h>
 
