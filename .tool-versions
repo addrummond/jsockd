@@ -4,3 +4,4 @@ elixir 1.18.4
 erlang 28.0.1
 jq 1.7.1
 golang 1.25.1
+uv 0.9.26

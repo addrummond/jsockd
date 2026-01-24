@@ -1,11 +1,3 @@
-# Python JSockD client inspired by the Go client
-# - Starts the jsockd process
-# - Connects via multiple unix domain sockets (one per thread)
-# - Sends commands with per-connection workers
-# - Supports message handlers (bidirectional messaging during a command)
-# - Parses jsockd logs on stderr and forwards to a Python logger callback
-# - Optional auto-download of jsockd with ed25519 signature verification
-#
 # Requires Python 3.10+
 from __future__ import annotations
 
@@ -28,37 +20,34 @@ import tarfile
 import tempfile
 import threading
 import time
-from dataclasses import dataclass
-from datetime import datetime, timezone
+from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Generic, Optional, TypeVar
+from typing import Any, Callable, Generic, Optional, TypeVar, cast
 
-# Optional runtime deps for auto download. These are declared in pyproject.
-try:
-    import requests
-    from nacl import bindings as nacl_bindings
-except Exception:  # pragma: no cover - only needed for auto-download
-    requests = None  # type: ignore[assignment]
-    nacl_bindings = None  # type: ignore[assignment]
+import requests
+from dateutil.parser import isoparse
+from nacl import (
+    bindings as nacl_bindings,
+)
+
+del enum
+
 
 __all__ = [
     "JSOCKD_VERSION",
     "Config",
-    "DefaultConfig",
     "JSockDClient",
-    "init_jsockd_client",
-    "init_jsockd_client_via_auto_download",
     "JSockDClientError",
     "JSockDJSException",
 ]
 
-# Mirror the Go client
+# __jsockd_version__ <- this comment triggers a CI check to keep the version in sync
 JSOCKD_VERSION = "0.0.139"
 
 # Protocol tokens
 _MESSAGE_HANDLER_INTERNAL_ERROR = "internal_error"
 
-# Log line regex (same as Go)
 _LOG_LINE_RE = re.compile(r"(\*|\$) jsockd ([^ ]+) \[([^][]+)\] (.*)")
 
 T = TypeVar("T")
@@ -80,50 +69,56 @@ class JSockDJSException(JSockDClientError):
 
 @dataclass(slots=True)
 class Config:
-    # The number of threads that JSockD should use. If 0, number of CPU cores is used.
-    NThreads: int
-    # The filename of the bytecode module to load, or "" if none.
-    BytecodeModuleFile: str = ""
-    # Hex-encoded public key used to verify the signature of the bytecode module, or "" if none.
-    BytecodeModulePublicKey: str = ""
-    # The filename of the source map to load, or "" if none.
-    SourceMap: str = ""
-    # The maximum time in microseconds a connection is allowed to be idle before JSockD shuts down its associated QuickJS instance. If 0, no idle timeout is applied.
-    MaxIdleTimeUs: int = 0
-    # The maximum time in microseconds a command is allowed to run (0 for default max time)
-    MaxCommandRuntimeUs: int = 0
-    # The timeout in microseconds when communicating with JSockD
-    TimeoutUs: int = 15_000_000  # 15 seconds
-    # If true, the JSockD server version is not checked against the version expected by this client. This should always be set to 'false' in production systems.
-    SkipJSockDVersionCheck: bool = False
-    # If set, this function is called for each log message sent by JSockD.
-    # timestamp can be None if parsing fails
-    Logger: Optional[Callable[[Optional[datetime], str, str], None]] = None
-    # The maximum number of times that the jsockd process will be restarted within one minute if it crashes. If 0, it will never be restarted.
-    MaxRestartsPerMinute: int = 1
-    # Value for JSOCKD_LOG_PREFIX env var
-    LogPrefix: str = ""
+    """Configuration for the JSockD client.
 
+    Fields:
+      - n_threads (int): Number of worker threads; defaults to the number of CPU cores (>= 1).
+      - bytecode_module_file (str): Path to the bytecode module to load, or "" for none.
+      - bytecode_module_public_key (str): Hex-encoded public key used to verify the module signature, or "" for none.
+      - souce_map (str): Path to the source map to load, or "" for none.
+      - max_idle_time_us (int): Maximum idle time per connection in microseconds before its QuickJS instance is shut down; 0 disables idle timeout.
+      - max_command_runtime_us (int): Maximum allowed runtime for a command in microseconds; 0 uses the default max.
+      - timeout_us (int): I/O timeout in microseconds when communicating with JSockD.
+      - skip_jsockd_version_check (bool): If true, skip checking server version against the client’s expected version. Keep false in production.
+      - logger (Optional[Callable[[Optional[datetime], str, str], None]]): Callback for JSockD log messages; timestamp may be None if parsing fails.
+      - max_restarts_per_minute (int): Max times the jsockd process will be restarted within one minute if it crashes; 0 disables restarts.
+      - log_prefix (str): Value for the JSOCKD_LOG_PREFIX environment variable.
 
-def DefaultConfig() -> Config:
-    nthreads = os.cpu_count() or 1
-    return Config(
-        NThreads=nthreads,
-        Logger=lambda ts, level, msg: print(f"[jsockd] {msg}"),
+    Use Config() for sensible defaults and override fields as needed.
+    """
+
+    n_threads: int = field(default_factory=lambda: os.cpu_count() or 1)
+    bytecode_module_file: str = ""
+    bytecode_module_public_key: str = ""
+    souce_map: str = ""
+    max_idle_time_us: int = 0
+    max_command_runtime_us: int = 0
+    timeout_us: int = 15_000_000  # 15 seconds
+    skip_jsockd_version_check: bool = False
+    logger: Optional[Callable[[Optional[datetime], str, str], None]] = field(
+        default_factory=lambda: (lambda ts, level, msg: print(f"[jsockd] {msg}"))
     )
+    max_restarts_per_minute: int = 1
+    log_prefix: str = ""
 
 
 @dataclass(slots=True)
 class RawResponse:
-    Exception: bool
-    ResultJson: str
+    """
+    Raw response from JSockD."""
+
+    exception: bool
+    result_json: str
 
 
 @dataclass(slots=True)
 class Response(Generic[T]):
-    Exception: bool
-    Result: T
-    RawResponse: RawResponse
+    """
+    Parsed response from JSockD. Check raw_response for information about the error if Exception is True."""
+
+    exception: bool
+    result: T
+    raw_response: RawResponse
 
 
 @dataclasses.dataclass(slots=True)
@@ -146,40 +141,12 @@ class _InternalClient:
     fatal_error: Optional[BaseException]
     fatal_error_lock: threading.Lock
     quit_event: threading.Event
-    next_cmd_id: itertools.count
-    choose_index: itertools.count
-    restarts_in_window: int
+    next_cmd_id: itertools.count[int]
+    choose_index: itertools.count[int]
+    restart_count: int
     last_restart_time: float
     restart_guard: threading.Lock
     auto_downloaded_exec: Optional[str]
-
-
-def _parse_rfc3339nano(ts: str) -> Optional[datetime]:
-    # Try best-effort parse of RFC3339 with up to nanoseconds
-    # Normalize 'Z' to '+00:00'
-    try:
-        if ts.endswith("Z"):
-            ts = ts[:-1] + "+00:00"
-        # If fractional seconds > 6 digits, trim to microseconds
-        if "." in ts:
-            head, tail = ts.split(".", 1)
-            if "+" in tail:
-                frac, tz = tail.split("+", 1)
-                frac = (frac + "000000")[:6]
-                ts2 = f"{head}.{frac}+{tz}"
-            elif "-" in tail:
-                frac, tz = tail.split("-", 1)
-                frac = (frac + "000000")[:6]
-                ts2 = f"{head}.{frac}-{tz}"
-            else:
-                # no tz (unlikely here)
-                frac = (tail + "000000")[:6]
-                ts2 = f"{head}.{frac}"
-        else:
-            ts2 = ts
-        return datetime.fromisoformat(ts2)
-    except Exception:
-        return None
 
 
 def _stream_stderr_logs(stderr: io.TextIOBase, config: Config) -> None:
@@ -190,11 +157,11 @@ def _stream_stderr_logs(stderr: io.TextIOBase, config: Config) -> None:
         line = raw.strip()
         m = _LOG_LINE_RE.match(line)
         if not m:
-            if config.Logger:
-                config.Logger(zero_time, "INFO", line)
+            if config.logger:
+                config.logger(zero_time, "INFO", line)
             continue
         prefix, timestamp, level, msg = m.groups()
-        t = _parse_rfc3339nano(timestamp)
+        t = isoparse(timestamp)
         if prefix == "*":
             if current_line:
                 current_line.append("\n")
@@ -204,16 +171,19 @@ def _stream_stderr_logs(stderr: io.TextIOBase, config: Config) -> None:
                 current_line.append("\n")
             last_was_dollar = False
             current_line.append(msg)
-            if config.Logger:
-                config.Logger(t, level, "".join(current_line))
+            if config.logger:
+                config.logger(t, level, "".join(current_line))
             current_line.clear()
         else:
-            if config.Logger:
-                config.Logger(zero_time, "INFO", line)
+            if config.logger:
+                config.logger(zero_time, "INFO", line)
 
 
 def _read_ready_from_stdout(
-    stdout: io.TextIOBase, ready_q: "queue.Queue[int]", err_q: "queue.Queue[BaseException]", config: Config
+    stdout: io.TextIOBase,
+    ready_q: "queue.Queue[int]",
+    err_q: "queue.Queue[BaseException]",
+    config: Config,
 ) -> None:
     try:
         for raw in stdout:
@@ -227,9 +197,14 @@ def _read_ready_from_stdout(
                         err_q.put(JSockDClientError(f"malformed READY line: {line!r}"))
                         return
                     version = parts[2]
-                    if not config.SkipJSockDVersionCheck and version != JSOCKD_VERSION:
+                    if (
+                        not config.skip_jsockd_version_check
+                        and version != JSOCKD_VERSION
+                    ):
                         err_q.put(
-                            JSockDClientError(f"version mismatch: client {JSOCKD_VERSION!r}, server {version!r}")
+                            JSockDClientError(
+                                f"version mismatch: client {JSOCKD_VERSION!r}, server {version!r}"
+                            )
                         )
                         return
                     ready_q.put(n)
@@ -237,21 +212,25 @@ def _read_ready_from_stdout(
                 err_q.put(JSockDClientError(f"malformed READY line: {line!r}"))
                 return
         # EOF
-        err_q.put(JSockDClientError("stdout closed before READY line; check jsockd logs for error"))
+        err_q.put(
+            JSockDClientError(
+                "stdout closed before READY line; check jsockd logs for error"
+            )
+        )
     except Exception as e:
         err_q.put(e)
 
 
 def _prepare_cmd_args(config: Config, sockets: list[str]) -> list[str]:
     args: list[str] = ["-b", "00"]
-    if config.BytecodeModuleFile:
-        args += ["-m", config.BytecodeModuleFile]
-    if config.SourceMap:
-        args += ["-sm", config.SourceMap]
-    if config.MaxIdleTimeUs:
-        args += ["-i", str(config.MaxIdleTimeUs)]
-    if config.MaxCommandRuntimeUs:
-        args += ["-t", str(config.MaxCommandRuntimeUs)]
+    if config.bytecode_module_file:
+        args += ["-m", config.bytecode_module_file]
+    if config.souce_map:
+        args += ["-sm", config.souce_map]
+    if config.max_idle_time_us:
+        args += ["-i", str(config.max_idle_time_us)]
+    if config.max_command_runtime_us:
+        args += ["-t", str(config.max_command_runtime_us)]
     args += ["-s", "--"]
     args.extend(sockets)
     return args
@@ -267,7 +246,11 @@ def _read_record(fp: io.BufferedReader) -> str:
         raise JSockDClientError(f"decode record: {e}") from e
 
 
-def _conn_handler(conn: socket.socket, cmd_q: "queue.Queue[Optional[_Command]]", iclient: _InternalClient) -> None:
+def _conn_handler(
+    conn: socket.socket,
+    cmd_q: "queue.Queue[Optional[_Command]]",
+    iclient: _InternalClient,
+) -> None:
     try:
         rfile = conn.makefile("rb")
         wfile = conn.makefile("wb")
@@ -295,32 +278,55 @@ def _conn_handler(conn: socket.socket, cmd_q: "queue.Queue[Optional[_Command]]",
 
             parts = rec.split(" ", 1)
             if len(parts) != 2 or parts[0] != cmd.id:
-                _set_fatal_error(iclient, JSockDClientError(f"malformed or mismatched response: {rec!r}"))
+                _set_fatal_error(
+                    iclient,
+                    JSockDClientError(f"malformed or mismatched response: {rec!r}"),
+                )
                 return
 
             rest = parts[1]
             if rest.startswith("exception "):
-                cmd.response_q.put(RawResponse(Exception=True, ResultJson=rest[len("exception ") :].rstrip("\n")))
+                cmd.response_q.put(
+                    RawResponse(
+                        exception=True,
+                        result_json=rest[len("exception ") :].rstrip("\n"),
+                    )
+                )
                 continue
             elif rest.startswith("ok "):
-                cmd.response_q.put(RawResponse(Exception=False, ResultJson=rest[len("ok ") :].rstrip("\n")))
+                cmd.response_q.put(
+                    RawResponse(
+                        exception=False, result_json=rest[len("ok ") :].rstrip("\n")
+                    )
+                )
                 continue
             elif rest.startswith("message "):
                 # Handle message exchange loop
                 message_rest = rest[len("message ") :]
                 while True:
                     response_json = "null"
-                    handler_err: Optional[BaseException] = JSockDClientError("no message handler")
+                    handler_err: Optional[BaseException] = JSockDClientError(
+                        "no message handler"
+                    )
                     if cmd.message_handler is not None:
                         try:
-                            response_json = cmd.message_handler(message_rest.rstrip("\n"))
+                            response_json = cmd.message_handler(
+                                message_rest.rstrip("\n")
+                            )
                             handler_err = None
                         except BaseException as e:
                             handler_err = e
                     if handler_err is not None:
-                        _set_fatal_error(iclient, JSockDClientError(f"message handler error: {handler_err}"))
+                        _set_fatal_error(
+                            iclient,
+                            JSockDClientError(f"message handler error: {handler_err}"),
+                        )
                         try:
-                            wfile.write(f"{cmd.id}\x00{_MESSAGE_HANDLER_INTERNAL_ERROR}\x00".encode("utf-8"))
+                            wfile.write(
+                                f"{cmd.id}\x00{_MESSAGE_HANDLER_INTERNAL_ERROR}\x00".encode(
+                                    "utf-8"
+                                )
+                            )
                             wfile.flush()
                         except Exception:
                             pass
@@ -340,23 +346,44 @@ def _conn_handler(conn: socket.socket, cmd_q: "queue.Queue[Optional[_Command]]",
                     if len(mparts) != 2 or mparts[0] != cmd.id:
                         _set_fatal_error(
                             iclient,
-                            JSockDClientError(f"mismatched or malformed message response: {mresp!r}, want id {cmd.id!r}"),
+                            JSockDClientError(
+                                f"mismatched or malformed message response: {mresp!r}, want id {cmd.id!r}"
+                            ),
                         )
                         return
                     if mparts[1].startswith("ok "):
-                        cmd.response_q.put(RawResponse(Exception=False, ResultJson=mparts[1][3:].rstrip("\n")))
+                        cmd.response_q.put(
+                            RawResponse(
+                                exception=False, result_json=mparts[1][3:].rstrip("\n")
+                            )
+                        )
                         break
                     elif mparts[1].startswith("exception "):
-                        cmd.response_q.put(RawResponse(Exception=True, ResultJson=mparts[1][len("exception ") :].rstrip("\n")))
+                        cmd.response_q.put(
+                            RawResponse(
+                                exception=True,
+                                result_json=mparts[1][len("exception ") :].rstrip("\n"),
+                            )
+                        )
                         break
                     elif mparts[1].startswith("message "):
                         message_rest = mparts[1][len("message ") :]
                         continue
                     else:
-                        _set_fatal_error(iclient, JSockDClientError(f"malformed message response from JSockD: {mresp!r}"))
+                        _set_fatal_error(
+                            iclient,
+                            JSockDClientError(
+                                f"malformed message response from JSockD: {mresp!r}"
+                            ),
+                        )
                         return
             else:
-                _set_fatal_error(iclient, JSockDClientError(f"malformed command response from JSockD: {rec!r}"))
+                _set_fatal_error(
+                    iclient,
+                    JSockDClientError(
+                        f"malformed command response from JSockD: {rec!r}"
+                    ),
+                )
                 return
     finally:
         try:
@@ -376,13 +403,15 @@ def _set_fatal_error(iclient: _InternalClient, err: BaseException) -> None:
             iclient.fatal_error = err
 
 
-def _start_jsockd_process(jsockd_exec: str, config: Config, sockets: list[str]) -> subprocess.Popen[str]:
+def _start_jsockd_process(
+    jsockd_exec: str, config: Config, sockets: list[str]
+) -> subprocess.Popen[str]:
     args = [jsockd_exec] + _prepare_cmd_args(config, sockets)
     env = os.environ.copy()
-    if config.LogPrefix:
-        env["JSOCKD_LOG_PREFIX"] = config.LogPrefix
-    if config.BytecodeModulePublicKey:
-        env["JSOCKD_BYTECODE_MODULE_PUBLIC_KEY"] = config.BytecodeModulePublicKey
+    if config.log_prefix:
+        env["JSOCKD_LOG_PREFIX"] = config.log_prefix
+    if config.bytecode_module_public_key:
+        env["JSOCKD_BYTECODE_MODULE_PUBLIC_KEY"] = config.bytecode_module_public_key
 
     # Use text mode for stdout/stderr to simplify parsing
     proc = subprocess.Popen(
@@ -406,8 +435,294 @@ def _dial_unix(path: str, timeout_us: int) -> socket.socket:
 
 
 class JSockDClient:
-    def __init__(self, iclient: _InternalClient):
-        self._iclient = iclient
+    def __init__(
+        self,
+        config: Config,
+        jsockd_exec: Optional[str] = None,
+        autodownload: bool = False,
+    ):
+        """Create a JSockD client. Either provide jsockd_exec path or set autodownload=True to download the appropriate binary."""
+        if config.n_threads <= 0:
+            raise JSockDClientError("NThreads must be greater than zero.")
+
+        # Create short socket dir to avoid UDS path len issues
+        socket_tmpdir = tempfile.mkdtemp(prefix="jsd_")
+        sockets: list[str] = [
+            str(Path(socket_tmpdir) / f"jsd_{i}.sock") for i in range(config.n_threads)
+        ]
+
+        # Resolve jsockd executable (explicit or autodownload)
+        if autodownload:
+            jsockd_exec_resolved = _download_and_verify_jsockd()
+            auto_downloaded: Optional[str] = jsockd_exec_resolved
+        else:
+            if not jsockd_exec:
+                raise JSockDClientError("Provide jsockd_exec or set autodownload=True")
+            jsockd_exec_resolved = jsockd_exec
+            auto_downloaded = None
+
+        # Start process
+        proc = _start_jsockd_process(jsockd_exec_resolved, config, sockets)
+
+        # Setup readers
+        assert proc.stdout is not None and proc.stderr is not None
+        ready_q: "queue.Queue[int]" = queue.Queue()
+        err_q: "queue.Queue[BaseException]" = queue.Queue()
+
+        t_ready = threading.Thread(
+            target=_read_ready_from_stdout,
+            args=(proc.stdout, ready_q, err_q, config),
+            name="jsockd-ready",
+            daemon=True,
+        )
+        t_ready.start()
+
+        t_logs = threading.Thread(
+            target=_stream_stderr_logs,
+            args=(proc.stderr, config),
+            name="jsockd-logs",
+            daemon=True,
+        )
+        t_logs.start()
+
+        # Wait for READY or error/timeout
+        ready_count = 0
+        try:
+            timeout_s = (
+                config.timeout_us / 1_000_000.0 if config.timeout_us > 0 else 15.0
+            )
+            start = time.time()
+            while True:
+                try:
+                    n = ready_q.get_nowait()
+                    ready_count = n
+                    break
+                except queue.Empty:
+                    pass
+                try:
+                    e = err_q.get_nowait()
+                    proc.kill()
+                    proc.wait()
+                    shutil.rmtree(socket_tmpdir, ignore_errors=True)
+                    raise JSockDClientError(f"waiting for READY: {e}") from e
+                except queue.Empty:
+                    pass
+                if (time.time() - start) > timeout_s:
+                    proc.kill()
+                    proc.wait()
+                    shutil.rmtree(socket_tmpdir, ignore_errors=True)
+                    raise JSockDClientError(
+                        f"timeout ({timeout_s:.3f}s) waiting for READY line"
+                    )
+                time.sleep(0.01)
+        except Exception:
+            raise
+
+        if ready_count > len(sockets):
+            proc.kill()
+            proc.wait()
+            shutil.rmtree(socket_tmpdir, ignore_errors=True)
+            raise JSockDClientError(
+                f"ready count ({ready_count}) exceeds number of sockets specified ({len(sockets)})"
+            )
+
+        # Dial sockets
+        conns: list[socket.socket] = []
+        try:
+            for i in range(ready_count):
+                s = _dial_unix(sockets[i], config.timeout_us)
+                conns.append(s)
+        except Exception as e:
+            proc.kill()
+            proc.wait()
+            shutil.rmtree(socket_tmpdir, ignore_errors=True)
+            raise JSockDClientError(f"dial {sockets[len(conns)]}: {e}") from e
+
+        # Build internal client
+        ic = _InternalClient(
+            process=proc,
+            sockets=conns,
+            socket_paths=sockets[:ready_count],
+            cmd_queues=[queue.Queue() for _ in range(ready_count)],
+            config=config,
+            socket_tmpdir=socket_tmpdir,
+            fatal_error=None,
+            fatal_error_lock=threading.Lock(),
+            quit_event=threading.Event(),
+            next_cmd_id=itertools.count(1),
+            choose_index=itertools.count(0),
+            restart_count=0,
+            last_restart_time=0.0,
+            restart_guard=threading.Lock(),
+            auto_downloaded_exec=auto_downloaded,
+        )
+
+        # Start connection workers
+        for i in range(ready_count):
+            threading.Thread(
+                target=_conn_handler,
+                args=(conns[i], ic.cmd_queues[i], ic),
+                daemon=True,
+                name=f"jsockd-conn-{i}",
+            ).start()
+
+        # Monitor process exit with bounded auto-restart
+        def _reaper() -> None:
+            nonlocal proc
+            while not ic.quit_event.is_set():
+                rc = proc.wait()
+                if ic.quit_event.is_set():
+                    break
+                if rc == 0:
+                    # Clean shutdown; propagate quit and cleanup
+                    ic.quit_event.set()
+                    try:
+                        shutil.rmtree(ic.socket_tmpdir, ignore_errors=True)
+                    except Exception:
+                        pass
+                    break
+
+                # Unexpected exit; try bounded restart
+                now = time.time()
+                with ic.restart_guard:
+                    # Rolling budget: allow up to MaxRestartsPerMinute per minute elapsed since last_restart_time.
+                    minutes_passed = (
+                        int((now - ic.last_restart_time) / 60.0)
+                        if ic.last_restart_time > 0
+                        else 0
+                    )
+                    effective_count = ic.restart_count - (
+                        minutes_passed * ic.config.max_restarts_per_minute
+                    )
+                    if effective_count >= ic.config.max_restarts_per_minute:
+                        _set_fatal_error(
+                            ic,
+                            JSockDClientError(
+                                f"jsockd crashed (code {rc}); exceeded MaxRestartsPerMinute={ic.config.max_restarts_per_minute}"
+                            ),
+                        )
+                        ic.quit_event.set()
+                        try:
+                            shutil.rmtree(ic.socket_tmpdir, ignore_errors=True)
+                        except Exception:
+                            pass
+                        break
+
+                    ic.restart_count += 1
+                    ic.last_restart_time = now
+
+                # Attempt restart
+                try:
+                    # Close existing sockets
+                    for s in ic.sockets:
+                        with contextlib.suppress(Exception):
+                            s.close()
+                    ic.sockets.clear()
+
+                    # Start new process
+                    new_proc = _start_jsockd_process(
+                        jsockd_exec_resolved, ic.config, ic.socket_paths
+                    )
+
+                    # Setup readers
+                    assert new_proc.stdout is not None and new_proc.stderr is not None
+                    ready_q: "queue.Queue[int]" = queue.Queue()
+                    err_q: "queue.Queue[BaseException]" = queue.Queue()
+
+                    threading.Thread(
+                        target=_read_ready_from_stdout,
+                        args=(new_proc.stdout, ready_q, err_q, ic.config),
+                        name="jsockd-ready",
+                        daemon=True,
+                    ).start()
+
+                    threading.Thread(
+                        target=_stream_stderr_logs,
+                        args=(new_proc.stderr, ic.config),
+                        name="jsockd-logs",
+                        daemon=True,
+                    ).start()
+
+                    # Wait for READY or error/timeout
+                    ready_count = 0
+                    timeout_s = (
+                        ic.config.timeout_us / 1_000_000.0
+                        if ic.config.timeout_us > 0
+                        else 15.0
+                    )
+                    start = time.time()
+                    while True:
+                        try:
+                            n = ready_q.get_nowait()
+                            ready_count = n
+                            break
+                        except queue.Empty:
+                            pass
+                        try:
+                            e = err_q.get_nowait()
+                            new_proc.kill()
+                            new_proc.wait()
+                            raise JSockDClientError(
+                                f"waiting for READY (restart): {e}"
+                            ) from e
+                        except queue.Empty:
+                            pass
+                        if (time.time() - start) > timeout_s:
+                            new_proc.kill()
+                            new_proc.wait()
+                            raise JSockDClientError(
+                                f"timeout ({timeout_s:.3f}s) waiting for READY line during restart"
+                            )
+                        time.sleep(0.01)
+
+                    if ready_count > len(ic.socket_paths):
+                        new_proc.kill()
+                        new_proc.wait()
+                        raise JSockDClientError(
+                            f"ready count ({ready_count}) exceeds number of sockets specified ({len(ic.socket_paths)}) during restart"
+                        )
+
+                    # Dial sockets
+                    new_conns: list[socket.socket] = []
+                    for i in range(ready_count):
+                        s = _dial_unix(ic.socket_paths[i], ic.config.timeout_us)
+                        new_conns.append(s)
+
+                    # Replace process and sockets
+                    ic.process = new_proc
+                    ic.sockets = new_conns
+
+                    # Recreate command queues (clear old queues to avoid stale workers)
+                    ic.cmd_queues = [queue.Queue() for _ in range(ready_count)]
+
+                    # Start new connection workers
+                    for i in range(ready_count):
+                        threading.Thread(
+                            target=_conn_handler,
+                            args=(new_conns[i], ic.cmd_queues[i], ic),
+                            daemon=True,
+                            name=f"jsockd-conn-restart-{i}",
+                        ).start()
+
+                    # Successfully restarted; continue monitoring
+                    proc = new_proc
+                    continue
+                except Exception as e:
+                    # Restart failed; record fatal and stop
+                    _set_fatal_error(
+                        iclient=ic, err=JSockDClientError(f"restart failed: {e}")
+                    )
+                    ic.quit_event.set()
+                    try:
+                        shutil.rmtree(ic.socket_tmpdir, ignore_errors=True)
+                    except Exception:
+                        pass
+                    break
+
+        threading.Thread(target=_reaper, daemon=True, name="jsockd-reaper").start()
+
+        # Store internal client and locks
+        self._iclient = ic
         self._close_lock = threading.Lock()
         self._closed = False
 
@@ -418,30 +733,8 @@ class JSockDClient:
     def get_jsockd_process(self) -> subprocess.Popen[str]:
         return self._iclient.process
 
-    def run_raw(
-        self,
-        query: str,
-        json_param: str,
-        message_handler: Optional[Callable[[str], str]] = None,
-    ) -> str:
-        raw = self.send_raw_command(query, json_param, message_handler)
-        if raw.Exception:
-            raise JSockDJSException(raw.ResultJson)
-        return raw.ResultJson
-
-    def run(
-        self,
-        query: str,
-        param: Any = None,
-        message_handler: Optional[Callable[[Any], Any]] = None,
-    ) -> Any:
-        if message_handler is None:
-            resp = self.send_command(query, param)
-        else:
-            resp = self.send_command_with_message_handler(query, param, message_handler)
-        if resp.Exception:
-            raise JSockDJSException(resp.RawResponse.ResultJson)
-        return resp.Result
+    def set_auto_downloaded_exec(self, path: str) -> None:
+        self._iclient.auto_downloaded_exec = path
 
     def close(self) -> None:
         with self._close_lock:
@@ -468,7 +761,11 @@ class JSockDClient:
 
             # Terminate process
             try:
-                timeout_s = ic.config.TimeoutUs / 1_000_000.0 if ic.config.TimeoutUs > 0 else 5.0
+                timeout_s = (
+                    ic.config.timeout_us / 1_000_000.0
+                    if ic.config.timeout_us > 0
+                    else 5.0
+                )
                 ic.process.terminate()
                 try:
                     ic.process.wait(timeout=timeout_s)
@@ -502,6 +799,8 @@ class JSockDClient:
         json_param: str,
         message_handler: Optional[Callable[[str], str]] = None,
     ) -> RawResponse:
+        """
+        Send a raw JSON command to JSockD."""
         ic = self._iclient
         fe = _get_fatal_error(ic)
         if fe:
@@ -529,37 +828,22 @@ class JSockDClient:
             # Fallback to random enqueue
             random.choice(ic.cmd_queues).put(cmd)
 
-        timeout_s = ic.config.TimeoutUs / 1_000_000.0 if ic.config.TimeoutUs > 0 else None
+        timeout_s = (
+            ic.config.timeout_us / 1_000_000.0 if ic.config.timeout_us > 0 else None
+        )
         try:
             return resp_q.get(timeout=timeout_s)
         except queue.Empty:
             raise JSockDClientError("timeout waiting for response")
 
-    def send_raw_command_with_message_handler(
-        self,
-        query: str,
-        json_param: str,
-        message_handler: Callable[[str], str],
-    ) -> RawResponse:
-        return self.send_raw_command(query, json_param, message_handler)
-
-    def send_command(self, query: str, json_param: Any) -> Response[Any]:
-        payload = json.dumps(json_param, separators=(",", ":"))
-        raw = self.send_raw_command(query, payload)
-        if raw.Exception:
-            return Response(Exception=True, Result=None, RawResponse=raw)
-        try:
-            result = json.loads(raw.ResultJson)
-        except Exception as e:
-            raise JSockDClientError(f"json unmarshal: {e}") from e
-        return Response(Exception=False, Result=result, RawResponse=raw)
-
-    def send_command_with_message_handler(
+    def send_command(
         self,
         query: str,
         json_param: Any,
-        message_handler: Callable[[Any], Any],
+        message_handler: Optional[Callable[[Any], Any]] = None,
     ) -> Response[Any]:
+        """
+        Send a command to JSockD with JSON marshalling/unmarshalling handled by json.dumps and json.loads."""
         msg_handler_err: list[Optional[BaseException]] = [None]
 
         def _wrapped(json_message: str) -> str:
@@ -569,7 +853,7 @@ class JSockDClient:
                 msg_handler_err[0] = e
                 raise
             try:
-                response = message_handler(message)
+                response = message_handler(message) if message_handler else None
             except Exception as e:
                 msg_handler_err[0] = e
                 raise
@@ -580,151 +864,23 @@ class JSockDClient:
                 raise
 
         payload = json.dumps(json_param, separators=(",", ":"))
-        try:
-            raw = self.send_raw_command(query, payload, _wrapped)
-        except Exception as cmd_err:
-            if msg_handler_err[0] is not None:
-                raise JSockDClientError(f"message handler error: {msg_handler_err[0]}; command error: {cmd_err}") from cmd_err
-            raise
+        raw = self.send_raw_command(query, payload, _wrapped)
         if msg_handler_err[0] is not None:
             raise JSockDClientError(f"message handler error: {msg_handler_err[0]}")
-        if raw.Exception:
-            return Response(Exception=True, Result=None, RawResponse=raw)
+        if raw.exception:
+            return Response(exception=True, result=None, raw_response=raw)
         try:
-            result = json.loads(raw.ResultJson)
+            result = json.loads(raw.result_json)
         except Exception as e:
             raise JSockDClientError(f"json unmarshal: {e}") from e
-        return Response(Exception=False, Result=result, RawResponse=raw)
+        return Response(exception=False, result=result, raw_response=raw)
 
 
-def init_jsockd_client(config: Config, jsockd_exec: str) -> JSockDClient:
-    if config.NThreads <= 0:
-        raise JSockDClientError(
-            "NThreads must be greater than zero. Did you forget to call DefaultConfig() to initialize Config?"
-        )
-
-    # Create short socket dir to avoid UDS path len issues
-    socket_tmpdir = tempfile.mkdtemp(prefix="jsd_")
-    sockets: list[str] = [str(Path(socket_tmpdir) / f"jsd_{i}.sock") for i in range(config.NThreads)]
-
-    # Start process
-    proc = _start_jsockd_process(jsockd_exec, config, sockets)
-
-    # Setup readers
-    assert proc.stdout is not None and proc.stderr is not None
-    ready_q: "queue.Queue[int]" = queue.Queue()
-    err_q: "queue.Queue[BaseException]" = queue.Queue()
-
-    t_ready = threading.Thread(
-        target=_read_ready_from_stdout, args=(proc.stdout, ready_q, err_q, config), name="jsockd-ready", daemon=True
-    )
-    t_ready.start()
-
-    t_logs = threading.Thread(
-        target=_stream_stderr_logs, args=(proc.stderr, config), name="jsockd-logs", daemon=True
-    )
-    t_logs.start()
-
-    # Wait for READY or error/timeout
-    ready_count = 0
-    try:
-        timeout_s = config.TimeoutUs / 1_000_000.0 if config.TimeoutUs > 0 else 15.0
-        start = time.time()
-        while True:
-            try:
-                n = ready_q.get_nowait()
-                ready_count = n
-                break
-            except queue.Empty:
-                pass
-            try:
-                e = err_q.get_nowait()
-                proc.kill()
-                proc.wait()
-                shutil.rmtree(socket_tmpdir, ignore_errors=True)
-                raise JSockDClientError(f"waiting for READY: {e}") from e
-            except queue.Empty:
-                pass
-            if (time.time() - start) > timeout_s:
-                proc.kill()
-                proc.wait()
-                shutil.rmtree(socket_tmpdir, ignore_errors=True)
-                raise JSockDClientError(f"timeout ({timeout_s:.3f}s) waiting for READY line")
-            time.sleep(0.01)
-    except Exception:
-        raise
-
-    if ready_count > len(sockets):
-        proc.kill()
-        proc.wait()
-        shutil.rmtree(socket_tmpdir, ignore_errors=True)
-        raise JSockDClientError(
-            f"ready count ({ready_count}) exceeds number of sockets specified ({len(sockets)})"
-        )
-
-    # Dial sockets
-    conns: list[socket.socket] = []
-    try:
-        for i in range(ready_count):
-            s = _dial_unix(sockets[i], config.TimeoutUs)
-            conns.append(s)
-    except Exception as e:
-        proc.kill()
-        proc.wait()
-        shutil.rmtree(socket_tmpdir, ignore_errors=True)
-        raise JSockDClientError(f"dial {sockets[len(conns)]}: {e}") from e
-
-    # Build internal client
-    ic = _InternalClient(
-        process=proc,
-        sockets=conns,
-        socket_paths=sockets[:ready_count],
-        cmd_queues=[queue.Queue() for _ in range(ready_count)],
-        config=config,
-        socket_tmpdir=socket_tmpdir,
-        fatal_error=None,
-        fatal_error_lock=threading.Lock(),
-        quit_event=threading.Event(),
-        next_cmd_id=itertools.count(1),
-        choose_index=itertools.count(0),
-        restarts_in_window=0,
-        last_restart_time=0.0,
-        restart_guard=threading.Lock(),
-        auto_downloaded_exec=None,
-    )
-
-    # Start connection workers
-    for i in range(ready_count):
-        threading.Thread(
-            target=_conn_handler, args=(conns[i], ic.cmd_queues[i], ic), daemon=True, name=f"jsockd-conn-{i}"
-        ).start()
-
-    # Monitor process exit
-    def _reaper() -> None:
-        rc = proc.wait()
-        ic.quit_event.set()
-        # Note: Go client restarts jsockd if it crashes, bounded by MaxRestartsPerMinute.
-        # For simplicity, we only record a fatal error on unexpected exit.
-        if rc != 0:
-            _set_fatal_error(ic, JSockDClientError(f"jsockd process exited unexpectedly with code {rc}"))
-        try:
-            shutil.rmtree(ic.socket_tmpdir, ignore_errors=True)
-        except Exception:
-            pass
-
-    threading.Thread(target=_reaper, daemon=True, name="jsockd-reaper").start()
-
-    return JSockDClient(ic)
-
-
-# Auto-download support (parity with Go client)
-_JSOCKD_RELEASE_URL_TEMPL = (
-    "https://github.com/addrummond/jsockd/releases/download/vVERSION/jsockd-VERSION-OS-ARCH.tar.gz"
+_JSOCKD_RELEASE_URL_TEMPL = "https://github.com/addrummond/jsockd/releases/download/vVERSION/jsockd-VERSION-OS-ARCH.tar.gz"
+_JSOCKD_SIGNATURE_URL_TEMPL = "https://github.com/addrummond/jsockd/releases/download/vVERSION/ed25519_signatures.txt"
+_JSOCKD_BINARY_PUBLIC_KEY = (
+    "b136fca8fbfc42fe6dc95dedd035b0b50ad93b6a5d6fcaf8fc0552e9d29ee406"
 )
-_JSOCKD_SIGNATURE_URL_TEMPL = (
-    "https://github.com/addrummond/jsockd/releases/download/vVERSION/ed25519_signatures.txt"
-)
-_JSOCKD_BINARY_PUBLIC_KEY = "b136fca8fbfc42fe6dc95dedd035b0b50ad93b6a5d6fcaf8fc0552e9d29ee406"
 
 
 class _DownloadError(JSockDClientError):
@@ -732,9 +888,6 @@ class _DownloadError(JSockDClientError):
 
 
 def _download_and_verify_jsockd() -> str:
-    if requests is None or nacl_bindings is None:
-        raise JSockDClientError("Auto-download requires 'requests' and 'PyNaCl' dependencies installed")
-
     os_name = platform.system().lower()
     if os_name == "darwin":
         os_name = "macos"
@@ -746,7 +899,11 @@ def _download_and_verify_jsockd() -> str:
     if arch == "x86-64":
         arch = "x86_64"
 
-    url = _JSOCKD_RELEASE_URL_TEMPL.replace("VERSION", JSOCKD_VERSION).replace("OS", os_name).replace("ARCH", arch)
+    url = (
+        _JSOCKD_RELEASE_URL_TEMPL.replace("VERSION", JSOCKD_VERSION)
+        .replace("OS", os_name)
+        .replace("ARCH", arch)
+    )
     sig_url = _JSOCKD_SIGNATURE_URL_TEMPL.replace("VERSION", JSOCKD_VERSION)
 
     # Download signatures file
@@ -755,7 +912,9 @@ def _download_and_verify_jsockd() -> str:
     except Exception as e:
         raise _DownloadError(f"failed to download file: {sig_url}: {e}") from e
     if sig_resp.status_code != 200:
-        raise _DownloadError(f"failed to download file: unexpected HTTP status {sig_resp.status_code} for {sig_url}")
+        raise _DownloadError(
+            f"failed to download file: unexpected HTTP status {sig_resp.status_code} for {sig_url}"
+        )
 
     archive_filename = url.split("/")[-1]
     signature_bytes: Optional[bytes] = None
@@ -780,14 +939,18 @@ def _download_and_verify_jsockd() -> str:
     except Exception as e:
         raise JSockDClientError(f"download {url}: {e}") from e
     if resp.status_code != 200:
-        raise _DownloadError(f"failed to download file: unexpected HTTP status {resp.status_code} for {url}")
+        raise _DownloadError(
+            f"failed to download file: unexpected HTTP status {resp.status_code} for {url}"
+        )
 
     archive_data = resp.content
 
     # Verify signature (detached)
     try:
         pubkey = bytes.fromhex(_JSOCKD_BINARY_PUBLIC_KEY)
-        ok = nacl_bindings.crypto_sign_verify_detached(signature_bytes, archive_data, pubkey)
+        ok = cast(Any, nacl_bindings).crypto_sign_verify_detached(
+            signature_bytes, archive_data, pubkey
+        )
     except Exception as e:
         raise JSockDClientError(f"signature verification error: {e}") from e
     if not ok:
@@ -798,7 +961,10 @@ def _download_and_verify_jsockd() -> str:
     jsockd_path = os.path.join(tmpdir, "jsockd")
 
     try:
-        with io.BytesIO(archive_data) as bio, tarfile.open(fileobj=bio, mode="r:gz") as tf:
+        with (
+            io.BytesIO(archive_data) as bio,
+            tarfile.open(fileobj=bio, mode="r:gz") as tf,
+        ):
             member: Optional[tarfile.TarInfo] = None
             for ti in tf:
                 if ti.isfile() and os.path.basename(ti.name) == "jsockd":
@@ -806,24 +972,18 @@ def _download_and_verify_jsockd() -> str:
                     break
             if member is None:
                 raise JSockDClientError("jsockd binary not found in archive")
-            with tf.extractfile(member) as src, open(jsockd_path, "wb") as dst:
-                if src is None:
-                    raise JSockDClientError("failed to extract jsockd binary")
+            src = tf.extractfile(member)
+            if src is None:
+                raise JSockDClientError("failed to extract jsockd binary")
+            with open(jsockd_path, "wb") as dst:
                 shutil.copyfileobj(src, dst)
-        os.chmod(jsockd_path, os.stat(jsockd_path).st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+            src.close()
+        os.chmod(
+            jsockd_path,
+            os.stat(jsockd_path).st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH,
+        )
     except Exception:
         shutil.rmtree(tmpdir, ignore_errors=True)
         raise
 
     return jsockd_path
-
-
-def init_jsockd_client_via_auto_download(config: Config) -> JSockDClient:
-    jsockd_path = _download_and_verify_jsockd()
-    client = init_jsockd_client(config, jsockd_path)
-    # Mark the exec path for cleanup on close
-    client._iclient.auto_downloaded_exec = jsockd_path
-    return client
-
-
-# Optional conveniences mirroring Go-style free functions
