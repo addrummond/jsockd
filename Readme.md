@@ -54,6 +54,22 @@ The following is a typical example of a command in the context of React SSR. The
 }
 ````
 
+### 1.3 Two-way communication
+
+A JSockD command can send messages to the client and wait for a response using the `JSockD.sendMessage` method. This allows two-way communication between the command and the client. For example, the command could request additional data from the client that is not available in the initial parameter.
+
+```javascript
+(mod, param) => {
+  const userId = param.userId
+  const userDetails = JSockD.sendMessage({ type: 'getUserDetails', userId })
+  return mod.renderToString(
+    mod.createElement(mod.UserDetails, { size: 'small', userDetails })
+  )
+}
+```
+
+Where possible, code should be architected to avoid the need for two-way communication as it adds latency and complexity. However, it is useful in cases where, for example, conditional logic deep within a React component tree causes additional data to be required.
+
 ## 2. The module compiler
 
 ### 2.1 Signing and compiling modules
