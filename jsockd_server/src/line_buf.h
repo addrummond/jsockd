@@ -1,10 +1,6 @@
 #ifndef LINE_BUF_H
 #define LINE_BUF_H
 
-#ifndef _REENTRANT
-#define _REENTRANT
-#endif
-
 #include <stdbool.h>
 #include <stdlib.h>
 

@@ -1,4 +1,5 @@
 #include "cmdargs.h"
+#include "config.h"
 #include "threadstate.h"
 #include "wait_group.h"
 #include <stdatomic.h>
@@ -31,3 +32,7 @@ WaitGroup g_thread_ready_wait_group;
 const char *g_log_prefix = NULL;
 
 bool g_interactive_logging_mode = false;
+
+#ifdef CMAKE_BUILD_TYPE_DEBUG
+int g_debug_hash_bits = CACHED_FUNCTIONS_HASH_BITS_DEBUG;
+#endif

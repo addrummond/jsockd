@@ -85,6 +85,9 @@ jobs:
       - name: Run jsockd_server stress tests implemented in Go (Debug build)
         run: ./ci.sh run_jsockd_go_stress_tests_with_debug_build
 
+      - name: Run jsockd_server stress tests implemented in Go (Debug build with JSOCKD_DEBUG_HASH_BITS_OVERRIDE set)
+        run: ./ci.sh run_jsockd_go_stress_tests_with_debug_build_and_n_bits_override
+
       - name: Run jsockd_server stress tests implemented in Go (Release build)
         run: ./ci.sh run_jsockd_go_stress_tests_with_release_build
 

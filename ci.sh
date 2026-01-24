@@ -172,6 +172,14 @@ case $1 in
         )
         ;;
 
+    run_jsockd_go_stress_tests_with_debug_build_and_n_bits_override)
+        (
+            set -e
+            cd "$GITHUB_WORKSPACE/jsockd_server/tests/go"
+            JSOCKD_DEBUG_HASH_BITS_OVERRIDE=2 go run main.go normalStressTest "$GITHUB_WORKSPACE/jsockd_server/build_Debug/jsockd"
+        )
+        ;;
+
     run_jsockd_go_stress_tests_with_release_build)
         (
             set -e

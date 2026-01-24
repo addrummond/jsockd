@@ -1,10 +1,6 @@
 #ifndef VERIFY_BYTECODE_H_
 #define VERIFY_BYTECODE_H_
 
-#ifndef _REENTRANT
-#define _REENTRANT
-#endif
-
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>

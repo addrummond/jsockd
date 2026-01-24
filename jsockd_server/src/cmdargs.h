@@ -1,10 +1,6 @@
 #ifndef CMDARGS_H_
 #define CMDARGS_H_
 
-#ifndef _REENTRANT
-#define _REENTRANT
-#endif
-
 #include "config.h"
 #include <stdbool.h>
 #include <stdint.h>

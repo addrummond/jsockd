@@ -1,6 +1,3 @@
-#ifndef _REENTRANT
-#define _REENTRANT
-#endif
 
 #include "custom_module_loader.h"
 #include "quickjs-libc.h"

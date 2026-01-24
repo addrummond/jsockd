@@ -1,10 +1,6 @@
 #ifndef UTILS_H_
 #define UTILS_H_
 
-#ifndef _REENTRANT
-#define _REENTRANT
-#endif
-
 #include "quickjs.h"
 #include <pthread.h>
 #include <stdint.h>
