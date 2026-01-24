@@ -1,6 +1,10 @@
 #ifndef HEX_H_
 #define HEX_H_
 
+#ifndef _REENTRANT
+#define _REENTRANT
+#endif
+
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>

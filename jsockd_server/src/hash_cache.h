@@ -1,6 +1,10 @@
 #ifndef HASH_CACHE_H_
 #define HASH_CACHE_H_
 
+#ifndef _REENTRANT
+#define _REENTRANT
+#endif
+
 #include "typeofshim.h"
 #include <inttypes.h>
 #include <stdatomic.h>
