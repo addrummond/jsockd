@@ -1,0 +1,2 @@
+# This file marks the jsockdclient package as typed per PEP 561.
+# Keep this file included in distributions so type checkers recognize inline type hints.
