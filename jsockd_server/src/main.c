@@ -60,7 +60,7 @@
 // 16-byte align may be required for use of native
 // 128-bit atomic instructions.
 _Alignas(16) static CachedFunctionBucket
-    g_cached_function_buckets[CACHED_FUNCTION_MAX_HASH_BITS];
+    g_cached_function_buckets[CACHED_FUNCTIONS_N_BUCKETS];
 static atomic_int g_n_cached_functions;
 
 static void cleanup_unused_hash_cache_bucket(HashCacheBucket *b) {
