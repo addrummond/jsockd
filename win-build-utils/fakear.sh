@@ -15,10 +15,7 @@
 
 set -eu
 
-if ! command -v lib >/dev/null 2>&1; then
-  echo "error: lib.exe not found in PATH (run from MSVC Developer Prompt or set up env)" >&2
-  exit 127
-fi
+LIB=${LIB:-lib}
 
 op=""            # operation: r/rc/rcs/t/d/x
 arflags=""       # raw flag token (for diagnostics)
@@ -80,14 +77,14 @@ case "$op" in
     # Use members as-is
     log "lib /OUT:$libfile $members"
     set -x
-    exec cmd "/c lib /NOLOGO /OUT:$libfile $members"
+    exec cmd "/c $LIB /NOLOGO /OUT:$libfile $members"
     ;;
 
   t)
     # List archive contents: lib /LIST libfile
     log "lib /LIST $libfile"
     set -x
-    exec cmd "/c lib /NOLOGO /LIST $libfile"
+    exec cmd "/c $LIB /NOLOGO /LIST $libfile"
     ;;
 
   d)
@@ -104,7 +101,7 @@ case "$op" in
     # MSVC lib rewrites the archive; provide /OUT explicitly
     log "lib $remargs /OUT:$libfile $libfile"
     set -x
-    exec cmd "/c lib /NOLOGO $remargs /OUT:$libfile $libfile"
+    exec cmd "/c $LIB /NOLOGO $remargs /OUT:$libfile $libfile"
     ;;
 
   x)
@@ -119,7 +116,7 @@ case "$op" in
     done
     log "lib $exargs $libfile"
     set -x
-    exec cmd "/c lib /NOLOGO $exargs $libfile"
+    exec cmd "/c $LIB /NOLOGO $exargs $libfile"
     ;;
 
   *)
