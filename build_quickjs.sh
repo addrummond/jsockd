@@ -130,7 +130,7 @@ for platform in $platforms; do
             echo "Listing downloaded files"
             ls -l pthreads-win32-include pthreads-win32-lib *.dll
             # Unblock all DLLs in current working directory (clears MOTW to avoid loader prompts/scans)
-            powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-ChildItem -Path . -Filter '*.dll' | Unblock-File"
+            #powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-ChildItem -Path . -Filter '*.dll' | Unblock-File"
             # Get time.h and put it in a 'sys' folder we can add to the include path
             mkdir -p fakesys/sys
             find "/c/Program Files (x86)" -name 'time.h' -type f -exec cp {} ./fakesys/sys/time.h \;
