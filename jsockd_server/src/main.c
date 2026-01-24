@@ -1062,7 +1062,7 @@ static const uint8_t *load_module_bytecode(const char *filename,
 }
 
 static void global_cleanup(void) {
-  for (size_t i = 0; i < CACHED_FUNCTIONS_N_BUCKETS; ++i)
+  for (int i = 0; i < CACHED_FUNCTIONS_N_BUCKETS; ++i)
     free((void *)g_cached_function_buckets[i].payload.bytecode);
 
   // These can fail, but we're calling this when
