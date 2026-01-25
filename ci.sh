@@ -22,7 +22,8 @@ fi
 case $1 in
     setup)
         sudo apt-get update
-        sudo apt-get install -y unzip libncurses-dev valgrind gcc-aarch64-linux-gnu shellcheck
+        sudo apt-get install -y unzip libncurses-dev valgrind gcc-aarch64-linux-gnu shellcheck python3-pip
+        pip3 install --upgrade uv
         curl -L https://github.com/jdx/mise/releases/download/v2025.8.18/mise-v2025.8.18-linux-x64 --output - | sudo tee -a /usr/local/bin/mise > /dev/null
         if [ "$(sha256sum /usr/local/bin/mise | awk '{ print $1 }')" != "7265c5f8099bec212009fcd05bdb786423e9a06e316eddb4362a9869a1950c57" ]; then
             echo "Bad checksum for mise"
@@ -201,6 +202,15 @@ case $1 in
             set -e
             cd "$GITHUB_WORKSPACE/jsockd_server/tests/go"
             go run main.go idleTimeoutStressTest "$GITHUB_WORKSPACE/jsockd_server/build_Release/jsockd"
+        )
+        ;;
+
+    run_jsockd_python_client_tests)
+        (
+            set -e
+            cd "$GITHUB_WORKSPACE/clients/python/jsockdclient"
+            uv sync --extra dev
+            uv run test
         )
         ;;
 
