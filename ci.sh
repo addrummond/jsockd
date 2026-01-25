@@ -208,10 +208,8 @@ case $1 in
         (
             set -e
             cd "$GITHUB_WORKSPACE/clients/python/jsockdclient"
-            echo "Before uv sync"
             uv sync --extra dev
-            echo "After uv sync"
-            JSOCKD="$GITHUB_WORKSPACE/jsockd_server/build_Debug/jsockd" uv run test
+            JSOCKD="$GITHUB_WORKSPACE/jsockd_server/build_Debug/jsockd" uv run pytest
         )
         ;;
 
