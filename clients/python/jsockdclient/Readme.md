@@ -1,40 +1,46 @@
 # Python JSockD client
 
-A Python client for JSockD. 
+A Python client for JSockD (QuickJS socket daemon).
 
-⚠️ **_Experimental._** ⚠️
+⚠️⚠️ Status: Experimental ⚠️⚠️
 
-## Install (uv)
+## Installation (uv)
 
 ```sh
-# __jsockd_version__ <- ignore this comment, it's used by a CI check
-#uv add "git+https://github.com/addrummond/jsockd@v0.0.131#subdirectory=clients/python/jsockdclient"
-# TEMP while we're still on Python branch
-"git+https://github.com/addrummond/jsockd@python#subdirectory=clients/python/jsockdclient"
+-# __jsockd_version__ <- ignore this comment, it's used by a CI check
+-#uv add "git+https://github.com/addrummond/jsockd@v0.0.131#subdirectory=clients/python/jsockdclient"
+-# TEMP while we're still on Python branch
+-"git+https://github.com/addrummond/jsockd@python#subdirectory=clients/python/jsockdclient"
 ```
 
 ## Quick start
 
 ```python
-from jsockdclient import DefaultConfig, init_jsockd_client_via_auto_download, JSockDJSException
+from jsockdclient import Config, JSockDClient, JSockDClientError, JSockDJSException
 
-config = DefaultConfig()
+# Configure client
+config = Config()
+config.n_threads = 1
+config.skip_jsockd_version_check = True  # useful in development
+
 # Optional: attach a logger for jsockd stderr lines
-config.Logger = lambda ts, level, msg: print(f"{ts} [{level}] {msg}")
+from datetime import datetime
+def logger(ts: datetime | None, level: str, msg: str) -> None:
+    when = ts.isoformat() if ts else "unknown-time"
+    print(f"{when} [{level}] {msg}")
+config.logger = logger
 
-# Optionally provide a source map that matches your bytecode module (if using one)
-# config.SourceMap = "example_module.mjs.map"
+# Optionally provide a source map filename that matches your bytecode module (if using one)
+# config.souce_map = "example_module.mjs.map"
 
-client = nit_jsockd_client_via_auto_download(config)
+# Autodownload jsockd binary and run it
+client = JSockDClient(config, autodownload=True)
 try:
-    # The query is a JS function of the form (m, p) => ...
-    # - m is an internal object with JSockD helpers
-    # - p is your parameter (JSON value)
-    result = client.run("(_, name) => 'Hello ' + name", "World")
-    print(result)  # "Hello World"
-except JSockDJSException as e:
-    # e.result_json contains the server-side JS error details (JSON)
-    print("JavaScript exception:", e.result_json)
+    response = client.send_command("(_, name) => 'Hello ' + name", "World")
+    if response.exception:
+        print("JavaScript exception:", response.raw_response.result_json)
+    else:
+        print(response.result)  # "Hello World"
 finally:
     client.close()
 ```
@@ -44,13 +50,13 @@ finally:
 If you already have the `jsockd` binary on disk, initialize with its path:
 
 ```python
-from jsockdclient import DefaultConfig, init_jsockd_client
+from jsockdclient import Config, JSockDClient
 
-config = DefaultConfig()
-client = init_jsockd_client(config, "/path/to/jsockd")
+config = Config()
+client = JSockDClient(config, jsockd_exec="/path/to/jsockd")
 try:
-    result = client.run("(_, n) => n + 1", 99)
-    print(result)  # 100
+    result = client.send_command("(_, n) => n + 1", 99)
+    print(result.result)  # 100
 finally:
     client.close()
 ```
@@ -60,6 +66,7 @@ finally:
 JSockD commands can send messages back to the client and await replies.
 
 Typed handler (Python objects in/out):
+
 ```python
 def on_message(msg):
     # msg is a Python value decoded from JSON
@@ -68,15 +75,16 @@ def on_message(msg):
         return "ack-1"
     return "ack-2"
 
-result = client.run(
+response = client.send_command(
     "(m, p) => { JSockD.sendMessage('foo'); return JSockD.sendMessage('bar'); }",
     99,
     message_handler=on_message,
 )
-assert result == "ack-2"
+assert response.result == "ack-2"
 ```
 
 Raw handler (JSON strings in/out):
+
 ```python
 def on_message_raw(msg_json: str) -> str:
     # msg_json is a JSON string (e.g., "\"foo\"")
@@ -85,89 +93,28 @@ def on_message_raw(msg_json: str) -> str:
         return "\"ack-1\""
     return "\"ack-2\""
 
-raw_json = client.run_raw(
+raw = client.send_raw_command(
     "(m, p) => { JSockD.sendMessage('foo'); return JSockD.sendMessage('bar'); }",
     "99",
     message_handler=on_message_raw,
 )
-assert raw_json == "\"ack-2\""
+assert raw.result_json == "\"ack-2\""
 ```
 
 If your handler raises or returns invalid JSON, the client terminates the session with a clear error.
 
 ## Configuration
 
-`Config()` populates sensible defaults:
+`Config()` provides sensible defaults. Fields:
 
-- `n_threads`: number of JS threads (defaults to CPU cores)
-- `bytecode_module_file`: path to a QuickJS bytecode module (optional)
-- `bytecode_module_public_key`: hex-encoded public key to verify the module (optional). Exported as env `JSOCKD_BYTECODE_MODULE_PUBLIC_KEY`.
-- `source_map`: source map filename (optional, helps logging)
-- `max_idle_time_us`: kill idle QuickJS instances after this time (microseconds)
-- `max_command_runtime_us`: per-command max runtime (microseconds)
-- `timeout_us`: client timeout for starting/dialing/responding (microseconds; default 15s)
-- `skip_jsockd_version_check`: if true, skip protocol version check (avoid in production)
-- `logger`: callback `(timestamp: Optional[datetime], level: str, message: str) -> None`
-- `max_restarts_per_minute`: not currently used for restarts in the Python client
-- `log_prefix`: sets `JSOCKD_LOG_PREFIX` for jsockd logs
-
-Example:
-
-```python
-config = Config()
-config.n_threads = 2
-config.bytecode_module_file = "example_module.qjsbc"
-config.bytecode_module_public_key = "deadbeef..."  # hex
-config.source_map = "example_module.mjs.map"
-```
-
-## Auto-download details
-
-`init_jsockd_client_via_auto_download(config)`:
-- Downloads `jsockd` from GitHub Releases based on OS/arch
-- Downloads and verifies the signature against the embedded ed25519 public key
-- Extracts the `jsockd` binary to a temp folder
-- Launches `jsockd` with your config
-
-If you prefer not to enable network access or want to manage upgrades yourself, use `init_jsockd_client(config, "/path/to/jsockd")`.
-
-## Logging
-
-`config.Logger` receives parsed log lines from `jsockd` stderr. The timestamp is parsed as RFC3339. If parsing unexpectedly fails, `timestamp` is `None`.
-
-```python
-from datetime import datetime
-
-def logger(ts: datetime | None, level: str, msg: str) -> None:
-    when = ts.isoformat() if ts else "unknown-time"
-    print(f"{when} [{level}] {msg}")
-
-config.Logger = logger
-```
-
-## Cleanup
-
-Always close your client:
-
-```python
-client.close()
-```
-
-This:
-- Signals worker threads to stop
-- Closes Unix sockets
-- Terminates the `jsockd` process
-- Cleans up temp directories and any auto-downloaded `jsockd` binary
-
-## API summary
-
-- `DefaultConfig() -> Config`
-- `init_jsockd_client(config: Config, jsockd_exec: str) -> JSockDClient`
-- `init_jsockd_client_via_auto_download(config: Config) -> JSockDClient`
-- `JSockDClient`:
-  - `run(query: str, param: Any = None, message_handler: Optional[Callable[[Any], Any]] = None) -> Any`
-  - `run_raw(query: str, json_param: str, message_handler: Optional[Callable[[str], str]] = None) -> str`
-  - `close() -> None`
-- Exceptions:
-  - `JSockDClientError` (client/transport errors)
-  - `JSockDJSException` (JavaScript exceptions; `result_json` holds details)
+- `n_threads: int` — number of JS worker threads; defaults to CPU cores (>= 1)
+- `bytecode_module_file: str` — path to a QuickJS bytecode module (optional, "" for none)
+- `bytecode_module_public_key: str` — hex-encoded public key to verify the module signature (optional, "" for none)
+- `souce_map: str` — source map filename (optional; helps logging)
+- `max_idle_time_us: int` — idle timeout per connection (microseconds); 0 disables
+- `max_command_runtime_us: int` — per-command max runtime (microseconds); 0 uses default
+- `timeout_us: int` — I/O timeout for start/dial/respond (microseconds; default 15s)
+- `skip_jsockd_version_check: bool` — skip protocol version check (avoid in production)
+- `logger: Optional[Callable[[Optional[datetime], str, str], None]]` — stderr log callback
+- `max_restarts_per_minute: int` — bounded auto-restart budget if jsockd crashes; 0 disables restarts
+- `log_prefix: str` — sets `JSOCKD_LOG_PREFIX` for jsockd logs
