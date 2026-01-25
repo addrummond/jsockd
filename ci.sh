@@ -207,7 +207,7 @@ case $1 in
 
     run_jsockd_python_client_tests)
         (
-            set -e
+            set +e
             cd "$GITHUB_WORKSPACE/clients/python/jsockdclient"
             uv sync --extra dev
             JSOCKD="$GITHUB_WORKSPACE/jsockd_server/build_Debug/jsockd" uv run test
@@ -216,7 +216,7 @@ case $1 in
 
     build_jsockd_server_linux_arm64)
         (
-            set +e
+            set -e
             export TOOLCHAIN_FILE=TC-gcc-arm64.cmake
             cd jsockd_server
             ./mk.sh Debug
