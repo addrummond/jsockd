@@ -210,7 +210,7 @@ case $1 in
             set -e
             cd "$GITHUB_WORKSPACE/clients/python/jsockdclient"
             uv sync --extra dev
-            uv run test
+            JSOCKD="$GITHUB_WORKSPACE/jsockd_server/build_Debug/jsockd" uv run test
         )
         ;;
 
