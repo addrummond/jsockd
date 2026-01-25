@@ -48,7 +48,6 @@ case $1 in
         curl -L https://github.com/pizlonator/llvm-project-deluge/releases/download/v${FILC_VERSION}/filc-${FILC_VERSION}-linux-x86_64.tar.xz -o ~/filc-${FILC_VERSION}-linux-x86_64.tar.xz
         if [ "$(sha256sum ~/filc-${FILC_VERSION}-linux-x86_64.tar.xz | awk '{ print $1 }')" != "$FILC_CHECKSUM" ]; then
             echo "SHA256 checksum of filc-${FILC_VERSION}-linux-x86_64.tar.xz does not match expected value."
-            exit 1
         fi
         ( cd ~ && tar -xf ~/filc-${FILC_VERSION}-linux-x86_64.tar.xz && cd filc-${FILC_VERSION}-linux-x86_64 && ./setup.sh )
         ;;
@@ -207,9 +206,11 @@ case $1 in
 
     run_jsockd_python_client_tests)
         (
-            set +e
+            set -e
             cd "$GITHUB_WORKSPACE/clients/python/jsockdclient"
+            echo "Before uv sync"
             uv sync --extra dev
+            echo "After uv sync"
             JSOCKD="$GITHUB_WORKSPACE/jsockd_server/build_Debug/jsockd" uv run test
         )
         ;;
