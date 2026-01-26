@@ -57,8 +57,5 @@ executionEnvironments = [
   { root = ".", extraPaths = ["src"] }
 ]
 
-[tool.hatch.build.targets.wheel]
-include = [
-  "src/jsockdclient/**",
-  "src/jsockdclient/py.typed",
-]
+[tool.hatch.build]
+packages = ["src/jsockdclient"]
