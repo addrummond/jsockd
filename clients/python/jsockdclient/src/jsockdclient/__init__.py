@@ -945,16 +945,20 @@ def _download_and_verify_jsockd() -> str:
 
     archive_data = resp.content
 
-    # Verify signature (detached)
+    # Verify signature (detached) using PyNaCl VerifyKey (ed25519)
     try:
+        from nacl.exceptions import BadSignatureError
+        from nacl.signing import VerifyKey
+
         pubkey = bytes.fromhex(_JSOCKD_BINARY_PUBLIC_KEY)
-        ok = cast(Any, nacl_bindings).crypto_sign_verify_detached(
-            signature_bytes, archive_data, pubkey
-        )
+        vk = VerifyKey(pubkey)
+        try:
+            # Raises BadSignatureError if the signature doesn't verify
+            vk.verify(archive_data, signature_bytes)
+        except BadSignatureError:
+            raise JSockDClientError("signature verification failed")
     except Exception as e:
         raise JSockDClientError(f"signature verification error: {e}") from e
-    if not ok:
-        raise JSockDClientError("signature verification failed")
 
     # Extract jsockd binary to temp dir
     tmpdir = tempfile.mkdtemp(prefix="jsockd-")
