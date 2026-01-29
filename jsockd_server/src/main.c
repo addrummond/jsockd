@@ -1130,9 +1130,7 @@ static int eval(void) {
   memset(g_thread_states, 0, sizeof(ThreadState));
   ThreadState *ts = &g_thread_states[0];
   if (0 != init_thread_state(ts, NULL, 0)) {
-    jsockd_log(LOG_ERROR | LOG_INTERACTIVE,
-               "Internal error initializing QuickJS "
-               "runtime");
+    // init_thread_state will have logged reason
     exit_status = EXIT_FAILURE;
     goto cleanup;
   }

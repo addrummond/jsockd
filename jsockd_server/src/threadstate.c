@@ -120,7 +120,7 @@ int init_thread_state(ThreadState *ts, SocketState *socket_state,
   atomic_init(&ts->replacement_thread_state, REPLACEMENT_THREAD_STATE_NONE);
 
   if (0 != clock_gettime(MONOTONIC_CLOCK, &ts->last_active_time)) {
-    jsockd_logf(LOG_ERROR,
+    jsockd_logf(LOG_ERROR | LOG_INTERACTIVE,
                 "Error getting time while initializing thread %i state: %s\n",
                 thread_index, strerror(errno));
     return -1;
@@ -128,14 +128,14 @@ int init_thread_state(ThreadState *ts, SocketState *socket_state,
 
   ts->rt = JS_NewRuntime();
   if (!ts->rt) {
-    jsockd_log(LOG_ERROR, "Failed to create JS runtime\n");
+    jsockd_log(LOG_ERROR | LOG_INTERACTIVE, "Failed to create JS runtime\n");
     return -1;
   }
 
   js_std_set_worker_new_context_func(new_custom_context_for_worker);
   js_std_init_handlers(ts->rt);
   if (0 != new_custom_context(ts->rt, &ts->ctx)) {
-    jsockd_log(LOG_ERROR, "Failed to create JS context\n");
+    jsockd_log(LOG_ERROR | LOG_INTERACTIVE, "Failed to create JS context\n");
     return -1;
   }
 
@@ -195,7 +195,8 @@ int init_thread_state(ThreadState *ts, SocketState *socket_state,
   else
     ts->compiled_module = JS_UNDEFINED;
   if (JS_IsException(ts->compiled_module)) {
-    jsockd_log(LOG_ERROR, "Failed to load precompiled module\n");
+    jsockd_log(LOG_ERROR | LOG_INTERACTIVE,
+               "Failed to load precompiled module\n");
     char *error_msg_buf = calloc(ERROR_MSG_MAX_BYTES, sizeof(char));
     WBuf emb = {
         .buf = error_msg_buf, .index = 0, .length = ERROR_MSG_MAX_BYTES};
@@ -206,9 +207,10 @@ int init_thread_state(ThreadState *ts, SocketState *socket_state,
     const char *bt_str =
         get_backtrace(ts, emb.buf, emb.index, &bt_length, BACKTRACE_PRETTY);
     if (!bt_str) {
-      jsockd_logf(LOG_ERROR, "<no backtrace available>\n");
+      jsockd_logf(LOG_ERROR | LOG_INTERACTIVE, "<no backtrace available>\n");
     } else {
-      jsockd_logf(LOG_ERROR, "%.*s\n", (int)bt_length, bt_str);
+      jsockd_logf(LOG_ERROR | LOG_INTERACTIVE, "%.*s\n", (int)bt_length,
+                  bt_str);
       JS_FreeCString(ts->ctx, bt_str);
     }
 
