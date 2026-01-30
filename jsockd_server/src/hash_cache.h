@@ -41,7 +41,7 @@ typedef struct {
   // instructions.
   _Alignas(16)
 #endif
-  _Atomic(HashCacheUid) uid;
+      _Atomic(HashCacheUid) uid;
   int32_t _Atomic refcount;
   int32_t _Atomic update_count;
 } HashCacheBucket;
