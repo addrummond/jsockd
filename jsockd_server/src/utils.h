@@ -68,4 +68,23 @@ void log_error_with_prefix(const char *prefix, JSContext *ctx,
 #define MONOTONIC_CLOCK CLOCK_MONOTONIC
 #endif
 
+#if defined(__GNUC__) && !defined(__clang__)
+static inline __attribute__((always_inline) void cpu_relax(void) {
+#if defined(__x86_64__) || defined(__i386__)
+  __builtin_ia32_pause();
+#elif defined(__aarch64__) || defined(__arm__)
+  __asm__ __volatile__("yield" ::: "memory");
+#elif defined(__powerpc__) || defined(__powerpc64__)
+  __asm__ __volatile__("or 27,27,27" ::: "memory"); // or a no-op
+#elif defined(__riscv)
+  __asm__ __volatile__("pause" ::: "memory");
+#else
+  // Generic fallback - just a compiler barrier
+  __asm__ __volatile__("" ::: "memory");
+#endif
+}
+#else
+static inline void cpu_relax(void) {}
+#endif
+
 #endif

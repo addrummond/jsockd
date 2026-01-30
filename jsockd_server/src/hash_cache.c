@@ -1,5 +1,6 @@
 #include "hash_cache.h"
 #include "config.h"
+#include "utils.h"
 #include <memory.h>
 #include <sched.h>
 #include <stdatomic.h>
@@ -85,14 +86,17 @@ HashCacheBucket *get_hash_cache_entry_(HashCacheBucket *buckets,
     HashCacheBucket *bucket =
         (HashCacheBucket *)((char *)buckets + j * bucket_size);
 
-    // In the unlikely event that we can't acquire the lock after a fair number
-    // of tries, we just report that the item is not in the cache.
+    // In the unlikely event that we can't acquire the lock after trying for
+    // a short while, we just report that the item is not in the cache.
     for (int n = 0; n < LOW_CONTENTION_SPIN_LOCK_MAX_TRIES; ++n) {
       int update_count_before =
           atomic_load_explicit(&bucket->update_count, memory_order_acquire);
 
       if (update_count_before % 2 != 0) {
-        sched_yield();
+        if (n > LOW_CONTENTION_SPIN_LOCK_MAX_TRIES / 2)
+          sched_yield();
+        else if (n > 10)
+          cpu_relax();
         continue;
       }
 
