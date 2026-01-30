@@ -95,7 +95,7 @@ HashCacheBucket *get_hash_cache_entry_(HashCacheBucket *buckets,
       if (update_count_before % 2 != 0) {
         if (n > LOW_CONTENTION_SPIN_LOCK_MAX_TRIES / 2)
           sched_yield();
-        else if (n > 10)
+        else if (n > MAX(1, LOW_CONTENTION_SPIN_LOCK_MAX_TRIES / 100))
           cpu_relax();
         continue;
       }
