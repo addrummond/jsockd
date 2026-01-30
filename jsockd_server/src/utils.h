@@ -69,7 +69,7 @@ void log_error_with_prefix(const char *prefix, JSContext *ctx,
 #endif
 
 #if defined(__GNUC__) && !defined(__clang__)
-static inline __attribute__((always_inline) void cpu_relax(void) {
+static inline __attribute__((always_inline)) void cpu_relax(void) {
 #if defined(__x86_64__) || defined(__i386__)
   __builtin_ia32_pause();
 #elif defined(__aarch64__) || defined(__arm__)
