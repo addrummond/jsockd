@@ -93,7 +93,7 @@ HashCacheBucket *get_hash_cache_entry_(HashCacheBucket *buckets,
 
       if (update_count_before % 2 != 0) {
         if (n > MAX(3, LOW_CONTENTION_SPIN_LOCK_MAX_TRIES / 100))
-          cpu_relax();
+          cpu_relax_no_barrier();
         continue;
       }
 
