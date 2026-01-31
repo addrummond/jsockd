@@ -33,6 +33,7 @@ const uint8_t *mmap_file(const char *filename, size_t *out_size,
       NULL, (size_t)st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
   if (contents == MAP_FAILED) {
     *out_errno = errno;
+    munmap((void *)contents, (size_t)st.st_size);
     close(fd);
     return NULL;
   }
