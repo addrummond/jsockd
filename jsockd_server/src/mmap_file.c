@@ -22,7 +22,8 @@ const uint8_t *mmap_file(const char *filename, size_t *out_size,
     close(fd);
     return NULL;
   }
-  if (st.st_size <= 0 || st.st_size > ((TYPEOF(st.st_size))(SIZE_MAX))) {
+  if (!S_ISREG(st.st_mode) || st.st_size <= 0 ||
+      st.st_size > ((TYPEOF(st.st_size))(SIZE_MAX))) {
     *out_errno = EINVAL;
     close(fd);
     return NULL;
