@@ -115,7 +115,7 @@ int compile_module_file(const char *module_filename,
                  (const unsigned char *)private_key);
   }
 
-  mf = fopen(output_filename, "w");
+  mf = fopen(output_filename, "wb");
   if (!mf) {
     fprintf(stderr, "Error creating output file %s: %s\n", output_filename,
             strerror(errno));
