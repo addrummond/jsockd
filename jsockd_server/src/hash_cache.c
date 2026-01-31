@@ -2,7 +2,6 @@
 #include "config.h"
 #include "utils.h"
 #include <memory.h>
-#include <sched.h>
 #include <stdatomic.h>
 #include <stdio.h>
 
@@ -93,9 +92,7 @@ HashCacheBucket *get_hash_cache_entry_(HashCacheBucket *buckets,
           atomic_load_explicit(&bucket->update_count, memory_order_acquire);
 
       if (update_count_before % 2 != 0) {
-        if (n > LOW_CONTENTION_SPIN_LOCK_MAX_TRIES / 2)
-          sched_yield();
-        else if (n > MAX(1, LOW_CONTENTION_SPIN_LOCK_MAX_TRIES / 100))
+        if (n > MAX(3, LOW_CONTENTION_SPIN_LOCK_MAX_TRIES / 100))
           cpu_relax();
         continue;
       }

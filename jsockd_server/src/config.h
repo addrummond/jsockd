@@ -46,6 +46,6 @@
 #define MAGIC_KEY_TO_ALLOW_INVALID_SIGNATURES                                  \
   "dangerously_allow_invalid_signatures"
 
-#define LOW_CONTENTION_SPIN_LOCK_MAX_TRIES 1000
+#define LOW_CONTENTION_SPIN_LOCK_MAX_TRIES 200
 
 #endif
