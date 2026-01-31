@@ -99,7 +99,7 @@ case $1 in
                 case "$tag" in
                     "v"*)
                         echo "Checking that all in-code JSockD version constants match the tag ${tag}..."
-                        find ./ \( -name '*.go' -o -name '*.c' -o -name '*.h' -o -name '*.ex*' -o -name '*.md' -o name '*.mod' \) -exec awk '/__jsockd_version_check__/ { vc=1 } !/__jsockd_version_check__/ { if (vc == 1) { vc = 0; print $0 } }' {} \; | \
+                        find ./ \( -name '*.go' -o -name '*.c' -o -name '*.h' -o -name '*.ex*' -o -name '*.md' -o -name '*.mod' \) -exec awk '/__jsockd_version_check__/ { vc=1 } !/__jsockd_version_check__/ { if (vc == 1) { vc = 0; print $0 } }' {} \; | \
                         sed -e 's/^.*\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*$/\1/' | \
                         while IFS= read -r v; do
                             if [ "v$v" != "$tag" ]; then
