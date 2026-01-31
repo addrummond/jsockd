@@ -10,13 +10,22 @@ int wait_group_init(WaitGroup *wg, int n_waiting_for) {
   // Don't need a monotonic clock on Mac because we can use
   // pthread_cond_timedwait_relative_np to set a relative timeout.
 #ifdef __APPLE__
-  pthread_cond_init(&wg->cond, NULL);
+  if (0 != pthread_cond_init(&wg->cond, NULL))
+    return -1;
 #else
   pthread_condattr_t attr;
-  pthread_condattr_init(&attr);
-  pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);
-  pthread_cond_init(&wg->cond, &attr);
-  pthread_condattr_destroy(&attr);
+  if (0 != pthread_condattr_init(&attr))
+    return -1;
+  if (0 != pthread_condattr_setclock(&attr, CLOCK_MONOTONIC)) {
+    pthread_condattr_destroy(&attr);
+    return -1;
+  }
+  if (0 != pthread_cond_init(&wg->cond, &attr)) {
+    pthread_condattr_destroy(&attr);
+    return -1;
+  }
+  if (0 != pthread_condattr_destroy(&attr))
+    return -1;
 #endif
 
   atomic_init(&wg->n_remaining, n_waiting_for);
@@ -29,12 +38,6 @@ int wait_group_inc(WaitGroup *wg, int n) {
   int previous_value =
       atomic_fetch_add_explicit(&wg->n_remaining, -n, memory_order_acq_rel);
   if (previous_value > 0 && previous_value <= n) {
-    // We have just decremented the wait group to zero. If
-    // wait_group_timed_wait has been called already then we need to call
-    // pthread_cond_signal. Otherwise, wait_group_timed_wait will notice
-    // that the wait group has been zeroed and will return without calling
-    // pthread_cond_signal.
-
     if (0 != (r = pthread_mutex_lock(&wg->mutex)))
       return r;
     if (0 != (r = pthread_cond_signal(&wg->cond))) {
