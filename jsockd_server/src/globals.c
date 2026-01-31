@@ -26,7 +26,6 @@ atomic_bool g_interrupted_or_error = false;
 
 CmdArgs g_cmd_args;
 
-// Global vars that need destruction before exit.
 WaitGroup g_thread_ready_wait_group;
 
 const char *g_log_prefix = NULL;
