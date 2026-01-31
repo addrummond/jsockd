@@ -244,8 +244,7 @@ void cleanup_command_state(ThreadState *ts) {
   ts->dangling_bytecode = NULL;
   ts->compiled_query = JS_UNDEFINED;
   if (ts->cached_function_in_use) {
-    atomic_fetch_add_explicit(&ts->cached_function_in_use->bucket.refcount, -1,
-                              memory_order_acq_rel);
+    decrement_hash_cache_bucket_refcount(&ts->cached_function_in_use->bucket);
     ts->cached_function_in_use = NULL;
   }
 }

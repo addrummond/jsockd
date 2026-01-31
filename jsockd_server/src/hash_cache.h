@@ -70,6 +70,7 @@ HashCacheBucket *add_to_hash_cache_(HashCacheBucket *buckets,
 HashCacheBucket *get_hash_cache_entry_(HashCacheBucket *buckets,
                                        size_t bucket_size, int n_bits,
                                        HashCacheUid uid);
+void decrement_hash_cache_bucket_refcount(HashCacheBucket *bucket);
 
 #define add_to_hash_cache(buckets, n_bits, uid, data_ptr, cleanup)             \
   ((TYPEOF(buckets[0]) *)add_to_hash_cache_(                                   \

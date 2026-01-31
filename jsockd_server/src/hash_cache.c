@@ -16,8 +16,8 @@ size_t get_cache_bucket(HashCacheUid uid, int n_bits) {
 static size_t get_bucket_look_forward(int n_bits) { return n_bits * 3 / 2; }
 
 HashCacheUid get_hash_cache_uid(const void *data, size_t len) {
-  HashCacheUid r;
 #ifdef HASH_CACHE_USE_128_BIT_UIDS
+  HashCacheUid r;
   XXH128_hash_t v = XXH3_128bits(data, len);
   r = v.high64;
   r <<= 64;
@@ -47,8 +47,8 @@ HashCacheBucket *add_to_hash_cache_(HashCacheBucket *buckets,
     // The bucket has a refcount of zero, so we can clean it up and then reuse
     // it.
     if (atomic_compare_exchange_strong_explicit(
-            &bucket->refcount, &expected0int, 1, memory_order_acq_rel,
-            memory_order_acquire)) {
+            &bucket->refcount, &expected0int, 1, memory_order_relaxed,
+            memory_order_relaxed)) {
       // Make odd
       atomic_fetch_add_explicit(&bucket->update_count, 1, memory_order_relaxed);
 
@@ -56,7 +56,7 @@ HashCacheBucket *add_to_hash_cache_(HashCacheBucket *buckets,
       // atomic compare/exchange, we know that no other thread is currently
       // doing so.
       HashCacheUid existing_uid =
-          atomic_load_explicit(&bucket->uid, memory_order_acquire);
+          atomic_load_explicit(&bucket->uid, memory_order_relaxed);
       if (existing_uid && cleanup)
         cleanup(bucket);
       memcpy((void *)((char *)bucket + object_offset), object, object_size);
@@ -97,10 +97,10 @@ HashCacheBucket *get_hash_cache_entry_(HashCacheBucket *buckets,
         continue;
       }
 
-      // Use of memory_order_relaxed here means we could read an out of date or
-      // partially written UID value, but this has (with a very high
-      // probability) the benign failure mode of concluding that something is
-      // not in the cache which in fact is.
+      // Use of memory_order_relaxed here means we could read an out of date
+      // UID value, but this has (with a very high probability) the benign
+      // failure mode of concluding that something is not in the cache which
+      // in fact is.
       if (uid != atomic_load_explicit(&bucket->uid, memory_order_relaxed))
         break;
 
@@ -108,11 +108,11 @@ HashCacheBucket *get_hash_cache_entry_(HashCacheBucket *buckets,
       // different cache entry if it's changed underneath us, but that's
       // acceptable (we remove the spurious refcount increment after checking
       // the update count below).
-      atomic_fetch_add_explicit(&bucket->refcount, 1, memory_order_release);
+      atomic_fetch_add_explicit(&bucket->refcount, 1, memory_order_relaxed);
 
       if (update_count_before !=
           atomic_load_explicit(&bucket->update_count, memory_order_acquire)) {
-        atomic_fetch_add_explicit(&bucket->refcount, -1, memory_order_acq_rel);
+        atomic_fetch_add_explicit(&bucket->refcount, -1, memory_order_relaxed);
         continue;
       }
 
@@ -120,4 +120,8 @@ HashCacheBucket *get_hash_cache_entry_(HashCacheBucket *buckets,
     }
   }
   return NULL;
+}
+
+void decrement_hash_cache_bucket_refcount(HashCacheBucket *bucket) {
+  atomic_fetch_add_explicit(&bucket->refcount, -1, memory_order_relaxed);
 }
