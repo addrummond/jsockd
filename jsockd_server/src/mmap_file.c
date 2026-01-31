@@ -1,4 +1,5 @@
 #include "mmap_file.h"
+#include "typeofshim.h"
 #include <errno.h>
 #include <fcntl.h>
 #include <stdint.h>
@@ -21,7 +22,8 @@ const uint8_t *mmap_file(const char *filename, size_t *out_size,
     close(fd);
     return NULL;
   }
-  if (!S_ISREG(st.st_mode) || st.st_size <= 0 || st.st_size > SIZE_MAX) {
+  if (!S_ISREG(st.st_mode) || st.st_size <= 0 ||
+      st.st_size > ((TYPEOF(st.st_size))(SIZE_MAX))) {
     *out_errno = EINVAL;
     close(fd);
     return NULL;

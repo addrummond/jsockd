@@ -18,22 +18,19 @@ static size_t split_uuid(const char *msg, size_t len) {
 
 typedef enum {
   SEND_MESSAGE_ERR_TIMEOUT = -1,
-  SEND_MESSAGE_ERR_EOF = -2,
-  SEND_MESSAGE_ERR_BAD_JSON = -3,
-  SEND_MESSAGE_ERR_TOO_BIG = -4,
-  SEND_MESSAGE_ERR_INTERRUPTED = -5,
-  SEND_MESSAGE_ERR_IO = -6,
-  SEND_MESSAGE_ERR_TIME = -7,
-  SEND_MESSAGE_ERR_BAD_MESSAGE = -8,
-  SEND_MESSAGE_ERR_HANDLER_INTERNAL_ERROR = -9
+  SEND_MESSAGE_ERR_BAD_JSON = -2,
+  SEND_MESSAGE_ERR_TOO_BIG = -3,
+  SEND_MESSAGE_ERR_INTERRUPTED = -4,
+  SEND_MESSAGE_ERR_IO = -5,
+  SEND_MESSAGE_ERR_TIME = -6,
+  SEND_MESSAGE_ERR_BAD_MESSAGE = -7,
+  SEND_MESSAGE_ERR_HANDLER_INTERNAL_ERROR = -8
 } SendMessageError;
 
 static const char *send_message_error_to_string(int err) {
   switch (err) {
   case SEND_MESSAGE_ERR_TIMEOUT:
     return "Timeout waiting for message response";
-  case SEND_MESSAGE_ERR_EOF:
-    return "EOF while reading message response";
   case SEND_MESSAGE_ERR_BAD_JSON:
     return "Bad JSON in message response";
   case SEND_MESSAGE_ERR_TOO_BIG:
@@ -121,7 +118,7 @@ static int send_message(JSRuntime *rt, const char *message, size_t message_len,
     }
     int64_t delta_ns = ns_time_diff(&now, &ts->last_js_execution_start);
     if (delta_ns > 0 &&
-        (uint64_t)delta_ns > g_cmd_args.max_command_runtime_us) {
+        (uint64_t)delta_ns > g_cmd_args.max_command_runtime_us * 1000ULL) {
       jsockd_logf(LOG_WARN,
                   "Command runtime of %" PRIu64 "us exceeded %" PRIu64
                   "us while waiting for %.*s message response; interrupting\n",
@@ -135,7 +132,7 @@ read_done:
   if (too_big)
     return SEND_MESSAGE_ERR_TOO_BIG;
   if (total_read == 0)
-    return SEND_MESSAGE_ERR_EOF;
+    return SEND_MESSAGE_ERR_IO;
   ts->input_buf[total_read] = '\0';
 
   size_t uuid_len = split_uuid(ts->input_buf, total_read);
@@ -220,6 +217,12 @@ static JSValue jsockd_send_message(JSContext *ctx, JSValueConst this_val,
   const char *message_str =
       JS_ToCStringLen(ctx, &message_len, encoded_message_val);
   JS_FreeValue(ctx, encoded_message_val);
+  if (!message_str) {
+    jsockd_log(LOG_DEBUG,
+               "Error calling JS_ToCStringLen before sending message");
+    return JS_ThrowInternalError(
+        ctx, "Internal error while sending message via JSockD");
+  }
   int r = send_message(JS_GetRuntime(ctx), message_str, message_len, &res);
   JS_FreeCString(ctx, message_str);
   if (r != 0) {
