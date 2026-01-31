@@ -42,7 +42,7 @@ HashCacheBucket *add_to_hash_cache_(HashCacheBucket *buckets,
     size_t j = i % n_buckets; // wrap around if we reach the end
     HashCacheBucket *bucket =
         (HashCacheBucket *)((char *)buckets + j * bucket_size);
-    int expected0int = 0;
+    int32_t expected0int = 0;
 
     // The bucket has a refcount of zero, so we can clean it up and then reuse
     // it.
