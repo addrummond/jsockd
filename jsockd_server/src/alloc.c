@@ -26,6 +26,7 @@ static void make_alloc_behavior_key() {
   if (0 != pthread_key_create(&alloc_behavior_key, NULL)) {
     atomic_store_explicit(&pthread_key_init_succeeded, false,
                           memory_order_release);
+    return;
   }
   if (0 != pthread_setspecific(alloc_behavior_key, (void *)MY_MALLOC_NORMAL)) {
     atomic_store_explicit(&pthread_key_init_succeeded, false,
