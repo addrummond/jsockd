@@ -7,31 +7,31 @@ message(STATUS "Using toolchain file: ${CMAKE_TOOLCHAIN_FILE}")
 # Derive version from git tag if available and the current commit is tagged
 find_package(Git QUIET)
 if(Git_FOUND)
-  execute_process(
+    execute_process(
     COMMAND "${GIT_EXECUTABLE}" describe --tags --match "v*.*.*"
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
     OUTPUT_VARIABLE VERSION_STRING
     OUTPUT_STRIP_TRAILING_WHITESPACE
     COMMAND_ERROR_IS_FATAL NONE
   )
-  string(REPLACE "v" "" VERSION_STRING "${VERSION_STRING}")
-  string(STRIP VERSION_STRING "${VERSION_STRING}")
-  if(VERSION_STRING)
-    message(STATUS "Version string: '${VERSION_STRING}'")
-  endif()
+    string(REPLACE "v" "" VERSION_STRING "${VERSION_STRING}")
+    string(STRIP VERSION_STRING "${VERSION_STRING}")
+    if(VERSION_STRING)
+        message(STATUS "Version string: '${VERSION_STRING}'")
+    endif()
 endif()
 
 # If the version string matches /-[0-9]+-g[0-9a-f]+$/ then the current commit is not tagged
 # and we don't know the version. If it is a clean tag, use it.
 set(_use_git_version OFF)
 if(VERSION_STRING AND NOT VERSION_STRING MATCHES "-[0-9]+-g[0-9a-f]+$")
-  string(REGEX REPLACE "-[0-9]+-g[0-9a-f]+$" "" VERSION_STRING "${VERSION_STRING}")
-  set(_use_git_version ON)
+    string(REGEX REPLACE "-[0-9]+-g[0-9a-f]+$" "" VERSION_STRING "${VERSION_STRING}")
+    set(_use_git_version ON)
 endif()
 
 # Toolchain suffix for filc builds
 if(CMAKE_C_COMPILER MATCHES "filc")
-  set(FILC "_filc")
+    set(FILC "_filc")
 endif()
 
 # Add xxHash without global side effects (static only)
@@ -109,6 +109,7 @@ set(JSOCKD_SERVER_SOURCES
   src/backtrace.c
   src/threadstate.c
   src/messages.c
+  src/alloc.c
   src/js/gen_backtrace.c
   src/js/gen_shims.c
   ${ED25519_LIB_SOURCES}
@@ -121,18 +122,18 @@ target_compile_features(jsockd_lib PUBLIC c_std_23)
 
 # Embed VERSION if we have a clean (tagged) git version
 if(_use_git_version)
-  target_compile_definitions(jsockd_lib PUBLIC VERSION="${VERSION_STRING}")
+    target_compile_definitions(jsockd_lib PUBLIC VERSION="${VERSION_STRING}")
 endif()
 
 target_compile_options(jsockd_lib PUBLIC $<$<CONFIG:Release>:-O2> $<$<CONFIG:Debug>:-O0>)
 if (CMAKE_C_COMPILER_ID MATCHES "Clang")
-  target_compile_options(jsockd_lib PUBLIC
+    target_compile_options(jsockd_lib PUBLIC
     $<$<CONFIG:Debug>:-Wall -Wextra -Wpedantic -Werror
       -Wno-unused-parameter -Wno-unused-function -Wno-unused-variable
       -Wno-missing-field-initializers>
   )
 elseif (CMAKE_C_COMPILER_ID MATCHES "GNU")
-  target_compile_options(jsockd_lib PUBLIC
+    target_compile_options(jsockd_lib PUBLIC
     $<$<CONFIG:Debug>:-Wall -Wextra -Wpedantic -Werror -Wno-unused-parameter -Wno-unknown-pragmas>
   )
 endif()
@@ -145,18 +146,18 @@ target_compile_definitions(jsockd_lib
 
 # For x86-64, ensure we have CX16 (CMPXCHG16B) support for 128-bit atomics (Clang/GCC)
 if(CMAKE_SIZEOF_VOID_P EQUAL 8 AND (CMAKE_SYSTEM_PROCESSOR MATCHES "86" OR CMAKE_SYSTEM_PROCESSOR MATCHES "amd64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64"))
-  if(CMAKE_C_COMPILER_ID MATCHES "Clang" OR CMAKE_C_COMPILER_ID MATCHES "GNU")
-    target_compile_options(jsockd_lib PUBLIC -march=x86-64 -mcx16 -mtune=generic)
-  endif()
+    if(CMAKE_C_COMPILER_ID MATCHES "Clang" OR CMAKE_C_COMPILER_ID MATCHES "GNU")
+        target_compile_options(jsockd_lib PUBLIC -march=x86-64 -mcx16 -mtune=generic)
+    endif()
 endif()
 
 # Determine architecture for QuickJS imported lib
 if(CMAKE_SIZEOF_VOID_P EQUAL 8 AND (CMAKE_SYSTEM_PROCESSOR MATCHES "arm" OR CMAKE_SYSTEM_PROCESSOR MATCHES "aarch"))
-  set(QUICKJS_LIB_ARCH "arm64")
+    set(QUICKJS_LIB_ARCH "arm64")
 elseif(CMAKE_SIZEOF_VOID_P EQUAL 8 AND (CMAKE_SYSTEM_PROCESSOR MATCHES "86" OR CMAKE_SYSTEM_PROCESSOR MATCHES "amd64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64"))
-  set(QUICKJS_LIB_ARCH "x86_64")
+    set(QUICKJS_LIB_ARCH "x86_64")
 else()
-  message(FATAL_ERROR "No QuickJS lib has been built for this architecture: ${CMAKE_SYSTEM_PROCESSOR} / ${CMAKE_SIZEOF_VOID_P}")
+    message(FATAL_ERROR "No QuickJS lib has been built for this architecture: ${CMAKE_SYSTEM_PROCESSOR} / ${CMAKE_SIZEOF_VOID_P}")
 endif()
 
 add_library(qjs STATIC IMPORTED)
@@ -170,15 +171,15 @@ set_target_properties(qjs PROPERTIES
 target_link_libraries(jsockd_lib PUBLIC qjs xxHash::xxhash)
 
 if(UNIX AND NOT APPLE)
-  target_link_libraries(jsockd_lib PUBLIC m)
+    target_link_libraries(jsockd_lib PUBLIC m)
 endif()
 
 if(CMAKE_C_COMPILER_ID MATCHES "GNU")
-  target_link_libraries(jsockd_lib PUBLIC atomic)
+    target_link_libraries(jsockd_lib PUBLIC atomic)
 endif()
 
 if(CMAKE_SYSTEM_NAME MATCHES "FreeBSD" OR CMAKE_SYSTEM_NAME MATCHES "OpenBSD")
-  target_link_libraries(jsockd_lib PUBLIC pthread)
+    target_link_libraries(jsockd_lib PUBLIC pthread)
 endif()
 
 add_executable(jsockd src/main.c)
