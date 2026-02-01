@@ -4,8 +4,10 @@
 #include <pthread.h>
 #include <stdatomic.h>
 #include <stdlib.h>
-#ifdef __APPLE__
+#if defined __APPLE__
 #include <malloc/malloc.h>
+#elif defined(__linux__) || defined(__GLIBC__) || defined(_WIN32)
+#include <malloc.h>
 #endif
 
 // The code in this file is copied from the default QuickJS allocator (which
