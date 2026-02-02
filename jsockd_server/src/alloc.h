@@ -3,11 +3,13 @@
 
 #include <quickjs.h>
 
-extern char MY_MALLOC_NORMAL[1];
-extern char MY_MALLOC_BYTECODE[1];
-
 extern const JSMallocFunctions my_malloc_funcs;
 
-void set_my_malloc_behavior(char *behavior);
+typedef enum {
+  MY_MALLOC_BEHAVIOR_NORMAL,
+  MY_MALLOC_BEHAVIOR_BYTECODE,
+} MyMallocBehavior;
+
+void set_my_malloc_behavior(MyMallocBehavior behavior);
 
 #endif

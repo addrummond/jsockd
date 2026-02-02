@@ -94,4 +94,12 @@ static inline void cpu_relax_no_barrier(void) {}
 #define unlikely(x) (x)
 #endif
 
+#if !defined(THREAD_LOCAL)
+#if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 202311L)
+#define THREAD_LOCAL thread_local
+#else
+#define THREAD_LOCAL _Thread_local
+#endif
+#endif
+
 #endif
