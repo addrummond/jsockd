@@ -1,7 +1,6 @@
 #include "utils.h"
 #include "globals.h"
 #include "log.h"
-#include "quickjs-libc.h"
 #include <errno.h>
 #ifdef __linux__
 #define _GNU_SOURCE // make ppoll available
