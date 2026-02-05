@@ -677,24 +677,20 @@ static int handle_line_3_parameter_helper(ThreadState *ts, const char *line,
     JSValue exception = JS_GetException(ts->ctx);
     JS_PrintValue(ts->ctx, write_to_wbuf_wrapper, &emb, exception, NULL);
 
-    const char *bt_str = "{}";
     size_t bt_length = 0;
-    const char *bt_str_ =
-        get_backtrace(ts, emb.buf, emb.index, &bt_length, BACKTRACE_JSON);
-    if (bt_str_)
-      bt_str = bt_str_;
+    const char *bt_str = get_backtrace(ts, emb.buf, emb.index, &bt_length, BACKTRACE_JSON);
 
     writev_to_stream(
         ts,
         {.iov_base = (void *)ts->current_uuid, .iov_len = ts->current_uuid_len},
         STRCONST_IOVEC(" exception "),
-        {.iov_base = (void *)bt_str, .iov_len = bt_length},
+        {.iov_base = bt_str ? (void *)bt_str : (void *)"{}", .iov_len = bt_str ? bt_length : 2},
         STRCONST_IOVEC("\n"));
 
     JS_FreeValue(ts->ctx, exception);
     JS_FreeValue(ts->ctx, parsed_arg);
     JS_FreeValue(ts->ctx, ret);
-
+    JS_FreeCString(ts->ctx, bt_str);
     free(error_msg_buf);
 
     return ts->socket_state->stream_io_err;
