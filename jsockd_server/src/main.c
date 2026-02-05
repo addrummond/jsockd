@@ -372,8 +372,9 @@ static const uint8_t *compile_buf(JSContext *ctx, const char *buf, int buf_len,
   JSValue val = JS_Eval(ctx, (const char *)buf, buf_len, "<buffer>",
                         JS_EVAL_FLAG_ASYNC | JS_EVAL_FLAG_COMPILE_ONLY);
   if (JS_IsException(val)) {
-    log_error_with_prefix("Exception compiling buffer:\n", ctx,
-                          JS_GetException(ctx));
+    JSValue exception = JS_GetException(ctx);
+    log_error_with_prefix("Exception compiling buffer:\n", ctx, exception);
+    JS_FreeValue(ctx, exception);
     JS_FreeValue(ctx, val);
     return NULL;
   }
