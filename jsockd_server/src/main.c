@@ -318,8 +318,7 @@ static void command_loop(ThreadState *ts,
     }
 
     if (ts->rt == NULL) {
-      jsockd_log(LOG_DEBUG, "Re-initializing shut "
-                            "down thread state\n");
+      jsockd_log(LOG_DEBUG, "Re-initializing shut down thread state\n");
       assert(REPLACEMENT_THREAD_STATE_NONE ==
              atomic_load_explicit(&ts->replacement_thread_state,
                                   memory_order_acquire));
@@ -373,7 +372,8 @@ static const uint8_t *compile_buf(JSContext *ctx, const char *buf, int buf_len,
   JSValue val = JS_Eval(ctx, (const char *)buf, buf_len, "<buffer>",
                         JS_EVAL_FLAG_ASYNC | JS_EVAL_FLAG_COMPILE_ONLY);
   if (JS_IsException(val)) {
-    log_error_with_prefix("Exception compiling buffer:\n", ctx, JS_GetException(ctx));
+    log_error_with_prefix("Exception compiling buffer:\n", ctx,
+                          JS_GetException(ctx));
     JS_FreeValue(ctx, val);
     return NULL;
   }
@@ -678,13 +678,15 @@ static int handle_line_3_parameter_helper(ThreadState *ts, const char *line,
     JS_PrintValue(ts->ctx, write_to_wbuf_wrapper, &emb, exception, NULL);
 
     size_t bt_length = 0;
-    const char *bt_str = get_backtrace(ts, emb.buf, emb.index, &bt_length, BACKTRACE_JSON);
+    const char *bt_str =
+        get_backtrace(ts, emb.buf, emb.index, &bt_length, BACKTRACE_JSON);
 
     writev_to_stream(
         ts,
         {.iov_base = (void *)ts->current_uuid, .iov_len = ts->current_uuid_len},
         STRCONST_IOVEC(" exception "),
-        {.iov_base = bt_str ? (void *)bt_str : (void *)"{}", .iov_len = bt_str ? bt_length : 2},
+        {.iov_base = bt_str ? (void *)bt_str : (void *)"{}",
+         .iov_len = bt_str ? bt_length : 2},
         STRCONST_IOVEC("\n"));
 
     JS_FreeValue(ts->ctx, exception);
