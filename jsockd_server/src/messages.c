@@ -89,7 +89,7 @@ static int send_message(JSRuntime *rt, const char *message, size_t message_len,
     case READY: {
       if (total_read == INPUT_BUF_BYTES - 1) {
         too_big = true;
-        total_read = 1; // make sure we don't confuse this condition with EOF
+        total_read = 0;
       }
       int r = read(ts->socket_state->streamfd, ts->input_buf + total_read,
                    INPUT_BUF_BYTES - 1 - total_read);
