@@ -73,8 +73,10 @@ static int send_message(JSRuntime *rt, const char *message, size_t message_len,
   size_t total_read = 0;
   bool too_big = false;
 
+  // 1us = 1000ns, so this sets the polling interval to be 1% of the max command
+  // runtime, with a minimum of 1ns.
   uint64_t polling_interval_ns =
-      MAX(1, g_cmd_args.max_command_runtime_us * 1000ULL / 100ULL);
+      MAX(1, g_cmd_args.max_command_runtime_us * 10ULL);
   struct timespec polling_interval = {
       .tv_sec = polling_interval_ns / (1000000ULL * 1000ULL),
       .tv_nsec = MAX(1, polling_interval_ns % (1000000ULL * 1000ULL))};
