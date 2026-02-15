@@ -54,7 +54,7 @@ HashCacheBucket *add_to_hash_cache_(HashCacheBucket *buckets,
 
       // This is the only code path that updates a bucket, so because of the
       // atomic compare/exchange, we know that no other thread is currently
-      // doing so.
+      // updating the bucket of interest.
       HashCacheUid existing_uid =
           atomic_load_explicit(&bucket->uid, memory_order_relaxed);
       if (existing_uid && cleanup)
