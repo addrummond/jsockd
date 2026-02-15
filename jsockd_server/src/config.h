@@ -48,4 +48,28 @@
 
 #define LOW_CONTENTION_SPIN_LOCK_MAX_TRIES 200
 
+// Number of spin-loop iterations before emitting a cpu_relax_no_barrier() hint.
+// Tuned per-architecture based on the cost of the hint instruction.
+#if defined(__x86_64__) || defined(__i386__)
+// x86 PAUSE is ~140 cycles on Skylake+. A tight spin iteration is ~3-5
+// cycles, so 20 fast spins (~60-100 cycles) cost less than a single PAUSE.
+#define SPIN_PAUSE_DELAY_ITERATIONS 20
+#elif defined(__aarch64__) || defined(__arm__)
+// ARM YIELD is very cheap (typically 1 cycle or NOP-like on Apple Silicon
+// and Cortex-A), so there's little cost to starting it early.
+#define SPIN_PAUSE_DELAY_ITERATIONS 3
+#elif defined(__powerpc__) || defined(__powerpc64__)
+// PowerPC SMT priority reduction hint (or 27,27,27) is cheap, similar to
+// ARM YIELD.
+#define SPIN_PAUSE_DELAY_ITERATIONS 3
+#elif defined(__riscv)
+// RISC-V Zihintpause pause cost varies by implementation. Use a moderate
+// value to hedge between cheap and expensive implementations.
+#define SPIN_PAUSE_DELAY_ITERATIONS 10
+#else
+// cpu_relax_no_barrier() is a no-op on unknown architectures, so the
+// threshold is irrelevant. Skip the delay.
+#define SPIN_PAUSE_DELAY_ITERATIONS 0
+#endif
+
 #endif
