@@ -11,8 +11,6 @@ fi
 
 # Useful when running the script locally
 if [ -z "$GITHUB_WORKSPACE" ]; then
-    GITHUB_WORKSPACE=$(pwd)
-else
     GITHUB_WORKSPACE=$(
       cd -- "$(dirname -- "$0")" >/dev/null 2>&1 || exit
       pwd -P
