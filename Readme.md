@@ -11,7 +11,7 @@ The server receives commands over one or more UNIX domain sockets. The motivatin
 - Caches command bytecode
 - Guards against memory leaks in JS code
 - Valgrind tests, fuzz tests
-- Memory-safe [Fil-C](https://github.com/pizlonator/llvm-project-deluge/) build available on Linux/x86_64 for the safety conscious.
+- Memory-safe [Fil-C](https://fil-c.org/) build available on Linux/x86_64 for the safety conscious.
 
 ## 1. Getting started
 
