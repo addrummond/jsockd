@@ -131,7 +131,7 @@ class _Command:
 
 
 @dataclasses.dataclass(slots=True)
-class _InternalClient:
+class _Client:
     process: subprocess.Popen[str]
     sockets: list[socket.socket]
     socket_paths: list[str]
@@ -249,7 +249,7 @@ def _read_record(fp: io.BufferedReader) -> str:
 def _conn_handler(
     conn: socket.socket,
     cmd_q: "queue.Queue[Optional[_Command]]",
-    iclient: _InternalClient,
+    iclient: _Client,
 ) -> None:
     try:
         rfile = conn.makefile("rb")
@@ -392,12 +392,12 @@ def _conn_handler(
             pass
 
 
-def _get_fatal_error(iclient: _InternalClient) -> Optional[BaseException]:
+def _get_fatal_error(iclient: _Client) -> Optional[BaseException]:
     with iclient.fatal_error_lock:
         return iclient.fatal_error
 
 
-def _set_fatal_error(iclient: _InternalClient, err: BaseException) -> None:
+def _set_fatal_error(iclient: _Client, err: BaseException) -> None:
     with iclient.fatal_error_lock:
         if iclient.fatal_error is None:
             iclient.fatal_error = err
@@ -539,7 +539,7 @@ class JSockDClient:
             raise JSockDClientError(f"dial {sockets[len(conns)]}: {e}") from e
 
         # Build internal client
-        ic = _InternalClient(
+        ic = _Client(
             process=proc,
             sockets=conns,
             socket_paths=sockets[:ready_count],
