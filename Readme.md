@@ -301,9 +301,8 @@ The `format.sh` script in `jsockd_server` formats C source files using `clang-fo
 
 ### 6.4 Developing with Fil-C
 
-**TODO: rough notes**
-
 * `FILC_CLANG=/path/to/fil-c/clang ./build_quickjs.sh linux_x86_64_filc`
+* Adjust `CMAKE_C_COMPILER` in TC-fil-c.cmake to point to the same clang binary.
 * [In `jsockd_server`] `TOOLCHAIN_FILE=TC-fil-c.cmake ./mk.sh Debug`
 
 ## 7. The server and socket protocol
