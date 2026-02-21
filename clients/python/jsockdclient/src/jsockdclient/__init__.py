@@ -427,7 +427,7 @@ def _start_jsockd_process(
 
 def _dial_unix(path: str, timeout_us: int) -> socket.socket:
     s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    s.settimeout(timeout_us / 1_000_000.0 if timeout_us > 0 else None)
+    s.settimeout(timeout_us / 1_000_000.0)
     s.connect(path)
     # Avoid per-op timeouts; rely on handler threads and overall client timeout.
     s.settimeout(None)
@@ -488,9 +488,7 @@ class JSockDClient:
         # Wait for READY or error/timeout
         ready_count = 0
         try:
-            timeout_s = (
-                config.timeout_us / 1_000_000.0 if config.timeout_us > 0 else 15.0
-            )
+            timeout_s = config.timeout_us / 1_000_000.0
             start = time.time()
             while True:
                 try:
@@ -645,11 +643,7 @@ class JSockDClient:
 
                     # Wait for READY or error/timeout
                     ready_count = 0
-                    timeout_s = (
-                        ic.config.timeout_us / 1_000_000.0
-                        if ic.config.timeout_us > 0
-                        else 15.0
-                    )
+                    timeout_s = ic.config.timeout_us / 1_000_000.0
                     start = time.time()
                     while True:
                         try:
@@ -761,11 +755,7 @@ class JSockDClient:
 
             # Terminate process
             try:
-                timeout_s = (
-                    ic.config.timeout_us / 1_000_000.0
-                    if ic.config.timeout_us > 0
-                    else 5.0
-                )
+                timeout_s = ic.config.timeout_us / 1_000_000.0
                 ic.process.terminate()
                 try:
                     ic.process.wait(timeout=timeout_s)
@@ -828,9 +818,7 @@ class JSockDClient:
             # Fallback to random enqueue
             random.choice(ic.cmd_queues).put(cmd)
 
-        timeout_s = (
-            ic.config.timeout_us / 1_000_000.0 if ic.config.timeout_us > 0 else None
-        )
+        timeout_s = ic.config.timeout_us / 1_000_000.0
         try:
             return resp_q.get(timeout=timeout_s)
         except queue.Empty:
