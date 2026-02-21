@@ -765,7 +765,6 @@ class JSockDClient:
             except Exception:
                 pass
 
-            # Cleanup sockets dir and temp exec if any
             try:
                 if ic.socket_tmpdir:
                     shutil.rmtree(ic.socket_tmpdir, ignore_errors=True)
@@ -880,10 +879,8 @@ def _download_and_verify_jsockd() -> str:
     if os_name == "darwin":
         os_name = "macos"
     arch = platform.machine().lower()
-    # Align with Go mapping: only change amd64 to x86_64, otherwise keep arch
     if arch == "amd64":
         arch = "x86_64"
-    # Common normalize
     if arch == "x86-64":
         arch = "x86_64"
 
@@ -894,7 +891,6 @@ def _download_and_verify_jsockd() -> str:
     )
     sig_url = _JSOCKD_SIGNATURE_URL_TEMPL.replace("VERSION", JSOCKD_VERSION)
 
-    # Download signatures file
     try:
         sig_resp = requests.get(sig_url, timeout=30)
     except Exception as e:
@@ -921,7 +917,6 @@ def _download_and_verify_jsockd() -> str:
     if signature_bytes is None:
         raise JSockDClientError(f"signature not found for {archive_filename}")
 
-    # Download archive
     try:
         resp = requests.get(url, timeout=60)
     except Exception as e:
@@ -933,7 +928,6 @@ def _download_and_verify_jsockd() -> str:
 
     archive_data = resp.content
 
-    # Verify signature (detached) using PyNaCl VerifyKey (ed25519)
     try:
         from nacl.exceptions import BadSignatureError
         from nacl.signing import VerifyKey
@@ -948,7 +942,6 @@ def _download_and_verify_jsockd() -> str:
     except Exception as e:
         raise JSockDClientError(f"signature verification error: {e}") from e
 
-    # Extract jsockd binary to temp dir
     tmpdir = tempfile.mkdtemp(prefix="jsockd-")
     jsockd_path = os.path.join(tmpdir, "jsockd")
 
