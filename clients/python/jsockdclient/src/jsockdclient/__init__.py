@@ -537,7 +537,7 @@ class JSockDClient:
             raise JSockDClientError(f"dial {sockets[len(conns)]}: {e}") from e
 
         # Build internal client
-        ic = _Client(
+        c = _Client(
             process=proc,
             sockets=conns,
             socket_paths=sockets[:ready_count],
@@ -559,7 +559,7 @@ class JSockDClient:
         for i in range(ready_count):
             threading.Thread(
                 target=_conn_handler,
-                args=(conns[i], ic.cmd_queues[i], ic),
+                args=(conns[i], c.cmd_queues[i], c),
                 daemon=True,
                 name=f"jsockd-conn-{i}",
             ).start()
@@ -567,59 +567,59 @@ class JSockDClient:
         # Monitor process exit with bounded auto-restart
         def _reaper() -> None:
             nonlocal proc
-            while not ic.quit_event.is_set():
+            while not c.quit_event.is_set():
                 rc = proc.wait()
-                if ic.quit_event.is_set():
+                if c.quit_event.is_set():
                     break
                 if rc == 0:
                     # Clean shutdown; propagate quit and cleanup
-                    ic.quit_event.set()
+                    c.quit_event.set()
                     try:
-                        shutil.rmtree(ic.socket_tmpdir, ignore_errors=True)
+                        shutil.rmtree(c.socket_tmpdir, ignore_errors=True)
                     except Exception:
                         pass
                     break
 
                 # Unexpected exit; try bounded restart
                 now = time.time()
-                with ic.restart_guard:
+                with c.restart_guard:
                     # Rolling budget: allow up to MaxRestartsPerMinute per minute elapsed since last_restart_time.
                     minutes_passed = (
-                        int((now - ic.last_restart_time) / 60.0)
-                        if ic.last_restart_time > 0
+                        int((now - c.last_restart_time) / 60.0)
+                        if c.last_restart_time > 0
                         else 0
                     )
-                    effective_count = ic.restart_count - (
-                        minutes_passed * ic.config.max_restarts_per_minute
+                    effective_count = c.restart_count - (
+                        minutes_passed * c.config.max_restarts_per_minute
                     )
-                    if effective_count >= ic.config.max_restarts_per_minute:
+                    if effective_count >= c.config.max_restarts_per_minute:
                         _set_fatal_error(
-                            ic,
+                            c,
                             JSockDClientError(
-                                f"jsockd crashed (code {rc}); exceeded MaxRestartsPerMinute={ic.config.max_restarts_per_minute}"
+                                f"jsockd crashed (code {rc}); exceeded MaxRestartsPerMinute={c.config.max_restarts_per_minute}"
                             ),
                         )
-                        ic.quit_event.set()
+                        c.quit_event.set()
                         try:
-                            shutil.rmtree(ic.socket_tmpdir, ignore_errors=True)
+                            shutil.rmtree(c.socket_tmpdir, ignore_errors=True)
                         except Exception:
                             pass
                         break
 
-                    ic.restart_count += 1
-                    ic.last_restart_time = now
+                    c.restart_count += 1
+                    c.last_restart_time = now
 
                 # Attempt restart
                 try:
                     # Close existing sockets
-                    for s in ic.sockets:
+                    for s in c.sockets:
                         with contextlib.suppress(Exception):
                             s.close()
-                    ic.sockets.clear()
+                    c.sockets.clear()
 
                     # Start new process
                     new_proc = _start_jsockd_process(
-                        jsockd_exec_resolved, ic.config, ic.socket_paths
+                        jsockd_exec_resolved, c.config, c.socket_paths
                     )
 
                     # Setup readers
@@ -629,21 +629,21 @@ class JSockDClient:
 
                     threading.Thread(
                         target=_read_ready_from_stdout,
-                        args=(new_proc.stdout, ready_q, err_q, ic.config),
+                        args=(new_proc.stdout, ready_q, err_q, c.config),
                         name="jsockd-ready",
                         daemon=True,
                     ).start()
 
                     threading.Thread(
                         target=_stream_stderr_logs,
-                        args=(new_proc.stderr, ic.config),
+                        args=(new_proc.stderr, c.config),
                         name="jsockd-logs",
                         daemon=True,
                     ).start()
 
                     # Wait for READY or error/timeout
                     ready_count = 0
-                    timeout_s = ic.config.timeout_us / 1_000_000.0
+                    timeout_s = c.config.timeout_us / 1_000_000.0
                     start = time.time()
                     while True:
                         try:
@@ -669,31 +669,31 @@ class JSockDClient:
                             )
                         time.sleep(0.01)
 
-                    if ready_count > len(ic.socket_paths):
+                    if ready_count > len(c.socket_paths):
                         new_proc.kill()
                         new_proc.wait()
                         raise JSockDClientError(
-                            f"ready count ({ready_count}) exceeds number of sockets specified ({len(ic.socket_paths)}) during restart"
+                            f"ready count ({ready_count}) exceeds number of sockets specified ({len(c.socket_paths)}) during restart"
                         )
 
                     # Dial sockets
                     new_conns: list[socket.socket] = []
                     for i in range(ready_count):
-                        s = _dial_unix(ic.socket_paths[i], ic.config.timeout_us)
+                        s = _dial_unix(c.socket_paths[i], c.config.timeout_us)
                         new_conns.append(s)
 
                     # Replace process and sockets
-                    ic.process = new_proc
-                    ic.sockets = new_conns
+                    c.process = new_proc
+                    c.sockets = new_conns
 
                     # Recreate command queues (clear old queues to avoid stale workers)
-                    ic.cmd_queues = [queue.Queue() for _ in range(ready_count)]
+                    c.cmd_queues = [queue.Queue() for _ in range(ready_count)]
 
                     # Start new connection workers
                     for i in range(ready_count):
                         threading.Thread(
                             target=_conn_handler,
-                            args=(new_conns[i], ic.cmd_queues[i], ic),
+                            args=(new_conns[i], c.cmd_queues[i], c),
                             daemon=True,
                             name=f"jsockd-conn-restart-{i}",
                         ).start()
@@ -704,11 +704,11 @@ class JSockDClient:
                 except Exception as e:
                     # Restart failed; record fatal and stop
                     _set_fatal_error(
-                        iclient=ic, err=JSockDClientError(f"restart failed: {e}")
+                        iclient=c, err=JSockDClientError(f"restart failed: {e}")
                     )
-                    ic.quit_event.set()
+                    c.quit_event.set()
                     try:
-                        shutil.rmtree(ic.socket_tmpdir, ignore_errors=True)
+                        shutil.rmtree(c.socket_tmpdir, ignore_errors=True)
                     except Exception:
                         pass
                     break
@@ -716,7 +716,7 @@ class JSockDClient:
         threading.Thread(target=_reaper, daemon=True, name="jsockd-reaper").start()
 
         # Store internal client and locks
-        self._iclient = ic
+        self._iclient = c
         self._close_lock = threading.Lock()
         self._closed = False
 
