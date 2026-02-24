@@ -122,7 +122,7 @@ static int send_message(JSRuntime *rt, const char *message, size_t message_len,
     if (delta_ns > 0 &&
         (uint64_t)delta_ns > g_cmd_args.max_command_runtime_us * 1000ULL) {
       jsockd_logf(LOG_WARN,
-                  "Command runtime of %" PRIi64 "us exceeded %" PRIu64
+                  "Command runtime of %lli us exceeded %" PRIu64
                   "us while waiting for %.*s message response; interrupting\n",
                   delta_ns / 1000LL, g_cmd_args.max_command_runtime_us,
                   (int)ts->current_uuid_len, ts->current_uuid);

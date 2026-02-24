@@ -76,7 +76,7 @@ static int interrupt_handler(JSRuntime *rt, void *opaque) {
     if (delta_ns > 0 &&
         (uint64_t)delta_ns > g_cmd_args.max_command_runtime_us * 1000ULL) {
       jsockd_logf(LOG_WARN,
-                  "Command runtime of %" PRIi64 "us exceeded %" PRIu64
+                  "Command runtime of %lli us exceeded %" PRIu64
                   "us, interrupting\n",
                   delta_ns / 1000LL, g_cmd_args.max_command_runtime_us);
       return 1;
