@@ -7,6 +7,13 @@
 
 #define ISO8601_MAX_LEN 29
 
+#if defined(__GNUC__) || defined(__clang__)
+#define PRINTF_FMT(fmt_idx, first_arg_idx)                                     \
+  __attribute__((format(printf, fmt_idx, first_arg_idx)))
+#else
+#define PRINTF_FMT(fmt_idx, first_arg_idx)
+#endif
+
 typedef enum {
   LOG_DEBUG,
   LOG_INFO,
@@ -17,7 +24,7 @@ typedef enum {
 
 void lock_log_mutex(void);
 void unlock_log_mutex(void);
-void jsockd_logf(LogLevel level, const char *fmt, ...);
+void jsockd_logf(LogLevel level, const char *fmt, ...) PRINTF_FMT(2, 3);
 void jsockd_log(LogLevel level, const char *s);
 void print_log_prefix(LogLevel log_level, FILE *f, bool last_line);
 void log_with_prefix_for_subsequent_lines(LogLevel log_level, FILE *fo,

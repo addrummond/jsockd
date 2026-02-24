@@ -62,7 +62,7 @@ static atomic_int g_n_cached_functions;
 
 static void cleanup_unused_hash_cache_bucket(HashCacheBucket *b) {
   jsockd_logf(LOG_DEBUG, "Freeing bytecode %p\n",
-              ((CachedFunctionBucket *)b)->payload.bytecode);
+              (const void *)((CachedFunctionBucket *)b)->payload.bytecode);
   free((void *)(((CachedFunctionBucket *)b)->payload.bytecode));
   ((CachedFunctionBucket *)b)->payload.bytecode = NULL;
 }
@@ -154,7 +154,7 @@ static atomic_int g_new_thread_state_count;
 static void js_print_value_debug_write(void *opaque, const char *buf,
                                        size_t len) {
   LogLevel l = *(LogLevel *)opaque;
-  jsockd_logf(l, "%.*s\n", len, buf);
+  jsockd_logf(l, "%.*s\n", (int)len, buf);
 }
 
 static int lb_read(char *buf, size_t n, void *data) {
