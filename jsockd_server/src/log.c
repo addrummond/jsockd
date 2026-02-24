@@ -72,28 +72,19 @@ void jsockd_logf(LogLevel log_level, const char *fmt, ...) {
 
   log_level &= ~LOG_INTERACTIVE;
 
-  va_list args, args2;
+  char *log_buf = NULL;
+  size_t log_buf_len = 0;
+  FILE *memf = open_memstream(&log_buf, &log_buf_len);
+  if (!memf)
+    return;
 
-  // Cannot use args twice in the two subsequent vsnprintf calls, so copy it.
-  // https://stackoverflow.com/a/55274498/376854
+  va_list args;
   va_start(args, fmt);
-  va_copy(args2, args);
-
-  char log_buf_[8192];
-  char *log_buf = log_buf_;
-
-  int n = vsnprintf(NULL, 0, fmt, args);
+  vfprintf(memf, fmt, args);
   va_end(args);
+  fclose(memf);
 
-  if (n > ABSOLUTE_MAX_LOG_BUF_SIZE - 1)
-    n = ABSOLUTE_MAX_LOG_BUF_SIZE - 1;
-
-  if ((size_t)n > sizeof(log_buf_) / sizeof(log_buf_[0]))
-    log_buf = (char *)calloc((size_t)n + 1, sizeof(char));
-
-  int m = vsnprintf(log_buf, n + 1, fmt, args2);
-  va_end(args2);
-  m = MIN(m, n);
+  int m = (int)MIN(log_buf_len, (size_t)(ABSOLUTE_MAX_LOG_BUF_SIZE - 1));
   m = remove_trailing_ws(log_buf, m);
 
   mutex_lock(&log_mutex);
@@ -105,10 +96,9 @@ void jsockd_logf(LogLevel log_level, const char *fmt, ...) {
   fputc('\n', stderr);
   fflush(stderr);
 
-  if (log_buf != log_buf_)
-    free(log_buf);
-
   mutex_unlock(&log_mutex);
+
+  free(log_buf);
 }
 
 void jsockd_log(LogLevel log_level, const char *s) {

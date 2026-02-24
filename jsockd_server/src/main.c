@@ -562,11 +562,14 @@ static int handle_line_2_query(ThreadState *ts, const char *line, int len) {
 }
 
 static const char *format_memusage(const JSMemoryUsage *m) {
-  const char *fmt =
-      "{\"malloc_size\":%" PRId64 ",\"malloc_count\":%" PRId64 "}";
-  int n = snprintf(NULL, 0, fmt, m->malloc_size, m->malloc_count);
-  char *buf = (char *)malloc((size_t)(n + 1));
-  snprintf(buf, n + 1, fmt, m->malloc_size, m->malloc_count);
+  char *buf = NULL;
+  size_t buf_len = 0;
+  FILE *memf = open_memstream(&buf, &buf_len);
+  if (!memf)
+    return NULL;
+  fprintf(memf, "{\"malloc_size\":%" PRId64 ",\"malloc_count\":%" PRId64 "}",
+          m->malloc_size, m->malloc_count);
+  fclose(memf);
   return buf;
 }
 
@@ -894,6 +897,10 @@ static int line_handler(const char *line, size_t len, ThreadState *ts,
     JSMemoryUsage mu;
     JS_ComputeMemoryUsage(ts->rt, &mu);
     const char *memusage_str = format_memusage(&mu);
+    if (!memusage_str) {
+      write_const_to_stream(ts, "error: failed to format memusage\n");
+      return 0;
+    }
     writev_to_stream(
         ts, {.iov_base = (void *)memusage_str, .iov_len = strlen(memusage_str)},
         STRCONST_IOVEC("\n"));
