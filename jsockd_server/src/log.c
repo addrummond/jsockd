@@ -61,15 +61,14 @@ static int remove_trailing_ws(const char *buf, int len) {
 }
 
 void jsockd_logf(LogLevel log_level, const char *fmt, ...) {
-  // No idea why clang gives this warning with C23 standard enabled. Seems like
-  // a bug?
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wconstant-logical-operand"
-  if ((log_level & 0xFF) == LOG_DEBUG && !CMAKE_BUILD_TYPE_IS_DEBUG)
-    return;
+  if (!CMAKE_BUILD_TYPE_IS_DEBUG) {
+    // nested if instead of && avoids weird clang warning about constant operand
+    // of &&
+    if ((log_level & 0xFF) == LOG_DEBUG)
+      return;
+  }
   if (g_interactive_logging_mode && 0 == (log_level & LOG_INTERACTIVE))
     return;
-#pragma clang diagnostic pop
 
   log_level &= ~LOG_INTERACTIVE;
 
