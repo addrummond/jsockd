@@ -105,6 +105,6 @@ const JSMallocFunctions my_malloc_funcs = {
     my_malloc_usable_size,
 };
 
-void set_my_malloc_behavior(MyMallocBehavior behavior) {
+void set_thread_local_my_malloc_behavior(MyMallocBehavior behavior) {
   alloc_behavior = behavior;
 }

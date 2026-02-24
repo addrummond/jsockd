@@ -10,6 +10,6 @@ typedef enum {
   MY_MALLOC_BEHAVIOR_BYTECODE,
 } MyMallocBehavior;
 
-void set_my_malloc_behavior(MyMallocBehavior behavior);
+void set_thread_local_my_malloc_behavior(MyMallocBehavior behavior);
 
 #endif

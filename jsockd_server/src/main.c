@@ -379,10 +379,10 @@ static const uint8_t *compile_buf(JSContext *ctx, const char *buf, int buf_len,
     return NULL;
   }
 
-  set_my_malloc_behavior(MY_MALLOC_BEHAVIOR_BYTECODE); // thread local
+  set_thread_local_my_malloc_behavior(MY_MALLOC_BEHAVIOR_BYTECODE);
   const uint8_t *bytecode =
       JS_WriteObject(ctx, bytecode_size, val, JS_WRITE_OBJ_BYTECODE);
-  set_my_malloc_behavior(MY_MALLOC_BEHAVIOR_NORMAL);
+  set_thread_local_my_malloc_behavior(MY_MALLOC_BEHAVIOR_NORMAL);
   JS_FreeValue(ctx, val);
   jsockd_logf(LOG_DEBUG, "Compiled bytecode size: %zu\n", *bytecode_size);
 
