@@ -57,7 +57,7 @@ _Static_assert(sizeof(HashCacheBucket) % 16 == 0,
 // We skip the check in that case.
 #if !defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_16) && \
     !(defined(__clang__) && (defined(__aarch64__) || defined(__arm64__)))
-#error "compiler does not support lock-free 128-bit atomics"
+#error "compiler does not support lock-free 128-bit atomics; config should be adjusted to use 64-bit UIDs for hash_cache"
 #endif
 #endif
 
