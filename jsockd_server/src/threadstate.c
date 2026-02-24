@@ -78,7 +78,7 @@ static int interrupt_handler(JSRuntime *rt, void *opaque) {
       jsockd_logf(LOG_WARN,
                   "Command runtime of %" PRIi64 "us exceeded %" PRIu64
                   "us, interrupting\n",
-                  delta_ns / 1000ULL, g_cmd_args.max_command_runtime_us);
+                  delta_ns / 1000LL, g_cmd_args.max_command_runtime_us);
       return 1;
     }
   }
