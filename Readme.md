@@ -252,12 +252,11 @@ JSockD tracks memory usage by each QuickJS runtime. If the memory used by a runt
 The current logic for detecting memory leaks is as follows:
 
 * For each QuickJS runtime:
-  * Let U be the initial memory usage of the runtime.
-  * Let C, the memory increase counter, be zero.
-  * After each 100 command executions:
-    * if current usage is higher than U, increment C and update U to the current usage;
-    * otherwise reset C to zero.
-    * If C = 3, reset the runtime and go to the first step; othwerwise, check again after another 100 command executions.
+  * [1] Let U be the initial memory usage of the runtime.
+  * [2] Let C, the memory increase counter, be zero.
+  * [3] After 100 command executions:
+    * if current usage is higher than U, increment C and update U to the current usage; otherwise reset C to zero.
+    * If C = 3, reset the runtime and go to [1]; othwerwise, go to [3].
 
 ## 6. Building from source
 
