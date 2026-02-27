@@ -8,6 +8,13 @@
 #include <stdlib.h>
 #include <xxHash/xxhash.h>
 
+// UIDs technically need to be an atomic type because data races are undefined
+// behaviour in C (even though we ignore any values that might be observed
+// during a data race). We could use 128-bit UIDs on all platforms and just
+// load/store UIDs via two atomic 64-bit operations. However, as 64-bit UIDs
+// are adequate, and most platforms of interest support 128-bit atomics, this
+// would be an unnecessary complication.
+
 // These platforms should provide lock-free 128-bit atomics (assuming
 // non-ancient processors in the x86 case). Robust compile-time detection of
 // this specific functionality appears to be a bit of a rabbit hole.
