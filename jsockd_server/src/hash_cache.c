@@ -8,6 +8,16 @@
 // The implementation here makes use of seqlocks. See e.g.
 //   https://github.com/Amanieu/seqlock/blob/master/src/lib.rs
 // for an example implementation of the general concept.
+//
+// Using seqlocks enables us to use per-bucket locking and reference counting
+// with an overhead of just 8 bytes per bucket (whereas a more traditional
+// approach using mutexes would require at least 40 bytes per bucket on a
+// 64-bit platform). Though spinlocking is usually a bad idea in user-space
+// code, it is ok here because contention is low, and in the worst case, we
+// can just give up after a few tries and proceed without the cache.
+//
+// pthread_spin_lock_t might be an option on Linux/BSD, but is not available
+// on Mac, and it would serialize reads to the same bucket.
 
 size_t get_cache_bucket(HashCacheUid uid, int n_bits) {
   return (size_t)(uid % ((HashCacheUid)1 << n_bits));

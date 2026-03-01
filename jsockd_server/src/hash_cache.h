@@ -49,6 +49,9 @@ typedef struct {
   _Alignas(16)
 #endif
       _Atomic(HashCacheUid) uid;
+  // Naturally aligned 32-bit loads/stores are atomic on x86_64, aarch64 and
+  // (lol) RISC-V 64, so we don't expect any surprise padding on platforms
+  // of interest.
   int32_t _Atomic refcount;
   int32_t _Atomic update_count;
 } HashCacheBucket;
