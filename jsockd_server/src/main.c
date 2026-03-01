@@ -785,15 +785,11 @@ static int handle_line_3_parameter_helper(ThreadState *ts, const char *line,
                     "Resetting interpreter state.\n",
                     MEMORY_INCREASE_MAX_COUNT * MEMORY_CHECK_INTERVAL);
         // To avoid latency, we do the following:
-        //   (i)   create a new thread state in a
-        //   background thread, (ii)  swap the old
-        //   and new thread states the next time
-        //   we're in
-        //         the line_1 handler and the new
-        //         thread state has finished
+        //     (i) create a new thread state in a background thread,
+        //    (ii) swap the old and new thread states the next time we're in
+        //         the line_1 handler and the new thread state has finished
         //         initializing, and then
-        //   (iii) clean up the old thread state in a
-        //   background thread.
+        //   (iii) clean up the old thread state in a background thread.
         atomic_store_explicit(&ts->replacement_thread_state,
                               REPLACEMENT_THREAD_STATE_INIT,
                               memory_order_release);
