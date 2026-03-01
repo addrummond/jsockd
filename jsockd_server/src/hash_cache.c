@@ -101,6 +101,10 @@ HashCacheBucket *get_hash_cache_entry_(HashCacheBucket *buckets,
       // UID value, but this has (with a very high probability) the benign
       // failure mode of concluding that something is not in the cache which
       // in fact is.
+      //
+      // This operation technically needs to be atomic because data races
+      // are undefined behavior in C (even though we will ignore the value
+      // read when a race occurs).
       if (uid != atomic_load_explicit(&bucket->uid, memory_order_relaxed))
         break;
 
@@ -108,10 +112,6 @@ HashCacheBucket *get_hash_cache_entry_(HashCacheBucket *buckets,
       // different cache entry if it's changed underneath us, but that's
       // acceptable (we remove the spurious refcount increment after checking
       // the update count below).
-      //
-      // This operation technically needs to be atomic because data races
-      // are undefined behavior in C (even though we will ignore the value
-      // read when a race occurs).
       atomic_fetch_add_explicit(&bucket->refcount, 1, memory_order_relaxed);
 
       if (update_count_before !=
