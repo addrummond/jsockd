@@ -105,6 +105,12 @@ case $1 in
                                 exit 1
                             fi
                         done
+                        # Special check for version in uv.lock of Python client.
+                        py_client_version=$(awk '/name = "jsockdclient"/ { vc=1 } !/name = "jsockdclient"/ { if (vc == 1) { vc = 0; print $0 } }' clients/python/jsockdclient/uv.lock | sed -e 's/.*"\(.*\)".*/\1/')
+                        if [ "v$py_client_version" != "$tag" ]; then
+                            echo "Python client version in uv.lock '$py_client_version' does not match tag '$tag'"
+                            exit 1
+                        fi
                         ;;
                     *)
                         echo "Not performing JSockD version constant check because tag $tag doesn't seem to be a version."

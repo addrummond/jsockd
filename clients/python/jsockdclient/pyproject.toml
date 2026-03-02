@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "jsockdclient"
 # __jsockd_version__
-version = "0.0.139"
+version = "0.0.146"
 description = "Python client for JSockD (QuickJS socket daemon), inspired by the Go client."
 license = { text = "MIT" }
 readme = "Readme.md"

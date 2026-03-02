@@ -339,7 +339,7 @@ wheels = [
 
 [[package]]
 name = "jsockdclient"
-version = "0.0.139"
+version = "0.0.146"
 source = { editable = "." }
 dependencies = [
     { name = "pynacl" },
