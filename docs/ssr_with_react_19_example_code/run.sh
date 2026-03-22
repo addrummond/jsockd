@@ -14,7 +14,7 @@ jsockd -k mykey
 npm i
 npx esbuild ./server.jsx --bundle --outfile=server-bundle.mjs --sourcemap --format=esm
 npx esbuild ./client.jsx --bundle --outfile=client-bundle.mjs --sourcemap --format=esm
-jsockd -k mykey.privkey -c server-bundle.mjs server-bundle.quickjs_bytecode
+jsockd -pk mykey.privkey -c server-bundle.mjs server-bundle.quickjs_bytecode
 
 export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=$(cat mykey.pubkey)
 

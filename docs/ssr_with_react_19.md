@@ -60,7 +60,7 @@ Bundle the application using esbuild and then compile and sign the bytecode:
 
 ```sh
 npx esbuild ./server.jsx --bundle --outfile=server-bundle.mjs --sourcemap --format=esm
-jsockd -k mykey.privkey -c server-bundle.mjs server-bundle.quickjs_bytecode
+jsockd -pk mykey.privkey -c server-bundle.mjs server-bundle.quickjs_bytecode
 ```
 
 Use the `-e` (eval) option of `jsockd` to test rendering without using a client:

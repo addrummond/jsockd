@@ -23,6 +23,7 @@ typedef struct {
   uint64_t max_idle_time_us;
   bool max_idle_time_set;
   const char *key_file_prefix;
+  const char *private_key_file;
   const char *mod_to_compile;
   const char *mod_output_file;
   CompileOpts compile_opts;

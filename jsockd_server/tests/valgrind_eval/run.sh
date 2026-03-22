@@ -10,7 +10,7 @@ rm -f valgrind_private_signing_key*
 export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY="$(cat valgrind_private_signing_key.pubkey)"
 
 # Compile the example module to QuickJS bytecode.
-./build_Debug/jsockd -c tests/valgrind_server/bundle.mjs /tmp/bundle.qjsb -k valgrind_private_signing_key.privkey
+./build_Debug/jsockd -c tests/valgrind_server/bundle.mjs /tmp/bundle.qjsb -pk valgrind_private_signing_key.privkey
 
 # Run some eval commands, which shouldn't leak memory.
 

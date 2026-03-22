@@ -1231,7 +1231,7 @@ int main(int argc, char **argv) {
     strip_flags = JS_STRIP_SOURCE;
   if (g_cmd_args.mod_to_compile) {
     return compile_module_file(
-        g_cmd_args.mod_to_compile, g_cmd_args.key_file_prefix,
+        g_cmd_args.mod_to_compile, g_cmd_args.private_key_file,
         g_cmd_args.mod_output_file, STRINGIFY(VERSION), strip_flags);
   }
 

@@ -15,6 +15,7 @@ static int n_flags_set(const CmdArgs *cmdargs) {
          (cmdargs->max_command_runtime_us != 0) +
          (cmdargs->max_idle_time_set == true) +
          (cmdargs->key_file_prefix != NULL) +
+         (cmdargs->private_key_file != NULL) +
          (cmdargs->mod_to_compile != NULL) +
          (cmdargs->compile_opts != COMPILE_OPTS_NONE) + (cmdargs->eval == true);
 }
@@ -149,6 +150,17 @@ static int parse_cmd_args_helper(int argc, char **argv,
         return -1;
       }
       cmdargs->key_file_prefix = argv[i];
+    } else if (0 == strcmp(argv[i], "-pk")) {
+      if (cmdargs->private_key_file != NULL) {
+        errlog("Error: -pk can be specified at most once\n");
+        return -1;
+      }
+      ++i;
+      if (i >= argc) {
+        errlog("Error: -pk requires an argument (private key file)\n");
+        return -1;
+      }
+      cmdargs->private_key_file = argv[i];
     } else if (0 == strcmp(argv[i], "-c")) {
       if (cmdargs->mod_to_compile != NULL) {
         errlog("Error: -c can be specified at most once\n");
@@ -216,9 +228,15 @@ static int parse_cmd_args_helper(int argc, char **argv,
     }
   }
 
-  if (cmdargs->key_file_prefix && !(n_flags == 1 || cmdargs->mod_to_compile)) {
-    errlog("Error: -k (key file) option must be used either alone (to "
-           "generate a key pair) or with the -c option.\n");
+  if (cmdargs->key_file_prefix && n_flags != 1) {
+    errlog("Error: -k (key file prefix) option must be used either alone (to "
+           "generate a key pair)\n");
+    return -1;
+  }
+
+  if (cmdargs->private_key_file && !(n_flags == 2 && cmdargs->mod_to_compile)) {
+    errlog("Error: -pk (private key file) option must be used with the -c "
+           "option.\n");
     return -1;
   }
 
@@ -228,11 +246,11 @@ static int parse_cmd_args_helper(int argc, char **argv,
   }
 
   if (cmdargs->mod_to_compile) {
-    if (1 < n_flags - (cmdargs->key_file_prefix != 0) -
+    if (1 < n_flags - (cmdargs->private_key_file != NULL) -
                 (cmdargs->compile_opts != COMPILE_OPTS_NONE)) {
       errlog(
-          "Error: -c (compile module) must be used only with -k (private key "
-          "file) option and -ss or -sd flags.\n");
+          "Error: -c (compile module) must be used only with -pk (private key "
+          "file), -k (key file prefix), and -ss or -sd flags.\n");
       return -1;
     }
   }
@@ -265,7 +283,8 @@ int parse_cmd_args(int argc, char **argv, void (*errlog)(const char *fmt, ...),
     errlog("Usage: %s [-m <module_bytecode_file>] [-sm <source_map_file>] [-b "
            "XX] [-t <max_command_runtime_us>] [-i <max_idle_time_us>] [-e <JS "
            "expression>] -s <socket1_path> [<socket2_path> ...]\n       %s -c "
-           "<module_to_compile> <output_file> [-k <private_key_file>]\n       "
+           "<module_to_compile> <output_file> [-pk <private_key_file>] [-k "
+           "<key_file_prefix>]\n       "
            "%s -k <key_file_prefix>\n",
            cmdname, cmdname, cmdname);
     return -1;

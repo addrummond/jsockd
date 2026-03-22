@@ -835,15 +835,14 @@ static void TEST_cmdargs_dash_c(void) {
   TEST_ASSERT(!strcmp(cmdargs.mod_output_file, "out.qjsbc"));
 }
 
-static void TEST_cmdargs_dash_c_with_dash_k(void) {
+static void TEST_cmdargs_dash_c_with_dash_k_error(void) {
+  /* -k (key file prefix) can no longer be combined with -c; use -pk instead */
   CmdArgs cmdargs = {0};
   char *argv[] = {"jsockd", "-c", "module.mjs", "out.qjsbc", "-k", "keyprefix"};
   int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
                          &cmdargs);
-  TEST_ASSERT(r == 0);
-  TEST_ASSERT(!strcmp(cmdargs.mod_to_compile, "module.mjs"));
-  TEST_ASSERT(!strcmp(cmdargs.mod_output_file, "out.qjsbc"));
-  TEST_ASSERT(!strcmp(cmdargs.key_file_prefix, "keyprefix"));
+  TEST_ASSERT(r != 0);
+  TEST_ASSERT(strstr(cmdargs_errlog_buf, "-k "));
 }
 
 static void TEST_cmdargs_dash_c_with_dash_k_error_if_dash_k_has_no_arg(void) {
@@ -853,6 +852,46 @@ static void TEST_cmdargs_dash_c_with_dash_k_error_if_dash_k_has_no_arg(void) {
                          &cmdargs);
   TEST_ASSERT(r != 0);
   TEST_ASSERT(strstr(cmdargs_errlog_buf, "-k "));
+}
+
+static void TEST_cmdargs_dash_pk(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"jsockd", "-c", "module.mjs", "out.qjsbc", "-pk", "key.pem"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r == 0);
+  TEST_ASSERT(!strcmp(cmdargs.mod_to_compile, "module.mjs"));
+  TEST_ASSERT(!strcmp(cmdargs.mod_output_file, "out.qjsbc"));
+  TEST_ASSERT(!strcmp(cmdargs.private_key_file, "key.pem"));
+}
+
+static void TEST_cmdargs_dash_pk_error_on_missing_arg(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"jsockd", "-c", "module.mjs", "out.qjsbc", "-pk"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r != 0);
+  TEST_ASSERT(strstr(cmdargs_errlog_buf, "-pk "));
+}
+
+static void TEST_cmdargs_dash_pk_error_on_double_flag(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"jsockd", "-c",     "module.mjs", "out.qjsbc",
+                  "-pk",    "k1.pem", "-pk",        "k2.pem"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r != 0);
+  TEST_ASSERT(strstr(cmdargs_errlog_buf, "-pk "));
+  TEST_ASSERT(strstr(cmdargs_errlog_buf, "at most once"));
+}
+
+static void TEST_cmdargs_dash_pk_must_be_used_with_dash_c(void) {
+  CmdArgs cmdargs = {0};
+  char *argv[] = {"jsockd", "-pk", "key.pem"};
+  int r = parse_cmd_args(sizeof(argv) / sizeof(argv[0]), argv, cmdargs_errlog,
+                         &cmdargs);
+  TEST_ASSERT(r != 0);
+  TEST_ASSERT(strstr(cmdargs_errlog_buf, "-pk "));
 }
 
 static void TEST_cmdargs_dash_c_error_on_no_args(void) {
@@ -1191,10 +1230,14 @@ TEST_LIST = {T(wait_group_inc_and_wait_basic_use_case),
              T(cmdargs_dash_i_error_on_non_numeric),
              T(cmdargs_dash_i_error_on_double_flag),
              T(cmdargs_dash_k),
-             T(cmdargs_dash_c_with_dash_k),
+             T(cmdargs_dash_c_with_dash_k_error),
              T(cmdargs_dash_c_with_dash_k_error_if_dash_k_has_no_arg),
              T(cmdargs_dash_k_error_on_missing_arg),
              T(cmdargs_dash_k_error_if_combined_with_other_flags),
+             T(cmdargs_dash_pk),
+             T(cmdargs_dash_pk_error_on_missing_arg),
+             T(cmdargs_dash_pk_error_on_double_flag),
+             T(cmdargs_dash_pk_must_be_used_with_dash_c),
              T(cmdargs_dash_c),
              T(cmdargs_dash_c_error_on_no_args),
              T(cmdargs_dash_c_error_on_only_one_arg),

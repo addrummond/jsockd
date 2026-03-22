@@ -35,7 +35,7 @@ rm -f filc_bench_private_signing_key*
 
 export JSOCKD_BYTECODE_MODULE_PUBLIC_KEY=$(cat filc_bench_private_signing_key.pubkey)
 
-"build_$BUILD/jsockd" -c tests/e2e/relative_bench/bundle.js tests/e2e/relative_bench/bundle.qjsbc -k filc_bench_private_signing_key.privkey
+"build_$BUILD/jsockd" -c tests/e2e/relative_bench/bundle.js tests/e2e/relative_bench/bundle.qjsbc -pk filc_bench_private_signing_key.privkey
 
 #
 # Build benchmark command input

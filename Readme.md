@@ -89,7 +89,7 @@ This command generates two files, `my_key_file.pubkey` (the public key) and `my_
 We can now compile an ES6 module to QuickJS bytecode and sign the bytecode using the key:
 
 ```sh
-jsockd -c my_module.mjs my_module.quickjs_bytecode -k my_key_file.privkey
+jsockd -c my_module.mjs my_module.quickjs_bytecode -pk my_key_file.privkey
 ```
 
 The public key is passed to the `jsockd` server process via the `JSOCKD_BYTECODE_MODULE_PUBLIC_KEY` environment variable:
@@ -156,10 +156,10 @@ Outputs two files: `<key_file_prefix>.pubkey` (the public key) and `<key_file_pr
 ### 3.3 Compile a module file
 
 ```sh
-jsockd -c <module_file> <output_bytecode_file> [-k <private_key_file>] [-ss] [-sd]
+jsockd -c <module_file> <output_bytecode_file> [-pk <private_key_file>] [-ss] [-sd]
 ```
 
-Compiles the specified ES6 module file to a QuickJS bytecode file. If the `-k` option is not given, the module is not signed. Unsigned modules can be used only by debug builds of `jsockd` when the `JSOCKD_BYTECODE_MODULE_PUBLIC_KEY` env var is set to `dangerously_allow_invalid_signatures`.
+Compiles the specified ES6 module file to a QuickJS bytecode file. If the `-pk` option is not given, the module is not signed. Unsigned modules can be used only by debug builds of `jsockd` when the `JSOCKD_BYTECODE_MODULE_PUBLIC_KEY` env var is set to `dangerously_allow_invalid_signatures`.
 
 The `-ss` and `-sd` options are mutually exclusive. Setting `-ss` strips all source code from the bytecode file, while `-sd` strips all debug info including source code.
 
