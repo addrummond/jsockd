@@ -8,7 +8,7 @@ A Python client for JSockD (QuickJS socket daemon).
 
 ```sh
 -# __jsockd_version__ <- ignore this comment, it's used by a CI check
--#uv add "jsockdclient @ git+https://github.com/addrummond/jsockd@v0.0.147#subdirectory=clients/python/jsockdclient"
+-#uv add "jsockdclient @ git+https://github.com/addrummond/jsockd@v0.0.148#subdirectory=clients/python/jsockdclient"
 -# TEMP while we're still on Python branch
 uv add "jsockdclient @ git+https://github.com/addrummond/jsockd@python#subdirectory=clients/python/jsockdclient"
 ```
