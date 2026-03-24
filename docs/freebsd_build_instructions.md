@@ -1,7 +1,5 @@
 # FreeBSD build instructions
 
-*These also work for OpenBSD if you replace `pkg install` with `pkg_add`.*
-
 ## Install necessary packages
 
 ```sh
