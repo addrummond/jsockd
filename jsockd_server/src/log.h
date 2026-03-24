@@ -19,7 +19,8 @@ typedef enum {
   LOG_INFO,
   LOG_WARN,
   LOG_ERROR,
-  LOG_INTERACTIVE = 0xF000000
+  LOG_INTERACTIVE = 0xF00000,
+  LOG_DROPPABLE = 0xF000000
 } LogLevel;
 
 void lock_log_mutex(void);

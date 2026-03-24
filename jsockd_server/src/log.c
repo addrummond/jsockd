@@ -44,6 +44,8 @@ void print_log_prefix(LogLevel log_level, FILE *f, bool last_line) {
     ll = "ERROR";
     break;
   case LOG_INTERACTIVE:
+  case LOG_DROPPABLE:
+  case LOG_INTERACTIVE | LOG_DROPPABLE:
     // High bytes should have been cleared before this function is called.
     assert(0);
     break;
