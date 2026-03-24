@@ -102,7 +102,7 @@ HashCacheBucket *get_hash_cache_entry_(HashCacheBucket *buckets,
           atomic_load_explicit(&bucket->update_count, memory_order_acquire);
 
       if (update_count_before % 2 != 0) {
-        if (n > SPIN_PAUSE_DELAY_ITERATIONS)
+        if (n >= SPIN_PAUSE_DELAY_ITERATIONS)
           cpu_relax_no_barrier();
         continue;
       }
