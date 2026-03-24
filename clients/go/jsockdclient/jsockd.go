@@ -5,28 +5,27 @@
 // JSockD.
 //
 // Example usage:
-// ```go
-// config := jsockdclient.DefaultConfig()
+//
+//	config := jsockdclient.DefaultConfig()
 //
 //	config.Logger = func(timestamp time.Time, level, message string) {
-//	  fmt.Printf("%s [%s] %s\n", timestamp.Format(time.RFC3339Nano), level, message)
+//		fmt.Printf("%s [%s] %s\n", timestamp.Format(time.RFC3339Nano), level, message)
 //	}
 //
-// client, err := jsockdclient.InitJSockD(config, "/path/to/jsockd", []string{"/tmp/jsockd.sock1", "/tmp/jsockd.sock2"})
+//	client, err := jsockdclient.InitJSockD(config, "/path/to/jsockd", []string{"/tmp/jsockd.sock1", "/tmp/jsockd.sock2"})
 //
 //	if err != nil {
-//	  log.Fatal(err)
+//		log.Fatal(err)
 //	}
 //
-// defer client.Close()
-// response, err := jsockdclient.SendRawCommand(client, "(m, p) => p+1", "99")
+//	defer client.Close()
+//	response, err := jsockdclient.SendRawCommand(client, "(m, p) => p+1", "99")
 //
 //	if err != nil {
-//	  log.Fatal(err)
+//		log.Fatal(err)
 //	}
 //
-// fmt.Printf("%+v\n", response)
-// ```
+//	fmt.Printf("%+v\n", response)
 package jsockdclient
 
 import (
