@@ -256,7 +256,7 @@ The current logic for detecting memory leaks is as follows:
   1. Let C, the memory increase counter, be zero.
   1. After 100 command executions:
     * if current usage is higher than U, increment C and update U to the current usage; otherwise reset C to zero.
-    * If C = 3, reset the runtime and go to step 1; otherwise, go to step 3.
+    * If C = 3, reset the runtime and go to step (i); otherwise, go to step (iii).
 
 ## 6. Building from source
 
