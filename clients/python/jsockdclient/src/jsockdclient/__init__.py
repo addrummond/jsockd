@@ -43,7 +43,7 @@ __all__ = [
 ]
 
 # __jsockd_version__ <- this comment triggers a CI check to keep the version in sync
-JSOCKD_VERSION = "0.0.149"
+JSOCKD_VERSION = "0.0.150"
 
 # Protocol tokens
 _MESSAGE_HANDLER_INTERNAL_ERROR = "internal_error"
