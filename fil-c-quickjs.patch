@@ -1,5 +1,5 @@
 diff --git a/Makefile b/Makefile
-index ba64923..50d12cf 100644
+index 2182368..70f1c6c 100644
 --- a/Makefile
 +++ b/Makefile
 @@ -226,15 +226,15 @@ ifeq ($(CROSS_PREFIX),)
@@ -50,8 +50,55 @@ index 094a8f1..b633aeb 100644
 +            void *arg);
 +
  #endif  /* CUTILS_H */
+diff --git a/libregexp.c b/libregexp.c
+index c387f00..f88ac00 100644
+--- a/libregexp.c
++++ b/libregexp.c
+@@ -1305,7 +1305,7 @@ static int re_emit_string_list(REParseState *s, const REStringList *sl)
+         }
+         assert(n <= sl->n_strings);
+         
+-        rqsort(tab, n, sizeof(tab[0]), re_string_cmp_len, NULL);
++        patched_rqsort(tab, n, sizeof(tab[0]), re_string_cmp_len, NULL);
+ 
+         last_match_pos = -1;
+         for(i = 0; i < n; i++) {
+diff --git a/libunicode.c b/libunicode.c
+index 0c510cc..4f3021c 100644
+--- a/libunicode.c
++++ b/libunicode.c
+@@ -624,7 +624,7 @@ static void cr_sort_and_remove_overlap(CharRange *cr)
+     uint32_t start, end, start1, end1, i, j;
+ 
+     /* the resulting ranges are not necessarily sorted and may overlap */
+-    rqsort(cr->points, cr->len / 2, sizeof(cr->points[0]) * 2, point_cmp, NULL);
++    patched_rqsort(cr->points, cr->len / 2, sizeof(cr->points[0]) * 2, point_cmp, NULL);
+     j = 0;
+     for(i = 0; i < cr->len; ) {
+         start = cr->points[i];
+diff --git a/quickjs-libc.c b/quickjs-libc.c
+index c24b6d5..b17ee41 100644
+--- a/quickjs-libc.c
++++ b/quickjs-libc.c
+@@ -4297,8 +4297,14 @@ JSValue js_std_await(JSContext *ctx, JSValue obj)
+             if (err == 0) {
+                 js_std_promise_rejection_check(ctx);
+ 
+-                if (os_poll_func)
+-                    os_poll_func(ctx);
++                // Alex D: Attempt to guard agasint an infinite loop that I caused by
++                // setting globalThis.setTimeout = () => {}. This infinite loop is
++                // nasty because it's immune to JS_SetInterrupt. User code shouldn't
++                // be able to lock the interpreter like this (however dumb it is).
++                if (! os_poll_func || os_poll_func(ctx)) {
++                    JS_FreeValue(ctx, obj);
++                    return JS_EXCEPTION;
++                }
+             }
+         } else {
+             /* not a promise */
 diff --git a/quickjs.c b/quickjs.c
-index 92a7297..1fd52a9 100644
+index 2b33bfa..5ecb564 100644
 --- a/quickjs.c
 +++ b/quickjs.c
 @@ -54,6 +54,8 @@
@@ -71,7 +118,16 @@ index 92a7297..1fd52a9 100644
  
  
  /* dump object free */
-@@ -888,7 +891,7 @@ typedef struct JSProperty {
+@@ -309,6 +312,8 @@ struct JSRuntime {
+     int shape_hash_count; /* number of hashed shapes */
+     JSShape **shape_hash;
+     void *user_opaque;
++    // Alex D: quickjs-libc makes use of user_opaque, but we need an opaque for our own purposes
++    void *user_opaque2;
+ };
+ 
+ struct JSClass {
+@@ -891,7 +896,7 @@ typedef struct JSProperty {
          struct {            /* JS_PROP_AUTOINIT */
              /* in order to use only 2 pointers, we compress the realm
                 and the init function pointer */
@@ -80,7 +136,37 @@ index 92a7297..1fd52a9 100644
                                         in the 2 low bits */
              void *opaque;
          } init;
-@@ -5595,12 +5598,13 @@ JSValue JS_NewCFunctionData(JSContext *ctx, JSCFunctionData *func,
+@@ -1716,6 +1721,16 @@ void JS_SetRuntimeOpaque(JSRuntime *rt, void *opaque)
+     rt->user_opaque = opaque;
+ }
+ 
++void *JS_GetRuntimeOpaque2(JSRuntime *rt)
++{
++    return rt->user_opaque2;
++}
++
++void JS_SetRuntimeOpaque2(JSRuntime *rt, void *opaque)
++{
++    rt->user_opaque2 = opaque;
++}
++
+ /* default memory allocation functions with memory limitation */
+ static size_t js_def_malloc_usable_size(const void *ptr)
+ {
+@@ -2043,9 +2058,11 @@ void JS_FreeRuntime(JSRuntime *rt)
+         if (count != 0)
+             printf("Secondary object leaks: %d\n", count);
+     }
+-#endif
++#else
++    // Alex D: These assertions cause an early exit which then makes Valgrind less useful, as tons of stuff is left unfreed.
+     assert(list_empty(&rt->gc_obj_list));
+     assert(list_empty(&rt->weakref_list));
++#endif
+ 
+     /* free the classes */
+     for(i = 0; i < rt->class_count; i++) {
+@@ -5670,12 +5687,13 @@ JSValue JS_NewCFunctionData(JSContext *ctx, JSCFunctionData *func,
  
  static JSContext *js_autoinit_get_realm(JSProperty *pr)
  {
@@ -96,7 +182,7 @@ index 92a7297..1fd52a9 100644
  }
  
  static void js_autoinit_free(JSRuntime *rt, JSProperty *pr)
-@@ -8271,7 +8275,7 @@ static int __exception JS_GetOwnPropertyNamesInternal(JSContext *ctx,
+@@ -8387,7 +8405,7 @@ static int __exception JS_GetOwnPropertyNamesInternal(JSContext *ctx,
      assert(sym_index == atom_count);
  
      if (num_keys_count != 0 && !num_sorted) {
@@ -105,7 +191,7 @@ index 92a7297..1fd52a9 100644
                 ctx);
      }
      *ptab = tab_atom;
-@@ -10011,10 +10015,10 @@ static int JS_DefineAutoInitProperty(JSContext *ctx, JSValueConst this_obj,
+@@ -10262,10 +10280,10 @@ static int JS_DefineAutoInitProperty(JSContext *ctx, JSValueConst this_obj,
      pr = add_property(ctx, p, prop, (flags & JS_PROP_C_W_E) | JS_PROP_AUTOINIT);
      if (unlikely(!pr))
          return -1;
@@ -119,7 +205,7 @@ index 92a7297..1fd52a9 100644
      pr->u.init.opaque = opaque;
      return TRUE;
  }
-@@ -29397,7 +29401,7 @@ static JSValue js_build_module_ns(JSContext *ctx, JSModuleDef *m)
+@@ -29886,7 +29904,7 @@ static JSValue js_build_module_ns(JSContext *ctx, JSModuleDef *m)
      }
  
      /* sort the exported names */
@@ -128,7 +214,7 @@ index 92a7297..1fd52a9 100644
             sizeof(s->exported_names[0]), exported_names_cmp, ctx);
  
      for(i = 0; i < s->exported_names_count; i++) {
-@@ -30307,7 +30311,7 @@ static JSValue js_async_module_execution_fulfilled(JSContext *ctx, JSValueConst
+@@ -30751,7 +30769,7 @@ static JSValue js_async_module_execution_fulfilled(JSContext *ctx, JSValueConst
      }
  
      /* sort by increasing async_evaluation timestamp */
@@ -137,7 +223,7 @@ index 92a7297..1fd52a9 100644
             exec_module_list_cmp, NULL);
  
      for(i = 0; i < exec_list->count; i++) {
-@@ -42177,7 +42181,7 @@ static JSValue js_array_sort(JSContext *ctx, JSValueConst this_val,
+@@ -42773,7 +42791,7 @@ static JSValue js_array_sort(JSContext *ctx, JSValueConst this_val,
          array[pos].pos = i;
          pos++;
      }
@@ -146,21 +232,34 @@ index 92a7297..1fd52a9 100644
      if (asc.exception)
          goto exception;
  
-@@ -56903,7 +56907,7 @@ static JSValue js_typed_array_sort(JSContext *ctx, JSValueConst this_val,
-             for(i = 0; i < len; i++)
+@@ -58183,7 +58201,7 @@ static JSValue js_typed_array_sort(JSContext *ctx, JSValueConst this_val,
                  array_idx[i] = i;
              tsc.elt_size = elt_size;
+             tsc.array = array;
 -            rqsort(array_idx, len, sizeof(array_idx[0]),
 +            patched_rqsort(array_idx, len, sizeof(array_idx[0]),
                     js_TA_cmp_generic, &tsc);
              if (tsc.exception) {
-                 if (tsc.exception == 1)
-@@ -56953,7 +56957,7 @@ static JSValue js_typed_array_sort(JSContext *ctx, JSValueConst this_val,
-             }
+                 if (tsc.exception == 1) {
+@@ -58227,7 +58245,7 @@ static JSValue js_typed_array_sort(JSContext *ctx, JSValueConst this_val,
              js_free(ctx, array_idx);
+             js_free(ctx, array);
          } else {
 -            rqsort(p->u.array.u.ptr, len, elt_size, cmpfun, &tsc);
 +            patched_rqsort(p->u.array.u.ptr, len, elt_size, cmpfun, &tsc);
              if (tsc.exception)
                  return JS_EXCEPTION;
          }
+diff --git a/quickjs.h b/quickjs.h
+index 92cc000..d13a2ff 100644
+--- a/quickjs.h
++++ b/quickjs.h
+@@ -377,6 +377,8 @@ JSRuntime *JS_NewRuntime2(const JSMallocFunctions *mf, void *opaque);
+ void JS_FreeRuntime(JSRuntime *rt);
+ void *JS_GetRuntimeOpaque(JSRuntime *rt);
+ void JS_SetRuntimeOpaque(JSRuntime *rt, void *opaque);
++void *JS_GetRuntimeOpaque2(JSRuntime *rt);
++void JS_SetRuntimeOpaque2(JSRuntime *rt, void *opaque);
+ typedef void JS_MarkFunc(JSRuntime *rt, JSGCObjectHeader *gp);
+ void JS_MarkValue(JSRuntime *rt, JSValueConst val, JS_MarkFunc *mark_func);
+ void JS_RunGC(JSRuntime *rt);
