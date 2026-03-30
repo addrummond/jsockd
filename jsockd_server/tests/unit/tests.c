@@ -55,7 +55,7 @@ typedef struct {
 
 static void TEST_hash_cache_add_and_retrieve(void) {
   MyHashCacheBucket buckets[8] = {0};
-  HashCacheUid uid = HASH_CACHE_UID_FROM_INT(123456789);
+  HashCacheUid uid = (HashCacheUid)(123456789);
 
   int payload = 42;
   MyHashCacheBucket *bucket =
@@ -70,9 +70,9 @@ static void TEST_hash_cache_add_and_retrieve(void) {
 static void TEST_hash_cache_handles_duplicate_buckets(void) {
   int payload = 99;
   MyHashCacheBucket buckets[8] = {0};
-  HashCacheUid uid1 = HASH_CACHE_UID_FROM_INT(1);
+  HashCacheUid uid1 = (HashCacheUid)(1);
   HashCacheUid uid2 =
-      HASH_CACHE_UID_FROM_INT(9); // we have 8 buckets, so same bucket as uid1
+      (HashCacheUid)(9); // we have 8 buckets, so same bucket as uid1
 
   TEST_ASSERT(NULL != add_to_hash_cache(buckets, 3, uid1, &payload, NULL));
   TEST_ASSERT(NULL != add_to_hash_cache(buckets, 3, uid2, &payload, NULL));
@@ -95,7 +95,7 @@ TEST_hash_cash_values_with_same_bucket_id_booted_if_zero_refcount(void) {
   int payload = 33;
 
   for (uint64_t i = 0; i < 8; ++i) {
-    HashCacheUid uid = HASH_CACHE_UID_FROM_INT((i << 48) | 1);
+    HashCacheUid uid = (HashCacheUid)((i << 48) | 1);
     MyHashCacheBucket *bucket =
         add_to_hash_cache(buckets, 3, uid, &payload, hash_cache_bucket_cleanup);
     atomic_store_explicit(&bucket->bucket.refcount, 0, memory_order_release);
@@ -103,8 +103,8 @@ TEST_hash_cash_values_with_same_bucket_id_booted_if_zero_refcount(void) {
 
   int retrieved_count = 0;
   for (uint64_t i = 0; i < 8; ++i) {
-    MyHashCacheBucket *retrieved = get_hash_cache_entry(
-        buckets, 3, HASH_CACHE_UID_FROM_INT((i << 48) | 1));
+    MyHashCacheBucket *retrieved =
+        get_hash_cache_entry(buckets, 3, (HashCacheUid)((i << 48) | 1));
     if (retrieved != NULL)
       ++retrieved_count;
   }
@@ -120,15 +120,14 @@ static void TEST_hash_cash_empty_bucket_array(void) {
   MyHashCacheBucket buckets[1] = {0};
   int payload = 99;
 
-  TEST_ASSERT(NULL == add_to_hash_cache(buckets, 0,
-                                        HASH_CACHE_UID_FROM_INT(123), &payload,
-                                        NULL));
+  TEST_ASSERT(NULL == add_to_hash_cache(buckets, 0, (HashCacheUid)(123),
+                                        &payload, NULL));
 }
 
 static void TEST_hash_cash_size_2_bucket_array(void) {
   MyHashCacheBucket buckets[2] = {0};
   int payload = 77;
-  HashCacheUid uid = HASH_CACHE_UID_FROM_INT(123);
+  HashCacheUid uid = (HashCacheUid)(123);
   MyHashCacheBucket *b = add_to_hash_cache(buckets, 1, uid, &payload, NULL);
   TEST_ASSERT(b == get_hash_cache_entry(buckets, 1, uid));
 }
@@ -146,21 +145,21 @@ static void TEST_hash_cash_fuzz(void) {
     switch (r % 3) {
     case 0: {
       // Add a new entry
-      HashCacheUid uid = HASH_CACHE_UID_FROM_INT(next_uid);
+      HashCacheUid uid = (HashCacheUid)(next_uid);
       ++next_uid;
       add_to_hash_cache(buckets, 6, uid, &payload, NULL);
     } break;
     case 1:
       if (next_uid != 0) {
         // Retrieve existing entry
-        void *v = get_hash_cache_entry(buckets, 6,
-                                       HASH_CACHE_UID_FROM_INT(r % next_uid));
+        void *v =
+            get_hash_cache_entry(buckets, 6, (HashCacheUid)(r % next_uid));
         TEST_CHECK(v != NULL);
         break;
       } // fallthrough
     case 2: {
       // Try to retrieve a (probably) non-existing entry
-      void *v = get_hash_cache_entry(buckets, 6, HASH_CACHE_UID_FROM_INT(r));
+      void *v = get_hash_cache_entry(buckets, 6, (HashCacheUid)(r));
       TEST_CHECK(v == NULL);
     } break;
     }
@@ -170,10 +169,9 @@ static void TEST_hash_cash_fuzz(void) {
   for (int i = 0; i < 10000; ++i) {
     uint32_t r1 = pcg32_random_r(&rng);
     uint32_t r2 = pcg32_random_r(&rng);
-    add_to_hash_cache(
-        buckets, 6,
-        HASH_CACHE_UID_FROM_INT((uint64_t)r1 | ((uint64_t)r2 << 32)), &payload,
-        NULL);
+    add_to_hash_cache(buckets, 6,
+                      (HashCacheUid)((uint64_t)r1 | ((uint64_t)r2 << 32)),
+                      &payload, NULL);
   }
 }
 
