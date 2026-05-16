@@ -5,6 +5,7 @@
 #include <inttypes.h>
 #include <stdatomic.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <xxHash/xxhash.h>
 
@@ -74,7 +75,7 @@ _Static_assert(sizeof(HashCacheBucket) % 16 == 0,
 #endif
 
 #define HASH_CACHE_BUCKET_ARRAY_SIZE_FROM_HASH_BITS(hash_bits)                 \
-  (1 << (hash_bits))
+  ((size_t)1 << (hash_bits))
 
 size_t get_cache_bucket(HashCacheUid uid, int n_bits);
 HashCacheUid get_hash_cache_uid(const void *data, size_t size);
@@ -89,13 +90,13 @@ HashCacheBucket *get_hash_cache_entry_(HashCacheBucket *buckets,
 void decrement_hash_cache_bucket_refcount(HashCacheBucket *bucket);
 
 #define add_to_hash_cache(buckets, n_bits, uid, data_ptr, cleanup)             \
-  ((TYPEOF(buckets[0]) *)add_to_hash_cache_(                                   \
+  ((TYPEOF((buckets)[0]) *)add_to_hash_cache_(                                 \
       &((buckets)[0].bucket), sizeof((buckets)[0]), (n_bits), (uid),           \
-      ((void *)(data_ptr)), offsetof(TYPEOF(buckets[0]), payload),             \
-      sizeof(buckets[0].payload), (cleanup)))
+      ((void *)(data_ptr)), offsetof(TYPEOF((buckets)[0]), payload),           \
+      sizeof((buckets)[0].payload), (cleanup)))
 
 #define get_hash_cache_entry(buckets, n_bits, uid)                             \
-  ((TYPEOF(buckets[0]) *)get_hash_cache_entry_(                                \
+  ((TYPEOF((buckets)[0]) *)get_hash_cache_entry_(                              \
       &((buckets)[0].bucket), sizeof((buckets)[0]), (n_bits), (uid)))
 
 #endif
