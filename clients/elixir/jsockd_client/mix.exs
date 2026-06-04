@@ -2,13 +2,13 @@ defmodule JsockdClient.MixProject do
   use Mix.Project
 
   # __jsockd_version_check__
-  @jsockd_version "0.1.0"
+  @jsockd_version "0.1.1"
   @jsockd_binary_public_key "b136fca8fbfc42fe6dc95dedd035b0b50ad93b6a5d6fcaf8fc0552e9d29ee406"
 
   def project do
     [
       app: :jsockd_client,
-      version: "0.1.0",
+      version: @jsockd_version,
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
