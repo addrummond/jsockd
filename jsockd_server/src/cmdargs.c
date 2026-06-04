@@ -250,7 +250,7 @@ static int parse_cmd_args_helper(int argc, char **argv,
                 (cmdargs->compile_opts != COMPILE_OPTS_NONE)) {
       errlog(
           "Error: -c (compile module) must be used only with -pk (private key "
-          "file), -k (key file prefix), and -ss or -sd flags.\n");
+          "file) and -ss or -sd flags.\n");
       return -1;
     }
   }
@@ -283,8 +283,8 @@ int parse_cmd_args(int argc, char **argv, void (*errlog)(const char *fmt, ...),
     errlog("Usage: %s [-m <module_bytecode_file>] [-sm <source_map_file>] [-b "
            "XX] [-t <max_command_runtime_us>] [-i <max_idle_time_us>] [-e <JS "
            "expression>] -s <socket1_path> [<socket2_path> ...]\n       %s -c "
-           "<module_to_compile> <output_file> [-pk <private_key_file>] [-k "
-           "<key_file_prefix>]\n       "
+           "<module_to_compile> <output_file> [-pk <private_key_file>] [-ss | "
+           "-sd]\n       "
            "%s -k <key_file_prefix>\n",
            cmdname, cmdname, cmdname);
     return -1;
