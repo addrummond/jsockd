@@ -1,5 +1,4 @@
 #include "threadstate.h"
-#include "alloc.h"
 #include "backtrace.h"
 #include "config.h"
 #include "console.h"
@@ -127,7 +126,7 @@ int init_thread_state(ThreadState *ts, SocketState *socket_state,
     return -1;
   }
 
-  ts->rt = JS_NewRuntime2(&my_malloc_funcs, NULL);
+  ts->rt = JS_NewRuntime();
   if (!ts->rt) {
     jsockd_log(LOG_ERROR | LOG_INTERACTIVE, "Failed to create JS runtime\n");
     return -1;

@@ -86,14 +86,6 @@ static inline __attribute__((always_inline)) void cpu_relax_no_barrier(void) {
 static inline void cpu_relax_no_barrier(void) {}
 #endif
 
-#ifdef __GNUC__
-#define likely(x) __builtin_expect(!!(x), 1)
-#define unlikely(x) __builtin_expect(!!(x), 0)
-#else
-#define likely(x) (x)
-#define unlikely(x) (x)
-#endif
-
 #if !defined(THREAD_LOCAL)
 #if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 202311L)
 #define THREAD_LOCAL thread_local

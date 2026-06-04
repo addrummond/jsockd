@@ -1,4 +1,3 @@
-#include "alloc.h"
 #include "backtrace.h"
 #include "cmdargs.h"
 #include "config.h"
@@ -379,14 +378,22 @@ static const uint8_t *compile_buf(JSContext *ctx, const char *buf, int buf_len,
     return NULL;
   }
 
-  set_thread_local_my_malloc_behavior(MY_MALLOC_BEHAVIOR_BYTECODE);
   const uint8_t *bytecode =
       JS_WriteObject(ctx, bytecode_size, val, JS_WRITE_OBJ_BYTECODE);
-  set_thread_local_my_malloc_behavior(MY_MALLOC_BEHAVIOR_NORMAL);
   JS_FreeValue(ctx, val);
   jsockd_logf(LOG_DEBUG, "Compiled bytecode size: %zu\n", *bytecode_size);
 
-  return (const uint8_t *)bytecode;
+  // We want to preserve the bytecode across runtime
+  // contexts, but js_free requires a context for
+  // some refcounting. So copy this over to some
+  // malloc'd memory.
+  const uint8_t *malloc_bytecode = malloc(*bytecode_size);
+  jsockd_logf(LOG_DEBUG, "Mallocing bytecode %p (size=%zu)\n",
+              (const void *)malloc_bytecode, *bytecode_size);
+  memcpy((void *)malloc_bytecode, bytecode, *bytecode_size);
+  js_free(ctx, (void *)bytecode);
+
+  return (const uint8_t *)malloc_bytecode;
 }
 
 static JSValue func_from_bytecode(JSContext *ctx, const uint8_t *bytecode,
