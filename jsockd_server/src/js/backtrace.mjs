@@ -1,4 +1,5 @@
 let parsedSourcemap = null;
+let parsedSourcemapSource = null;
 
 // Bellard's QuickJS doesn't expose structured backtraces via the public API,
 // so we need to parse the backtrace's string representation.
@@ -11,35 +12,89 @@ export function parseBacktrace(sourcemap, backtrace) {
 function parseBacktraceHelper(sourcemap, backtrace) {
   const lines = backtrace.split("\n");
   const trace = [];
-  let errorMessage = "";
+  const errorMessageLines = [];
   let foundMatch = false;
 
   for (const line of lines) {
-    const match = line.match(
-      /^\s+at ([^\s]+)(?:\s+\(([^:]*):(\d+)(?::(\d+))?\))?\s*$/,
-    );
-    if (match) {
-      const functionName = match[1];
-      const source = match[2] ?? "unknown location";
-      const line = match[3] ?? null;
-      const column = match[4] ?? null;
-      trace.push({ functionName, source, line, column });
+    const frame = parseBacktraceLine(line);
+    if (frame) {
+      trace.push(frame);
       foundMatch = true;
     } else if (!foundMatch) {
-      errorMessage += line;
+      errorMessageLines.push(line);
     }
   }
 
-  if (parsedSourcemap === null)
+  if (sourcemap !== parsedSourcemapSource) {
     parsedSourcemap = sourcemap ? JSON.parse(sourcemap) : null;
+    parsedSourcemapSource = sourcemap;
+  }
 
   return {
-    errorMessage: errorMessage.trim(),
+    errorMessage: errorMessageLines.join("\n").trim(),
     trace: sourcemap
       ? mapBacktraceWithSourceMap(parsedSourcemap, trace)
       : trace,
     raw: backtrace.trim(),
   };
+}
+
+function parseBacktraceLine(line) {
+  const nativeMatch = line.match(/^\s+at (.*?) \(native\)\s*$/);
+  if (nativeMatch) {
+    return {
+      functionName: nativeMatch[1] || null,
+      source: "native",
+      line: null,
+      column: null,
+    };
+  }
+
+  const functionLocationMatch = line.match(/^\s+at (.*?) \((.*)\)\s*$/);
+  if (functionLocationMatch) {
+    const location = parseSourceLocation(functionLocationMatch[2]);
+    if (!location) return null;
+
+    return {
+      functionName: functionLocationMatch[1] || null,
+      ...location,
+    };
+  }
+
+  const locationOnlyMatch = line.match(/^\s+at (.*)\s*$/);
+  if (locationOnlyMatch) {
+    const location = parseSourceLocation(locationOnlyMatch[1]);
+    if (!location) return null;
+
+    return {
+      functionName: null,
+      ...location,
+    };
+  }
+
+  return null;
+}
+
+function parseSourceLocation(location) {
+  const lineColumnMatch = location.match(/^(.*):(\d+):(\d+)$/);
+  if (lineColumnMatch) {
+    return {
+      source: lineColumnMatch[1] || "unknown location",
+      line: lineColumnMatch[2],
+      column: lineColumnMatch[3],
+    };
+  }
+
+  const lineOnlyMatch = location.match(/^(.*):(\d+)$/);
+  if (lineOnlyMatch) {
+    return {
+      source: lineOnlyMatch[1] || "unknown location",
+      line: lineOnlyMatch[2],
+      column: null,
+    };
+  }
+
+  return null;
 }
 
 export function formatBacktrace(sourcemap, backtrace) {
@@ -65,9 +120,6 @@ ${backtrace.trace
     bt = bt.substring(0, bt.length - 1);
   return bt;
 }
-
-// WARNING: AI-generated code from this point down. Haven't checked it very
-// carefully yet.
 
 /**
  * Maps a backtrace using a sourcemap.
@@ -152,13 +204,20 @@ export function mapBacktraceWithSourceMap(sourcemap, backtrace) {
 
   function mapLocation(line, column) {
     const lineIdx = Number(line) - 1;
+    const generatedColumn = Number(column) - 1;
     if (lineIdx < 0 || lineIdx >= mappingTable.length) return null;
     const segments = mappingTable[lineIdx];
-    if (!segments || segments.length === 0) return null;
+    if (
+      !Number.isFinite(generatedColumn) ||
+      generatedColumn < 0 ||
+      !segments ||
+      segments.length === 0
+    )
+      return null;
     // Find the closest segment with generatedColumn <= columnNumber
     let best = segments[0];
     for (let i = 1; i < segments.length; ++i) {
-      if (segments[i].generatedColumn <= column) {
+      if (segments[i].generatedColumn <= generatedColumn) {
         best = segments[i];
       } else {
         break;

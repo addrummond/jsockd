@@ -85,6 +85,19 @@ case $1 in
         )
         ;;
 
+    run_js_tests)
+        (
+            set -e
+            cd jsockd_server
+            for test_script in src/js/*.test.mjs; do
+                if [ -f "$test_script" ]; then
+                    printf "\n\nRunning JS test %s\n\n" "$test_script"
+                    node "$test_script"
+                fi
+            done
+        )
+        ;;
+
     check_jsockd_version_constants)
         # If you insert a line containing the marker __jsockd_version_check__
         # before a line containing a version constant, then this script will
