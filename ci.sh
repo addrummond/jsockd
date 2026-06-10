@@ -2,8 +2,8 @@
 
 set -e
 
-FILC_VERSION=0.678
-FILC_CHECKSUM=8c515f704b3ba524566847d78a8c324708a64d0eefadabb40094bc5130aa8995
+FILC_VERSION=0.679
+FILC_CHECKSUM=3d48083c6b15d8987aff42ff002d84926af71776d7c1966738baa1ee1b1dc2ff
 
 if [ -n "$GITHUB_WORKSPACE" ] && [ "$1" != "setup" ] && [ "$1" != "github_actions_create_release" ]; then
     eval "$(mise env)"
