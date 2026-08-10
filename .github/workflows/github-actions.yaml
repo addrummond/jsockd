@@ -16,6 +16,10 @@ jobs:
         uses: Timmmm/setup-osxcross@v2
         with:
           osx-version: "15.5"
+        env:
+          # osxcross build.sh prompts interactively for a build flavor unless
+          # BUILD_FLAVOR is set (the action clones osxcross master, unpinned).
+          BUILD_FLAVOR: stable
 
       - name: Set up tools
         run: ./ci.sh setup
