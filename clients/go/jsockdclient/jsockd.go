@@ -48,7 +48,7 @@ import (
 )
 
 // JSockDVersion specifies the expected version of JSockD [__jsockd_version_check__ <- for automatic CI check]
-const JSockDVersion = "0.1.4"
+const JSockDVersion = "0.1.5"
 
 const chanBufferSize = 64
 
