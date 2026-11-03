@@ -1,3 +1,3 @@
-set(CMAKE_C_COMPILER $ENV{HOME}/filc-0.685-linux-x86_64/build/bin/clang)
+set(CMAKE_C_COMPILER $ENV{HOME}/filc-0.687-linux-x86_64/build/bin/clang)
 add_compile_options(-static)
 add_link_options(-static)
