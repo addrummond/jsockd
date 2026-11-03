@@ -1,8 +1,8 @@
 diff --git a/Makefile b/Makefile
-index 2182368..70f1c6c 100644
+index 94684e1..e3efb75 100644
 --- a/Makefile
 +++ b/Makefile
-@@ -226,15 +226,15 @@ ifeq ($(CROSS_PREFIX),)
+@@ -242,15 +242,15 @@ ifeq ($(CROSS_PREFIX),)
  ifndef CONFIG_ASAN
  ifndef CONFIG_MSAN
  ifndef CONFIG_UBSAN
@@ -22,7 +22,7 @@ index 2182368..70f1c6c 100644
  endif
  endif
 diff --git a/cutils.c b/cutils.c
-index 52ff164..f1fbffa 100644
+index 6a3aeca..f5018fc 100644
 --- a/cutils.c
 +++ b/cutils.c
 @@ -638,4 +638,11 @@ void rqsort(void *base, size_t nmemb, size_t size, cmp_f cmp, void *opaque)
@@ -51,7 +51,7 @@ index 094a8f1..b633aeb 100644
 +
  #endif  /* CUTILS_H */
 diff --git a/libregexp.c b/libregexp.c
-index c387f00..f88ac00 100644
+index b231e95..de917ee 100644
 --- a/libregexp.c
 +++ b/libregexp.c
 @@ -1305,7 +1305,7 @@ static int re_emit_string_list(REParseState *s, const REStringList *sl)
@@ -64,10 +64,10 @@ index c387f00..f88ac00 100644
          last_match_pos = -1;
          for(i = 0; i < n; i++) {
 diff --git a/libunicode.c b/libunicode.c
-index 0c510cc..4f3021c 100644
+index 70475f5..7716bf8 100644
 --- a/libunicode.c
 +++ b/libunicode.c
-@@ -624,7 +624,7 @@ static void cr_sort_and_remove_overlap(CharRange *cr)
+@@ -631,7 +631,7 @@ static void cr_sort_and_remove_overlap(CharRange *cr)
      uint32_t start, end, start1, end1, i, j;
  
      /* the resulting ranges are not necessarily sorted and may overlap */
@@ -77,7 +77,7 @@ index 0c510cc..4f3021c 100644
      for(i = 0; i < cr->len; ) {
          start = cr->points[i];
 diff --git a/quickjs.c b/quickjs.c
-index 2de3d69..5ecb564 100644
+index cd05ee1..1ed7086 100644
 --- a/quickjs.c
 +++ b/quickjs.c
 @@ -54,6 +54,8 @@
@@ -97,32 +97,31 @@ index 2de3d69..5ecb564 100644
  
  
  /* dump object free */
-@@ -893,7 +896,7 @@ typedef struct JSProperty {
-         struct {            /* JS_PROP_AUTOINIT */
-             /* in order to use only 2 pointers, we compress the realm
-                and the init function pointer */
--            uintptr_t realm_and_id; /* realm and init_id (JS_AUTOINIT_ID_x)
-+            void *realm_and_id; /* realm and init_id (JS_AUTOINIT_ID_x)
-                                        in the 2 low bits */
-             void *opaque;
-         } init;
-@@ -5684,12 +5687,13 @@ JSValue JS_NewCFunctionData(JSContext *ctx, JSCFunctionData *func,
+@@ -967,7 +970,7 @@ typedef struct {
+ typedef struct {
+     /* in order to use only 2 pointers, we compress the realm
+        and the init function pointer */
+-    uintptr_t realm_and_id; /* realm and init_id (JS_AUTOINIT_ID_x)
++    void *realm_and_id; /* realm and init_id (JS_AUTOINIT_ID_x)
+                                in the 2 low bits */
+     void *opaque;
+ } JSPropertyAutoInit;
+@@ -6209,12 +6212,12 @@ JSValue JS_NewCFunctionData(JSContext *ctx, JSCFunctionData *func,
  
  static JSContext *js_autoinit_get_realm(JSProperty *pr)
  {
--    return (JSContext *)(pr->u.init.realm_and_id & ~3);
-+    return (JSContext *)((uintptr_t)pr->u.init.realm_and_id & ~3);
+-    return (JSContext *)(pr->u.init->realm_and_id & ~3);
++    return (JSContext *)((uintptr_t)pr->u.init->realm_and_id & ~3);
  }
  
  static JSAutoInitIDEnum js_autoinit_get_id(JSProperty *pr)
  {
--    return pr->u.init.realm_and_id & 3;
-+
-+    return (uintptr_t)pr->u.init.realm_and_id & 3;
+-    return pr->u.init->realm_and_id & 3;
++    return (uintptr_t)pr->u.init->realm_and_id & 3;
  }
  
  static void js_autoinit_free(JSRuntime *rt, JSProperty *pr)
-@@ -8401,7 +8405,7 @@ static int __exception JS_GetOwnPropertyNamesInternal(JSContext *ctx,
+@@ -8960,7 +8963,7 @@ static int __exception JS_GetOwnPropertyNamesInternal(JSContext *ctx,
      assert(sym_index == atom_count);
  
      if (num_keys_count != 0 && !num_sorted) {
@@ -131,21 +130,21 @@ index 2de3d69..5ecb564 100644
                 ctx);
      }
      *ptab = tab_atom;
-@@ -10276,10 +10280,10 @@ static int JS_DefineAutoInitProperty(JSContext *ctx, JSValueConst this_obj,
-     pr = add_property(ctx, p, prop, (flags & JS_PROP_C_W_E) | JS_PROP_AUTOINIT);
+@@ -10911,10 +10914,10 @@ static int JS_DefineAutoInitProperty(JSContext *ctx, JSValueConst this_obj,
      if (unlikely(!pr))
          return -1;
--    pr->u.init.realm_and_id = (uintptr_t)JS_DupContext(ctx);
--    assert((pr->u.init.realm_and_id & 3) == 0);
-+    pr->u.init.realm_and_id = JS_DupContext(ctx);
-+    assert(((uintptr_t)pr->u.init.realm_and_id & 3) == 0);
+     pr->u.init = init;
+-    init->realm_and_id = (uintptr_t)JS_DupContext(ctx);
+-    assert((init->realm_and_id & 3) == 0);
++    init->realm_and_id = JS_DupContext(ctx);
++    assert(((uintptr_t)init->realm_and_id & 3) == 0);
      assert(id <= 3);
--    pr->u.init.realm_and_id |= id;
-+    pr->u.init.realm_and_id = (void*)((uintptr_t)pr->u.init.realm_and_id | id);
-     pr->u.init.opaque = opaque;
+-    init->realm_and_id |= id;
++    init->realm_and_id = (void *)((uintptr_t)init->realm_and_id | id);
+     init->opaque = opaque;
      return TRUE;
  }
-@@ -29900,7 +29904,7 @@ static JSValue js_build_module_ns(JSContext *ctx, JSModuleDef *m)
+@@ -31512,7 +31515,7 @@ static JSValue js_build_module_ns(JSContext *ctx, JSModuleDef *m)
      }
  
      /* sort the exported names */
@@ -154,7 +153,7 @@ index 2de3d69..5ecb564 100644
             sizeof(s->exported_names[0]), exported_names_cmp, ctx);
  
      for(i = 0; i < s->exported_names_count; i++) {
-@@ -30765,7 +30769,7 @@ static JSValue js_async_module_execution_fulfilled(JSContext *ctx, JSValueConst
+@@ -32377,7 +32380,7 @@ static JSValue js_async_module_execution_fulfilled(JSContext *ctx, JSValueConst
      }
  
      /* sort by increasing async_evaluation timestamp */
@@ -163,7 +162,7 @@ index 2de3d69..5ecb564 100644
             exec_module_list_cmp, NULL);
  
      for(i = 0; i < exec_list->count; i++) {
-@@ -42787,7 +42791,7 @@ static JSValue js_array_sort(JSContext *ctx, JSValueConst this_val,
+@@ -45232,7 +45235,7 @@ static JSValue js_array_sort(JSContext *ctx, JSValueConst this_val,
          array[pos].pos = i;
          pos++;
      }
@@ -172,7 +171,7 @@ index 2de3d69..5ecb564 100644
      if (asc.exception)
          goto exception;
  
-@@ -58197,7 +58201,7 @@ static JSValue js_typed_array_sort(JSContext *ctx, JSValueConst this_val,
+@@ -62867,7 +62870,7 @@ static JSValue js_typed_array_sort(JSContext *ctx, JSValueConst this_val,
                  array_idx[i] = i;
              tsc.elt_size = elt_size;
              tsc.array = array;
@@ -181,7 +180,7 @@ index 2de3d69..5ecb564 100644
                     js_TA_cmp_generic, &tsc);
              if (tsc.exception) {
                  if (tsc.exception == 1) {
-@@ -58241,7 +58245,7 @@ static JSValue js_typed_array_sort(JSContext *ctx, JSValueConst this_val,
+@@ -62911,7 +62914,7 @@ static JSValue js_typed_array_sort(JSContext *ctx, JSValueConst this_val,
              js_free(ctx, array_idx);
              js_free(ctx, array);
          } else {
