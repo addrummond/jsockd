@@ -66,6 +66,18 @@ diff --git a/quickjs.h b/quickjs.h
 index 92cc000..d13a2ff 100644
 --- a/quickjs.h
 +++ b/quickjs.h
+@@ -70,6 +70,11 @@ typedef uint32_t JSAtom;
+ #define JS_NAN_BOX_TAG_SHIFT 47
+ #endif
+ 
++/* Fil-C requires pointers to retain their allocation metadata. */
++#ifdef __FILC__
++#undef JS_NAN_BOXING
++#endif
++
+ #if defined(__SIZEOF_INT128__) && (INTPTR_MAX >= INT64_MAX)
+ #define JS_LIMB_BITS 64
+ #else
 @@ -377,6 +377,8 @@ JSRuntime *JS_NewRuntime2(const JSMallocFunctions *mf, void *opaque);
  void JS_FreeRuntime(JSRuntime *rt);
  void *JS_GetRuntimeOpaque(JSRuntime *rt);
